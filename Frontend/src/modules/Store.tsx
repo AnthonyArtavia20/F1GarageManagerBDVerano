@@ -7,12 +7,12 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
 const categories = [
-  { id: "all", name: "Todas", icon: TextSearch },
+  { id: "all", name: "All", icon: TextSearch },
   { id: "power_unit", name: "Power Unit", icon: Zap },
-  { id: "aero", name: "Aerodinámico", icon: Wind },
-  { id: "tires", name: "Neumáticos", icon: CircleDot },
-  { id: "suspension", name: "Suspensión", icon: Cog },
-  { id: "gearbox", name: "Caja de Cambios", icon: Settings2 },
+  { id: "aero", name: "Aerodynamics", icon: Wind },
+  { id: "tires", name: "Tires", icon: CircleDot },
+  { id: "suspension", name: "Suspension", icon: Cog },
+  { id: "gearbox", name: "Gearbox", icon: Settings2 },
 ];
 
 const partsData = [
