@@ -11,6 +11,7 @@ import DriverProfile from "@/modules/DriverProfile";
 import Analytics from "@/modules/Analytics";
 import Teams from "@/modules/Teams";
 import Drivers from "@/modules/Drivers";
+import Sponsors from "@/modules/Sponsors";
 
 const queryClient = new QueryClient();
 
@@ -25,6 +26,7 @@ const App = () => (
           <Route path="/Analytics" element={<Analytics />} />
           <Route path="/Teams" element={<Teams />} />
           <Route path="/Drivers" element={<Drivers />} />
+          <Route path="/Sponsors" element={<Sponsors />} />
           <Route path="/DriverProfile" element={<DriverProfile />} />
           <Route path="/*" element={<NotFound />} />
         </Routes>
