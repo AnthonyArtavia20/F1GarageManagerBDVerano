@@ -1,16 +1,16 @@
 -- ============================================================================
 -- F1 Garage Manager - Base de Datos Verano CE3101
--- Entidades Débiles
+-- Entidades Dï¿½biles
 -- Grupo 3/C, Alexs, Anthony, Bryan, Felipe
 -- ============================================================================
 
 USE F1GarageManager;
 GO
 
-PRINT 'Creando entidades débiles...';
+PRINT 'Creando entidades dï¿½biles...';
 GO
 
--- *Ø*Ø*Ø*Ø*Ø*Ø*Ø*Ø*Ø*ØØ*
+-- *ï¿½*ï¿½*ï¿½*ï¿½*ï¿½*ï¿½*ï¿½*ï¿½*ï¿½*ï¿½ï¿½*
 PRINT 'Creando tabla ENGINEER...';
 GO
 
@@ -28,7 +28,7 @@ GO
 PRINT 'Tabla ENGINEER creada exitosamente';
 GO
 
--- *Ø*Ø*Ø*Ø*Ø*Ø*Ø*Ø*Ø*ØØ*
+-- *ï¿½*ï¿½*ï¿½*ï¿½*ï¿½*ï¿½*ï¿½*ï¿½*ï¿½*ï¿½ï¿½*
 PRINT 'Creando tabla DRIVER...';
 GO
 
@@ -46,7 +46,7 @@ GO
 PRINT 'Tabla DRIVER creada exitosamente';
 GO
 
--- *Ø*Ø*Ø*Ø*Ø*Ø*Ø*Ø*Ø*ØØ*
+-- *ï¿½*ï¿½*ï¿½*ï¿½*ï¿½*ï¿½*ï¿½*ï¿½*ï¿½*ï¿½ï¿½*
 PRINT 'Creando tabla ADMIN...';
 GO
 
@@ -59,34 +59,45 @@ GO
 PRINT 'Tabla ADMIN creada exitosamente';
 GO
 
--- *Ø*Ø*Ø*Ø*Ø*Ø*Ø*Ø*Ø*ØØ*
+-- *ï¿½*ï¿½*ï¿½*ï¿½*ï¿½*ï¿½*ï¿½*ï¿½*ï¿½*ï¿½ï¿½*
 -- Dependen de Team
 
 PRINT 'Creando tabla INVENTORY...';
 GO
 
-CREATE TABLE INVENTROY (
+CREATE TABLE INVENTORY (
 	Inventory_id INT PRIMARY KEY IDENTITY(1,1),
-	Team_id INT NOT NULL UNIQUE,	-- FK se agrega después	--Constraints
+	Team_id INT NOT NULL UNIQUE,
+	-- FK se agrega despuï¿½s
+
+	--Constraints
     CONSTRAINT UK_Inventory_Team UNIQUE (Team_id),  -- Cada equipo solo puede tener un inventario
-    CONSTRAINT CHK_Inventory_Team CHECK (Team_id > 0)  -- Team_id debe ser positivo);
+    CONSTRAINT CHK_Inventory_Team CHECK (Team_id > 0)  -- Team_id debe ser positivo
+);
 GO
 
 PRINT 'Tabla INVENTORY creada exitosamente';
 GO
 
--- *Ø*Ø*Ø*Ø*Ø*Ø*Ø*Ø*Ø*ØØ*
+-- *ï¿½*ï¿½*ï¿½*ï¿½*ï¿½*ï¿½*ï¿½*ï¿½*ï¿½*ï¿½ï¿½*
 
 PRINT 'Creando tabla CAR...';
 GO
 
 CREATE TABLE CAR (
-	Car_id INT PRIMARY KEY IDENTITY(1,1),	Team_id INT NOT NULL,	isFinalized BIT DEFAULT 0,	-- FK se agrega después	--Constraints    CONSTRAINT CHK_Car_Team CHECK (Team_id > 0),  -- Team_id debe ser positivo
-    CONSTRAINT DF_Car_isFinalized DEFAULT 0 FOR isFinalized  -- Valor por defecto);
+	Car_id INT PRIMARY KEY IDENTITY(1,1),
+	Team_id INT NOT NULL,
+	isFinalized BIT DEFAULT 0,
+	-- FK se agrega despuï¿½s
+
+	--Constraints
+    CONSTRAINT CHK_Car_Team CHECK (Team_id > 0),  -- Team_id debe ser positivo
+    CONSTRAINT DF_Car_isFinalized DEFAULT 0 FOR isFinalized  -- Valor por defecto
+);
 GO
 
 PRINT 'Tabla CAR creada exitosamente';
 GO
 
-PRINT 'Todas las entidades débiles creadas exitosamente';
+PRINT 'Todas las entidades dï¿½biles creadas exitosamente';
 GO
