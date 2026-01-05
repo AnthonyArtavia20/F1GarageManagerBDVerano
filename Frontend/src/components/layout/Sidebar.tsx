@@ -30,7 +30,7 @@ const navigation = [
   { name: "Simulation", href: "/Simulation", icon: Play },
 ];
 
-export const Sidebar = ({ userRole = "[ role ]", userName = "[ username ]"}) => {
+export const Sidebar = ({ userRole = "[Role]", userName = "[Username]"}) => {
   const navigate = useNavigate();
   const currentPath = window.location.pathname;
 

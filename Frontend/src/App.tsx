@@ -9,6 +9,8 @@ import NotFound from "@/modules/NotFound";
 import Login from "@/modules/Login";
 import DriverProfile from "@/modules/DriverProfile";
 import Analytics from "@/modules/Analytics";
+import Teams from "@/modules/Teams";
+import Drivers from "@/modules/Drivers";
 
 const queryClient = new QueryClient();
 
@@ -21,6 +23,8 @@ const App = () => (
         <Routes>
           <Route path="/" element={<Login />} />
           <Route path="/Analytics" element={<Analytics />} />
+          <Route path="/Teams" element={<Teams />} />
+          <Route path="/Drivers" element={<Drivers />} />
           <Route path="/DriverProfile" element={<DriverProfile />} />
           <Route path="/*" element={<NotFound />} />
         </Routes>
