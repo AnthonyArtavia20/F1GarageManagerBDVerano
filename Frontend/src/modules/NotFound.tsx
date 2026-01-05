@@ -16,7 +16,13 @@ const NotFound = () => {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background p-4">
+    <div className="flex min-h-screen items-center justify-center bg-background p-4 relative overflow-hidden">
+     
+      {/* Bg Glow*/}
+      <div className="absolute inset-0 overflow-hidden">
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-gradient-to-r from-destructive/10 via-primary/5 to-transparent rounded-full blur-3xl animate-pulse" />
+      </div>
+
       <div className="text-center max-w-md">
         
         {/* Icon */}
@@ -36,7 +42,7 @@ const NotFound = () => {
         </div>
 
         {/* Main Message */}
-        <div className="mb-6 animate-fade-in" style={{ animationDelay: "100ms" }}>
+        <div className="mb-12 animate-fade-in" style={{ animationDelay: "100ms" }}>
           <p className="text-xl text-accent-foreground mb-2">
             Page Not Found
           </p>

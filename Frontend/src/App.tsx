@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 
 // Import Modules
 import NotFound from "./modules/NotFound";
+import Login from "./modules/Login";
 
 const queryClient = new QueryClient();
 
@@ -16,7 +17,8 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<NotFound />} />
+          <Route path="/" element={<Login />} />
+          <Route path="/*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
     </TooltipProvider>

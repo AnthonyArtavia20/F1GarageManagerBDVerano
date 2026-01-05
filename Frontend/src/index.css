@@ -171,6 +171,11 @@
   .racing-stripe {
     @apply absolute top-0 left-0 w-1 h-full bg-primary;
   }
+
+  /* Shadow related efects in elements*/
+  .shadow-glow { box-shadow: var(--shadow-glow); }
+  .shadow-card { box-shadow: var(--shadow-card); }
+  .shadow-elevated { box-shadow: var(--shadow-elevated); }
 }
 
 /**
