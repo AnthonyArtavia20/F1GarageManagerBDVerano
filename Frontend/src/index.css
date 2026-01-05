@@ -1,0 +1,266 @@
+/**
+ * CCS Stylesheet
+ * AI-Assisted Design System Implementation
+ * 
+ * Created with AI assistance.
+ * Prompt: 'Based on the TailwindCSS configuration create a stylesheet (index.css) for the application'
+ */
+
+/* Import Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700&display=swap');
+
+/* Tailwind CSS directives */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Design layer system for consistent theming */
+@layer base {
+  :root {
+    /* Base theme colors - Dark racing aesthetic */
+    --background: 0 0% 5%;
+    --foreground: 0 0% 95%;
+    
+    /* Surface colors */
+    --card: 0 0% 8%;
+    --card-foreground: 0 0% 95%;
+    --popover: 0 0% 8%;
+    --popover-foreground: 0 0% 95%;
+    
+    /* Primary F1 racing colors */
+    --primary: 0 100% 45%;
+    --primary-foreground: 0 0% 100%;
+    
+    /* Secondary and supporting colors */
+    --secondary: 0 0% 12%;
+    --secondary-foreground: 0 0% 95%;
+    
+    /* UI state colors */
+    --muted: 0 0% 15%;
+    --muted-foreground: 0 0% 60%;
+    --accent: 0 0% 15%;
+    --accent-foreground: 0 0% 95%;
+    
+    /* Status and feedback colors */
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    
+    /* Border and input styling */
+    --border: 0 0% 18%;
+    --input: 0 0% 15%;
+    --ring: 0 100% 45%;
+    
+    /* Border radius system */
+    --radius: 0.75rem;
+    
+    /* Sidebar-specific theme */
+    --sidebar-background: 0 0% 6%;
+    --sidebar-foreground: 0 0% 85%;
+    --sidebar-primary: 0 100% 45%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 0 0% 12%;
+    --sidebar-accent-foreground: 0 0% 95%;
+    --sidebar-border: 0 0% 15%;
+    --sidebar-ring: 0 100% 45%;
+    
+    /* F1 Racing Color Palette */
+    --f1-red: 0 100% 45%;
+    --f1-gold: 45 100% 50%;
+    --f1-silver: 0 0% 75%;
+    --f1-bronze: 30 60% 45%;
+    
+    /* Status colors for system feedback */
+    --success: 145 80% 42%;
+    --success-foreground: 0 0% 100%;
+    --warning: 45 100% 50%;
+    --warning-foreground: 0 0% 10%;
+    
+    /* Gradient definitions - AI-generated color stops */
+    --gradient-primary: linear-gradient(135deg, hsl(0 100% 45%) 0%, hsl(0 100% 35%) 100%);
+    --gradient-card: linear-gradient(180deg, hsl(0 0% 10%) 0%, hsl(0 0% 7%) 100%);
+    --gradient-glow: radial-gradient(ellipse at center, hsl(0 100% 45% / 0.15) 0%, transparent 70%);
+    
+    /* Shadow system with AI-calculated opacity levels */
+    --shadow-glow: 0 0 30px hsl(0 100% 45% / 0.3);
+    --shadow-card: 0 4px 20px hsl(0 0% 0% / 0.5);
+    --shadow-elevated: 0 8px 40px hsl(0 0% 0% / 0.6);
+  }
+  
+  /**
+   * Dark mode overrides
+   * Currently identical to default for consistent dark theme.
+   */
+
+  .dark {
+    --background: 0 0% 5%;
+    --foreground: 0 0% 95%;
+  }
+}
+
+/* Base element styles */
+@layer base {
+  * {
+    @apply border-border;
+  }
+  
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+  }
+  
+  /* Apply racing font to all headings */
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-display;
+  }
+}
+
+/**
+ * Component classes developed with AI assistance
+ * Reusable UI patterns for F1 garage interface
+ */
+
+@layer components {
+  /* Glassmorphism card effect */
+  .glass-card {
+    @apply bg-card/80 backdrop-blur-xl border border-border/50 shadow-lg;
+  }
+  
+  /* Interactive glow border effect */
+  .glow-border {
+    @apply relative;
+  }
+  .glow-border::before {
+    content: '';
+    @apply absolute inset-0 rounded-lg opacity-0 transition-opacity duration-300;
+    background: var(--gradient-glow);
+    z-index: -1;
+  }
+  .glow-border:hover::before {
+    @apply opacity-100;
+  }
+  
+  /* Statistics display card */
+  .stat-card {
+    @apply glass-card rounded-xl p-4 transition-all duration-300 hover:border-primary/50;
+  }
+  
+  /* Navigation link system */
+  .nav-link {
+    @apply flex items-center gap-3 px-4 py-3 rounded-lg text-muted-foreground transition-all duration-200;
+  }
+  .nav-link:hover {
+    @apply bg-accent text-foreground;
+  }
+  .nav-link.active {
+    @apply bg-primary/10 text-primary border-l-2 border-primary;
+  }
+  
+  /* F1-themed text gradient */
+  .f1-gradient-text {
+    @apply bg-gradient-to-r from-primary to-red-400 bg-clip-text text-transparent;
+  }
+  
+  /* Performance visualization components */
+  .performance-bar {
+    @apply h-2 rounded-full bg-muted overflow-hidden;
+  }
+  .performance-bar-fill {
+    @apply h-full rounded-full transition-all duration-500;
+  }
+  
+  /* Racing stripe decorative element */
+  .racing-stripe {
+    @apply absolute top-0 left-0 w-1 h-full bg-primary;
+  }
+
+  /* Shadow related efects in elements*/
+  .shadow-glow { box-shadow: var(--shadow-glow); }
+  .shadow-card { box-shadow: var(--shadow-card); }
+  .shadow-elevated { box-shadow: var(--shadow-elevated); }
+}
+
+/**
+ * Utility classes with AI-optimized animation timing
+ */
+
+@layer utilities {
+  /* Animation utilities */
+  .animate-fade-in {
+    animation: fadeIn 0.5s ease-out forwards;
+  }
+  .animate-slide-up {
+    animation: slideUp 0.5s ease-out forwards;
+  }
+  .animate-scale-in {
+    animation: scaleIn 0.3s ease-out forwards;
+  }
+  .animate-pulse-glow {
+    animation: pulseGlow 2s ease-in-out infinite;
+  }
+  
+  /* Staggered animation delays for sequenced effects */
+  .stagger-1 { animation-delay: 0.1s; }
+  .stagger-2 { animation-delay: 0.2s; }
+  .stagger-3 { animation-delay: 0.3s; }
+  .stagger-4 { animation-delay: 0.4s; }
+  .stagger-5 { animation-delay: 0.5s; }
+}
+
+/* Custom animation keyframes */
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes pulseGlow {
+  0%, 100% {
+    box-shadow: 0 0 20px hsl(0 100% 45% / 0.3);
+  }
+  50% {
+    box-shadow: 0 0 40px hsl(0 100% 45% / 0.5);
+  }
+}
+
+/* Custom scrollbar styling */
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  @apply bg-background;
+}
+::-webkit-scrollbar-thumb {
+  @apply bg-muted rounded-full;
+}
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-muted-foreground/50;
+}
