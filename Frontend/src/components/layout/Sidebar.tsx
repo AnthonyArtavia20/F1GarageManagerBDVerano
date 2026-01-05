@@ -25,7 +25,7 @@ const navigation = [
   { name: "Sponsors", href: "/Sponsors", icon: Users },
   { name: "Store*", href: "/Store", icon: Store },
   { name: "Inventory*", href: "/Inventory", icon: Package },
-  { name: "Car Assembly*", href: "/Car-assembly", icon: Wrench },
+  { name: "Car Assembly*", href: "/CarAssembly", icon: Wrench },
   { name: "Circuits", href: "/Circuits", icon: Flag },
   { name: "Simulation", href: "/Simulation", icon: Play },
 ];

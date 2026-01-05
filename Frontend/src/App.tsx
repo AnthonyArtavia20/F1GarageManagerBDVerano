@@ -14,6 +14,7 @@ import Drivers from "@/modules/Drivers";
 import Sponsors from "@/modules/Sponsors";
 import Store from "@/modules/Store";
 import Inventory from "@/modules/Inventory";
+import CarAssembly from "@/modules/CarAssembly";
 
 const queryClient = new QueryClient();
 
@@ -31,6 +32,7 @@ const App = () => (
           <Route path="/Sponsors" element={<Sponsors />} />
           <Route path="/Store" element={<Store />} />
           <Route path="/Inventory" element={<Inventory />} />
+          <Route path="/CarAssembly" element={<CarAssembly />} />
           <Route path="/DriverProfile" element={<DriverProfile />} />
           <Route path="/*" element={<NotFound />} />
         </Routes>
