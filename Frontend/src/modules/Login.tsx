@@ -25,11 +25,11 @@ const Login = () => {
     // Handel Input according to role 
     
     if (username == "admin") {
-        navigate("/");
+        navigate("/Analytics");
         return;
     }
     if (username == "engineer") {
-        navigate("/");
+        navigate("/Analytics");
         return;
     }
     if (username == "driver") {
@@ -116,7 +116,7 @@ const Login = () => {
         
           <div className="mt-7 pt-2 border-t border-border">
             <p className="text-center text-sm text-muted-foreground">
-                version 0.0.2
+                version 0.0.3
             </p>
           </div>
         </div>

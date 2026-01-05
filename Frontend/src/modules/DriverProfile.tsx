@@ -15,7 +15,7 @@ const stats = [
 const driverData = {
   name: "[Driver's Name]",
   teamName: "[Driver's Team]",
-  initials: "INIT"
+  initials: "•‿•"
 };
 
 const DriverProfile = () => {
@@ -52,7 +52,7 @@ const DriverProfile = () => {
               onClick={handleLogout}
               variant="outline"
               size="sm"
-              className="gap-2 text-destructive"
+              className="border-primary text-primary hover:bg-primary/10"
             >
               <LogOut className="w-4 h-4" />
               Log-out
