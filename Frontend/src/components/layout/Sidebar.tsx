@@ -12,6 +12,7 @@ import {
   Settings,
   LogOut,
   Trophy,
+  UserPen,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -26,8 +27,9 @@ const navigation = [
   { name: "Store*", href: "/Store", icon: Store },
   { name: "Inventory*", href: "/Inventory", icon: Package },
   { name: "Car Assembly*", href: "/CarAssembly", icon: Wrench },
-  { name: "Circuits", href: "/Circuits", icon: Flag },
-  { name: "Simulation", href: "/Simulation", icon: Play },
+  { name: "Circuits [X]", href: "/Circuits", icon: Flag },
+  { name: "Simulation [X]", href: "/Simulation", icon: Play },
+  { name: "User Management", href: "/UserManagement", icon: UserPen },
 ];
 
 export const Sidebar = ({ userRole = "[Role]", userName = "[Username]"}) => {

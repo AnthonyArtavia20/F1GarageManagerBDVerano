@@ -79,7 +79,7 @@ const Inventory = () => {
         <div className="relative max-w-md mb-8 opacity-0 animate-fade-in" style={{ animationDelay: "250ms" }}>
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
           <Input
-            placeholder="Buscar en inventario..."
+            placeholder="Search in Inventory..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-10 bg-card border-border"
