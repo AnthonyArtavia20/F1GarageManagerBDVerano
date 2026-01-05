@@ -18,11 +18,9 @@ const Login = () => {
   const navigate = useNavigate();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState("Admin");
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-
     
     // Handel Input according to role 
     
@@ -35,7 +33,7 @@ const Login = () => {
         return;
     }
     if (username == "driver") {
-        navigate("/");
+        navigate("/DriverProfile");
         return;
     }
 
@@ -118,7 +116,7 @@ const Login = () => {
         
           <div className="mt-7 pt-2 border-t border-border">
             <p className="text-center text-sm text-muted-foreground">
-                version 0.0.1
+                version 0.0.2
             </p>
           </div>
         </div>

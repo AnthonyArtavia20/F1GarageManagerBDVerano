@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 // Import Modules
 import NotFound from "./modules/NotFound";
 import Login from "./modules/Login";
+import DriverProfile from "./modules/DriverProfile";
 
 const queryClient = new QueryClient();
 
@@ -18,6 +19,7 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Login />} />
+          <Route path="/DriverProfile" element={<DriverProfile />} />
           <Route path="/*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
