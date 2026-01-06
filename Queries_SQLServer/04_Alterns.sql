@@ -1,6 +1,6 @@
 -- ============================================================================
 -- F1 Garage Manager - Base de Datos Verano CE3101
--- Alterns / Alters 
+-- Foreign Keys (ALTER TABLE)
 -- Grupo 3/C, Alexs, Anthony, Bryan, Felipe
 -- ============================================================================
 
@@ -10,7 +10,7 @@ GO
 PRINT 'Agregando Foreign Keys (ALTER TABLE)...';
 GO
 
--- *¨*¨*¨*¨*¨*¨*¨*¨*¨*¨*
+-- *¨*¨*¨*¨*¨*¨*¨*¨*¨*¨¨*
 -- ENGINEER FKs
 PRINT 'Agregando FKs a ENGINEER...';
 GO
@@ -25,11 +25,11 @@ ADD CONSTRAINT FK_Engineer_Team FOREIGN KEY (Team_id)
 REFERENCES TEAM(Team_id);
 GO
 
-PRINT 'FKs de ENGINEER listas';
+PRINT 'FKs de ENGINEER agregadas';
 GO
 
 
--- *¨*¨*¨*¨*¨*¨*¨*¨*¨*¨*
+-- *¨*¨*¨*¨*¨*¨*¨*¨*¨*¨¨*
 -- DRIVER FKs
 PRINT 'Agregando FKs a DRIVER...';
 GO
@@ -44,11 +44,11 @@ ADD CONSTRAINT FK_Driver_Team FOREIGN KEY (Team_id)
 REFERENCES TEAM(Team_id);
 GO
 
-PRINT 'FKs de DRIVER listas';
+PRINT 'FKs de DRIVER agregadas';
 GO
 
 
--- *¨*¨*¨*¨*¨*¨*¨*¨*¨*¨*
+-- *¨*¨*¨*¨*¨*¨*¨*¨*¨*¨¨*
 -- ADMIN FKs
 PRINT 'Agregando FKs a ADMIN...';
 GO
@@ -58,25 +58,25 @@ ADD CONSTRAINT FK_Admin_User FOREIGN KEY (User_id)
 REFERENCES [USER](User_id);
 GO
 
-PRINT 'FKs de ADMIN listas';
+PRINT 'FKs de ADMIN agregadas';
 GO
 
 
--- *¨*¨*¨*¨*¨*¨*¨*¨*¨*¨*
--- INVENTROY FKs (ojo: en tu script 02 la tabla está como INVENTROY)
-PRINT 'Agregando FKs a INVENTROY...';
+-- *¨*¨*¨*¨*¨*¨*¨*¨*¨*¨¨*
+-- INVENTORY FKs (CORREGIDO: era INVENTROY)
+PRINT 'Agregando FKs a INVENTORY...';
 GO
 
-ALTER TABLE INVENTROY
+ALTER TABLE INVENTORY
 ADD CONSTRAINT FK_Inventory_Team FOREIGN KEY (Team_id)
 REFERENCES TEAM(Team_id);
 GO
 
-PRINT 'FKs de INVENTROY listas';
+PRINT 'FKs de INVENTORY agregadas';
 GO
 
 
--- *¨*¨*¨*¨*¨*¨*¨*¨*¨*¨*
+-- *¨*¨*¨*¨*¨*¨*¨*¨*¨*¨¨*
 -- CAR FKs
 PRINT 'Agregando FKs a CAR...';
 GO
@@ -86,11 +86,11 @@ ADD CONSTRAINT FK_Car_Team FOREIGN KEY (Team_id)
 REFERENCES TEAM(Team_id);
 GO
 
-PRINT 'FKs de CAR listas';
+PRINT 'FKs de CAR agregadas';
 GO
 
 
--- *¨*¨*¨*¨*¨*¨*¨*¨*¨*¨*
+-- *¨*¨*¨*¨*¨*¨*¨*¨*¨*¨¨*
 -- SIMULATION FKs
 PRINT 'Agregando FKs a SIMULATION...';
 GO
@@ -115,11 +115,11 @@ ADD CONSTRAINT FK_Simulation_Team FOREIGN KEY (Team_id)
 REFERENCES TEAM(Team_id);
 GO
 
-PRINT 'FKs de SIMULATION listas';
+PRINT 'FKs de SIMULATION agregadas';
 GO
 
 
--- *¨*¨*¨*¨*¨*¨*¨*¨*¨*¨*
+-- *¨*¨*¨*¨*¨*¨*¨*¨*¨*¨¨*
 -- CONTRIBUTION FKs
 PRINT 'Agregando FKs a CONTRIBUTION...';
 GO
@@ -134,11 +134,11 @@ ADD CONSTRAINT FK_Contribution_Team FOREIGN KEY (Team_id)
 REFERENCES TEAM(Team_id);
 GO
 
-PRINT 'FKs de CONTRIBUTION listas';
+PRINT 'FKs de CONTRIBUTION agregadas';
 GO
 
 
--- *¨*¨*¨*¨*¨*¨*¨*¨*¨*¨*
+-- *¨*¨*¨*¨*¨*¨*¨*¨*¨*¨¨*
 -- PURCHASE FKs
 PRINT 'Agregando FKs a PURCHASE...';
 GO
@@ -153,18 +153,18 @@ ADD CONSTRAINT FK_Purchase_Part FOREIGN KEY (Part_id)
 REFERENCES PART(Part_id);
 GO
 
-PRINT 'FKs de PURCHASE listas';
+PRINT 'FKs de PURCHASE agregadas';
 GO
 
 
--- *¨*¨*¨*¨*¨*¨*¨*¨*¨*¨*
--- INVENTORY_PART FKs (FK hacia INVENTROY según tu repo)
+-- *¨*¨*¨*¨*¨*¨*¨*¨*¨*¨¨*
+-- INVENTORY_PART FKs (CORREGIDO: era INVENTROY)
 PRINT 'Agregando FKs a INVENTORY_PART...';
 GO
 
 ALTER TABLE INVENTORY_PART
 ADD CONSTRAINT FK_InventoryPart_Inventory FOREIGN KEY (Inventory_id)
-REFERENCES INVENTROY(Inventory_id);
+REFERENCES INVENTORY(Inventory_id);
 GO
 
 ALTER TABLE INVENTORY_PART
@@ -172,11 +172,11 @@ ADD CONSTRAINT FK_InventoryPart_Part FOREIGN KEY (Part_id)
 REFERENCES PART(Part_id);
 GO
 
-PRINT 'FKs de INVENTORY_PART listas';
+PRINT 'FKs de INVENTORY_PART agregadas';
 GO
 
 
--- *¨*¨*¨*¨*¨*¨*¨*¨*¨*¨*
+-- *¨*¨*¨*¨*¨*¨*¨*¨*¨*¨¨*
 -- CAR_CONFIGURATION FKs
 PRINT 'Agregando FKs a CAR_CONFIGURATION...';
 GO
@@ -191,9 +191,12 @@ ADD CONSTRAINT FK_CarConfig_Part FOREIGN KEY (Part_id)
 REFERENCES PART(Part_id);
 GO
 
-PRINT 'FKs de CAR_CONFIGURATION listas';
+PRINT 'FKs de CAR_CONFIGURATION agregadas';
 GO
 
 
-PRINT 'Todas las Foreign Keys (ALTER TABLE) fueron agregadas exitosamente';
+PRINT '';
+PRINT '============================================================================';
+PRINT 'Todas las Foreign Keys agregadas exitosamente';
+PRINT '============================================================================';
 GO

@@ -1,13 +1,13 @@
 -- ============================================================================
 -- F1 Garage Manager
--- Parte 5: Stored Procedures Preliminares (Versión Básica para entregable 2 toca mejorarlos para entregable 3)
+-- Parte 5: Stored Procedures Preliminares (Versión Básica)
 -- Descripción: SPs simples para demostración inicial
 -- ============================================================================
 
 USE F1GarageManager;
 GO
 
-PRINT 'Iniciando creación de Stored Procedures:';
+PRINT 'Iniciando creación de Stored Procedures...';
 GO
 
 -- ============================================================================
@@ -15,16 +15,17 @@ GO
 -- ============================================================================
 
 CREATE PROCEDURE sp_GetTeamBudget
-    @Team_id INT -- parámetro de entrada @Team_id
-AS -- Inicio del cuerpo del porcedimiento
-BEGIN --Inicio del bloque de ejecución
+    @Team_id INT
+AS
+BEGIN
+    -- Sumar todos los aportes del equipo
     SELECT SUM(Amount) AS Total_Budget
-    FROM CONTRIBUTION -- Usando la tabla contribution
-    WHERE Team_id = @Team_id; -- Donde el Team_id coincida con el parámtro proporcionado.
+    FROM CONTRIBUTION
+    WHERE Team_id = @Team_id;
 END
 GO
 
-PRINT 'SP sp_GetTeamBudget creado!!';
+PRINT 'SP sp_GetTeamBudget creado';
 GO
 
 -- ============================================================================
@@ -34,19 +35,19 @@ CREATE PROCEDURE sp_GetTeamInventory
     @Team_id INT
 AS
 BEGIN
-    -- Mostrar partes en inventario, todo lo que el equipo ha comprado por el momento
-    SELECT --Seleccionamos los atributos importantes
+    -- Mostrar partes en inventario
+    SELECT 
         p.Part_id,
         p.Category,
         ip.Quantity
-    FROM INVENTORY i     -- Desde la tabla INVENTORY (alias i)
-    JOIN INVENTORY_PART ip ON i.Inventory_id = ip.Inventory_id -- Unir con INVENTORY_PART (alias ip) donde Inventory_id coincida
-    JOIN PART p ON ip.Part_id = p.Part_id   -- Unir con PART (alias p) donde Part_id coincida
-    WHERE i.Team_id = @Team_id; -- Solo donde TEAM _id del parámtro.
+    FROM INVENTORY i
+    JOIN INVENTORY_PART ip ON i.Inventory_id = ip.Inventory_id
+    JOIN PART p ON ip.Part_id = p.Part_id
+    WHERE i.Team_id = @Team_id;
 END
 GO
 
-PRINT 'SP sp_GetTeamInventory creado!!';
+PRINT 'SP sp_GetTeamInventory creado';
 GO
 
 -- ============================================================================
@@ -58,14 +59,15 @@ CREATE PROCEDURE sp_RegisterPurchase
     @Quantity INT
 AS
 BEGIN
+    -- Insertar compra (versión preliminar con valores fijos)
     INSERT INTO PURCHASE (Engineer_User_id, Part_id, Quantity, Unit_price, Total_price)
-    VALUES (@Engineer_User_id, @Part_id, @Quantity, 100, 100 * @Quantity);+
-    --Insersión de valores prueba.
+    VALUES (@Engineer_User_id, @Part_id, @Quantity, 100, 100 * @Quantity);
+    
     PRINT 'Compra registrada';
 END
 GO
 
-PRINT 'SP sp_RegisterPurchase creado!!';
+PRINT 'SP sp_RegisterPurchase creado';
 GO
 
 -- ============================================================================
@@ -75,29 +77,34 @@ CREATE PROCEDURE sp_GetCarConfiguration
     @Car_id INT
 AS
 BEGIN
+    -- Mostrar partes instaladas
     SELECT 
-        Part_Category, -- Categoría de la parte
-        Part_id --Id de la misma para identificación
+        Part_Category,
+        Part_id
     FROM CAR_CONFIGURATION
     WHERE Car_id = @Car_id;
 END
 GO
 
-PRINT 'SP sp_GetCarConfiguration creado!!';
+PRINT 'SP sp_GetCarConfiguration creado';
 GO
 
 
+PRINT '';
 PRINT '============================================================================';
 PRINT 'Stored Procedures preliminares creados exitosamente';
 PRINT '============================================================================';
+PRINT '';
 
--- Consultar y mostrar una lista de los SPs existentes para verificar que se creen bien.
+-- Verificar SPs creados
 SELECT 
-    name AS 'Stored Procedure' FROM sys.procedures --Para renombrar el campo name como Stored Procedure, esto para que aparezca en el encabezado de los resultados.
-WHERE schema_id = SCHEMA_ID('dbo')-- Filtrar para mostrar solo los SPs que son del esquema dbo.
-ORDER BY name;-- Ordenar alfabéticamente por nombre
+    name AS 'Stored Procedure'
+FROM sys.procedures
+WHERE schema_id = SCHEMA_ID('dbo')
+ORDER BY name;
 GO
 
-PRINT 'Total: 4 Stored Procedures básicos';
--- GO separa lotes
+PRINT '';
+PRINT 'Total: 4 Stored Procedures básicos creados';
 GO
+```
