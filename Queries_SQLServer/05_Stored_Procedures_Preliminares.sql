@@ -107,4 +107,3 @@ GO
 PRINT '';
 PRINT 'Total: 4 Stored Procedures básicos creados';
 GO
-```

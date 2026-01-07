@@ -4,7 +4,7 @@
 -- Grupo 3/C, Alexs, Anthony, Bryan, Felipe
 -- ============================================================================
 
---En este archivo se encuentra la creación de la BD y las entidades fuertes
+--En este archivo se encuentra la creaciÃ³n de la BD y las entidades fuertes
 
 -- 1. Crear base de datos:
 
@@ -30,11 +30,11 @@ GO
 PRINT 'Schema dbo verificado';
 GO
 
--- 3. Creación de entidades Fuertes!!
+-- 3. CreaciÃ³n de entidades Fuertes!!
 
 PRINT 'Creando tabla USER...';
 GO
--- *¨*¨*¨*¨*¨*¨*¨*¨*¨*¨¨*
+-- *Â¨*Â¨*Â¨*Â¨*Â¨*Â¨*Â¨*Â¨*Â¨*Â¨Â¨*
 CREATE TABLE [USER] (
     User_id INT IDENTITY(1,1),
     Username VARCHAR(50) NOT NULL,
@@ -50,7 +50,7 @@ GO
 PRINT 'Tabla USER creada exitosamente';
 GO
 
--- *¨*¨*¨*¨*¨*¨*¨*¨*¨*¨¨*
+-- *Â¨*Â¨*Â¨*Â¨*Â¨*Â¨*Â¨*Â¨*Â¨*Â¨Â¨*
 PRINT 'Creando tabla TEAM...';
 GO
 
@@ -66,7 +66,7 @@ GO
 PRINT 'Tabla TEAM creada exitosamente';
 GO
 
--- *¨*¨*¨*¨*¨*¨*¨*¨*¨*¨¨*
+-- *Â¨*Â¨*Â¨*Â¨*Â¨*Â¨*Â¨*Â¨*Â¨*Â¨Â¨*
 PRINT 'Creando tabla SPONSOR...';
 GO
 
@@ -82,7 +82,7 @@ GO
 PRINT 'Tabla SPONSOR creada exitosamente';
 GO
 
--- *¨*¨*¨*¨*¨*¨*¨*¨*¨*¨¨*
+-- *Â¨*Â¨*Â¨*Â¨*Â¨*Â¨*Â¨*Â¨*Â¨*Â¨Â¨*
 PRINT 'Creando tabla PART...';
 GO
 
@@ -111,7 +111,7 @@ GO
 PRINT 'Tabla PART creada exitosamente';
 GO
 
--- *¨*¨*¨*¨*¨*¨*¨*¨*¨*¨¨*
+-- *Â¨*Â¨*Â¨*Â¨*Â¨*Â¨*Â¨*Â¨*Â¨*Â¨Â¨*
 PRINT 'Creando tabla CIRCUIT...';
 GO
 
@@ -131,7 +131,7 @@ GO
 PRINT 'Tabla CIRCUIT creada exitosamente';
 GO
 
--- *¨*¨*¨*¨*¨*¨*¨*¨*¨*¨¨*
+-- *Â¨*Â¨*Â¨*Â¨*Â¨*Â¨*Â¨*Â¨*Â¨*Â¨Â¨*
 PRINT 'Creando tabla SIMULATION...';
 GO
 
@@ -139,14 +139,14 @@ CREATE TABLE SIMULATION (
     Simulation_id INT IDENTITY(1,1),
     Data_time DATETIME NOT NULL DEFAULT GETDATE(),
     Circuit_id INT NOT NULL,
-    Car_id INT NOT NULL,
-    Driver_User_id INT NOT NULL,
+    Winner_Car_id INT NOT NULL,
+    Winner_Driver_id INT NOT NULL,
     Team_id INT NOT NULL,
     
     -- Constraints
     CONSTRAINT PK_Simulation PRIMARY KEY (Simulation_id)
     
-    -- NOTA: Las Foreign Keys se agregarán en el script 04_Foreign_Keys.sql
+    -- NOTA: Las Foreign Keys se agregarÃ¡n en el script 04_Foreign_Keys.sql
 );
 GO
 

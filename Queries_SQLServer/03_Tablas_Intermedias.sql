@@ -10,7 +10,7 @@ GO
 PRINT 'Creando tablas intermedias (relaciones N:M)...';
 GO
 
--- *Ш*Ш*Ш*Ш*Ш*Ш*Ш*Ш*Ш*ШШ*
+-- *Г*Г*Г*Г*Г*Г*Г*Г*Г*ГГ*
 PRINT 'Creando tabla CONTRIBUTION...';
 GO
 
@@ -32,7 +32,7 @@ GO
 PRINT 'Tabla CONTRIBUTION creada exitosamente';
 GO
 
--- *Ш*Ш*Ш*Ш*Ш*Ш*Ш*Ш*Ш*ШШ*
+-- *Г*Г*Г*Г*Г*Г*Г*Г*Г*ГГ*
 PRINT 'Creando tabla PURCHASE...';
 GO
 
@@ -57,7 +57,7 @@ GO
 PRINT 'Tabla PURCHASE creada exitosamente';
 GO
 
--- *Ш*Ш*Ш*Ш*Ш*Ш*Ш*Ш*Ш*ШШ*
+-- *Г*Г*Г*Г*Г*Г*Г*Г*Г*ГГ*
 PRINT 'Creando tabla INVENTORY_PART...';
 GO
 
@@ -77,7 +77,7 @@ GO
 PRINT 'Tabla INVENTORY_PART creada exitosamente';
 GO
 
--- *Ш*Ш*Ш*Ш*Ш*Ш*Ш*Ш*Ш*ШШ*
+-- *Г*Г*Г*Г*Г*Г*Г*Г*Г*ГГ*
 PRINT 'Creando tabla CAR_CONFIGURATION...';
 GO
 
