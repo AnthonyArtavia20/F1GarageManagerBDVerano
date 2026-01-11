@@ -99,5 +99,24 @@ GO
 PRINT 'Tabla CAR_CONFIGURATION creada exitosamente';
 GO
 
+-- *¨*¨*¨*¨*¨*¨*¨*¨*¨*¨¨*
+PRINT 'Creando tabla SIMULATION_PARTICIPANT...';
+GO
+-- Se agrega tabla intermedia para permitir simulaciones del admin para varios equipos.
+CREATE TABLE SIMULATION_PARTICIPANT (
+    simulation_id INT NOT NULL,
+    car_id INT NOT NULL,
+    driver_id INT NOT NULL,
+    position INT NULL,           -- Se llena después de calcular
+    total_time DECIMAL(10,2) NULL,  -- Se calcula
+    
+    -- Constraints
+    CONSTRAINT PK_SimulationParticipant PRIMARY KEY (simulation_id, car_id)
+);
+GO
+
+PRINT 'Tabla SIMULATION_PARTICIPANT creada exitosamente';
+GO
+
 PRINT 'Todas las tablas intermedias creadas exitosamente';
 GO

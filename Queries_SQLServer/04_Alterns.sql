@@ -194,6 +194,24 @@ GO
 PRINT 'FKs de CAR_CONFIGURATION agregadas';
 GO
 
+-- *¨*¨*¨*¨*¨*¨*¨*¨*¨*¨¨*
+PRINT 'Agregando FKs a SIMULATION_PARTICIPANT...';
+GO
+
+ALTER TABLE SIMULATION_PARTICIPANT
+ADD CONSTRAINT FK_SimPart_Simulation FOREIGN KEY (simulation_id)
+REFERENCES SIMULATION(Simulation_id);
+
+ALTER TABLE SIMULATION_PARTICIPANT
+ADD CONSTRAINT FK_SimPart_Car FOREIGN KEY (car_id)
+REFERENCES CAR(Car_id);
+
+ALTER TABLE SIMULATION_PARTICIPANT
+ADD CONSTRAINT FK_SimPart_Driver FOREIGN KEY (driver_id)
+REFERENCES DRIVER(User_id);
+
+PRINT 'FKs de SIMULATION_PARTICIPANT agregadas';
+GO
 
 PRINT '';
 PRINT '============================================================================';

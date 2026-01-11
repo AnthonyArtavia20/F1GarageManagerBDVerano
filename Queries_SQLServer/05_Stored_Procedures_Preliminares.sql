@@ -96,6 +96,48 @@ PRINT 'Stored Procedures preliminares creados exitosamente';
 PRINT '============================================================================';
 PRINT '';
 
+
+-- ============================================================================
+-- 5 SP: Crear Simulación Básica
+-- ============================================================================
+CREATE PROCEDURE sp_CreateSimulationBasic
+    @AdminID INT,
+    @CircuitID INT
+AS
+BEGIN
+    INSERT INTO SIMULATION (Circuit_id, Created_by_admin_id, Data_time)
+    VALUES (@CircuitID, @AdminID, GETDATE());
+    
+    SELECT SCOPE_IDENTITY() AS NewSimulationID;
+END
+GO
+
+-- ============================================================================
+-- 6 SP: Agregar Participante
+-- ============================================================================
+CREATE PROCEDURE sp_AddSimulationParticipant
+    @SimulationID INT,
+    @CarID INT,
+    @DriverID INT
+AS
+BEGIN
+    -- Verificar que el carro esté finalizado
+    IF EXISTS (SELECT 1 FROM CAR WHERE Car_id = @CarID AND isFinalized = 1)
+    BEGIN
+        INSERT INTO SIMULATION_PARTICIPANT (simulation_id, car_id, driver_id)
+        VALUES (@SimulationID, @CarID, @DriverID);
+        
+        PRINT 'Participante agregado exitosamente';
+    END
+    ELSE
+    BEGIN
+        PRINT 'ERROR: El carro no está finalizado';
+        THROW 51000, 'El carro debe estar finalizado para participar', 1;
+    END
+END
+GO
+
+
 -- Verificar SPs creados
 SELECT 
     name AS 'Stored Procedure'
@@ -105,5 +147,5 @@ ORDER BY name;
 GO
 
 PRINT '';
-PRINT 'Total: 4 Stored Procedures básicos creados';
+PRINT 'Total: 6 Stored Procedures básicos creados';
 GO

@@ -139,14 +139,9 @@ CREATE TABLE SIMULATION (
     Simulation_id INT IDENTITY(1,1),
     Data_time DATETIME NOT NULL DEFAULT GETDATE(),
     Circuit_id INT NOT NULL,
-    Winner_Car_id INT NOT NULL,
-    Winner_Driver_id INT NOT NULL,
-    Team_id INT NOT NULL,
+    Created_by_admin_id INT NOT NULL,  -- <- NUEVO
     
-    -- Constraints
     CONSTRAINT PK_Simulation PRIMARY KEY (Simulation_id)
-    
-    -- NOTA: Las Foreign Keys se agregarán en el script 04_Foreign_Keys.sql
 );
 GO
 
