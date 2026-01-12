@@ -1,6 +1,6 @@
 {
-  "name": "backend",
-  "version": "1.0.0",
+  "name": "F1_Garage_Manager",
+  "version": "0.0.0",
   "description": "",
   "main": "index.js",
   "scripts": {
