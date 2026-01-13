@@ -1,10 +1,19 @@
-require('dotenv').config();
+
 const express = require('express');
 const { mssqlConnect } = require('./config/database');
+const corsMiddleware = require('./middleware/corsMiddleware');
+
+// Import Routes
+const testRoutes = require('./routes/testRoutes');
 
 const app = express();
 const PORT = process.env.PORT;
 
+// Middleware 
+app.use(corsMiddleware);
+app.use(express.json());
+
+// ─────── PUBLIC ROUTES ───────
 // Simple test route
 app.get('/', (req, res) => {
   res.json({
@@ -36,7 +45,10 @@ app.get('/status', async (req, res) => {
   }
 });
 
-// Init Server
+// API Routes 
+app.use('/api/test', testRoutes);
+
+// Init Server 
 async function initServer() {
   try {
     // Start connection with mssql-server

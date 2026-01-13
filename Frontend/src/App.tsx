@@ -17,6 +17,8 @@ import Inventory from "@/modules/Inventory";
 import CarAssembly from "@/modules/CarAssembly";
 import UserManagement from "@/modules/UserManagement";
 
+import Test from "@/modules/Test";
+
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -36,6 +38,7 @@ const App = () => (
           <Route path="/CarAssembly" element={<CarAssembly />} />
           <Route path="/UserManagement" element={<UserManagement />} />
           <Route path="/DriverProfile" element={<DriverProfile />} />
+          <Route path="/Test" element={<Test />} />
           <Route path="/*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
