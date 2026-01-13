@@ -118,14 +118,15 @@ GO
 CREATE PROCEDURE sp_AddSimulationParticipant
     @SimulationID INT,
     @CarID INT,
-    @DriverID INT
+    @DriverID INT,
+    @TeamID INT
 AS
 BEGIN
     -- Verificar que el carro esté finalizado
     IF EXISTS (SELECT 1 FROM CAR WHERE Car_id = @CarID AND isFinalized = 1)
     BEGIN
-        INSERT INTO SIMULATION_PARTICIPANT (simulation_id, car_id, driver_id)
-        VALUES (@SimulationID, @CarID, @DriverID);
+        INSERT INTO SIMULATION_PARTICIPANT (simulation_id, car_id, driver_id, team_id)
+        VALUES (@SimulationID, @CarID, @DriverID, @TeamID);
         
         PRINT 'Participante agregado exitosamente';
     END
@@ -148,4 +149,16 @@ GO
 
 PRINT '';
 PRINT 'Total: 6 Stored Procedures básicos creados';
+GO
+
+-- Verificar SPs creados
+SELECT 
+    name AS 'Stored Procedure'
+FROM sys.procedures
+WHERE schema_id = SCHEMA_ID('dbo')
+ORDER BY name;
+GO
+
+PRINT '';
+PRINT 'Total: 5 Stored Procedures básicos creados';
 GO

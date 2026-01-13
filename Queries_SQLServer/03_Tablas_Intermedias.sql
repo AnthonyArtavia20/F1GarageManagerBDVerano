@@ -102,13 +102,20 @@ GO
 -- *¨*¨*¨*¨*¨*¨*¨*¨*¨*¨¨*
 PRINT 'Creando tabla SIMULATION_PARTICIPANT...';
 GO
--- Se agrega tabla intermedia para permitir simulaciones del admin para varios equipos.
 CREATE TABLE SIMULATION_PARTICIPANT (
     simulation_id INT NOT NULL,
     car_id INT NOT NULL,
     driver_id INT NOT NULL,
-    position INT NULL,           -- Se llena después de calcular
-    total_time DECIMAL(10,2) NULL,  -- Se calcula
+    team_id INT NOT NULL,
+    position INT NULL,
+    time_seconds DECIMAL(10,2) NULL,
+    v_recta DECIMAL(10,2) NULL,
+    v_curva DECIMAL(10,2) NULL,
+    penalty DECIMAL(10,2) NULL,
+    setup_p INT NULL,
+    setup_a INT NULL,
+    setup_m INT NULL,
+    driver_h INT NULL,
     
     -- Constraints
     CONSTRAINT PK_SimulationParticipant PRIMARY KEY (simulation_id, car_id)
