@@ -5,6 +5,7 @@ const corsMiddleware = require('./middleware/corsMiddleware');
 
 // Import Routes
 const testRoutes = require('./routes/testRoutes');
+const spRoutes = require('./routes/spRoutes');
 
 const app = express();
 const PORT = process.env.PORT;
@@ -47,6 +48,7 @@ app.get('/status', async (req, res) => {
 
 // API Routes 
 app.use('/api/test', testRoutes);
+app.use('/api/sp', spRoutes);
 
 // Init Server 
 async function initServer() {

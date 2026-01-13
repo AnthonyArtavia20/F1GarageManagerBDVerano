@@ -360,7 +360,7 @@ const Test = () => {
               F1 Garage Manager • Connection Tester
             </p>
             <p className="text-xs text-muted-foreground/60 mt-1">
-              Backend running at: <code className="bg-muted px-1 rounded">http://localhost:3000</code>
+              Backend running at: <code className="bg-muted px-1 rounded">http://localhost:9090</code>
             </p>
             <p className="text-xs text-muted-foreground/60 mt-1">
               Tested at {new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
