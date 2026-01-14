@@ -6,8 +6,6 @@
 
 USE F1GarageManager;
 GO
-
-PRINT 'Iniciando creación de Stored Procedures...';
 GO
 
 -- ============================================================================
@@ -89,14 +87,6 @@ GO
 PRINT 'SP sp_GetCarConfiguration creado';
 GO
 
-
-PRINT '';
-PRINT '============================================================================';
-PRINT 'Stored Procedures preliminares creados exitosamente';
-PRINT '============================================================================';
-PRINT '';
-
-
 -- ============================================================================
 -- 5 SP: Crear Simulación Básica
 -- ============================================================================
@@ -138,6 +128,8 @@ BEGIN
 END
 GO
 
+PRINT 'SP sp_AddSimulationParticipant creado';
+GO
 
 -- Verificar SPs creados
 SELECT 
@@ -146,19 +138,14 @@ FROM sys.procedures
 WHERE schema_id = SCHEMA_ID('dbo')
 ORDER BY name;
 GO
+
+PRINT 'Iniciando creación de Stored Procedures...';
+PRINT '';
+PRINT '============================================================================';
+PRINT 'Stored Procedures preliminares creados exitosamente';
+PRINT '============================================================================';
+PRINT '';
 
 PRINT '';
 PRINT 'Total: 6 Stored Procedures básicos creados';
-GO
-
--- Verificar SPs creados
-SELECT 
-    name AS 'Stored Procedure'
-FROM sys.procedures
-WHERE schema_id = SCHEMA_ID('dbo')
-ORDER BY name;
-GO
-
-PRINT '';
-PRINT 'Total: 5 Stored Procedures básicos creados';
 GO
