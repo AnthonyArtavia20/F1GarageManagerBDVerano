@@ -34,6 +34,29 @@ router.post('/install-part', async (req, res) => {
   }
 });
 
+// POST - Reemplazar parte en auto
+router.post('/replace-part', async (req, res) => {
+  try {
+    const { carId, oldPartId, newPartId, teamId } = req.body;
+    
+    if (!carId || !oldPartId || !newPartId || !teamId) {
+      return res.status(400).json({ error: 'carId, oldPartId, newPartId, teamId requeridos' });
+    }
+    
+    const pool = await require('../config/database').mssqlConnect();
+    const result = await pool.request()
+      .input('Car_id', require('../config/database').sql.Int, carId)
+      .input('OldPart_id', require('../config/database').sql.Int, oldPartId)
+      .input('NewPart_id', require('../config/database').sql.Int, newPartId)
+      .input('Team_id', require('../config/database').sql.Int, teamId)
+      .execute('sp_ReplacePart');
+    
+    res.json({ success: true, message: 'Parte reemplazada exitosamente' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 
 
 module.exports = router;
