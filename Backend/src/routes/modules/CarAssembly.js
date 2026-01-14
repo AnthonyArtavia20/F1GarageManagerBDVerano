@@ -1,0 +1,117 @@
+// ============================================================================
+// MÓDULO ARMADO: ENDPOINTS ESPECÍFICOS - Encargado: Anthony :b
+// ============================================================================
+/**
+ * =============================================================================
+ * FUNCIONALIDADES DEL MÓDULO ARMADO:
+ * - Instalar partes en autos
+ * - Reemplazar partes existentes
+ * - Calcular estadísticas automáticas (Power/Aerodynamics/Maneuverability)
+ * - Validar compatibilidad de partes
+ *
+ * Estos endpoints llaman directamente a SPs específicos en lugar de usar
+ * el endpoint genérico, para mayor claridad y control.
+ * =============================================================================
+ */
+
+module.exports = (router) => {
+
+/**
+ * POST /api/sp/install-part
+ * Instala una nueva parte en un auto
+ *
+ * Método: POST, Body esperado: { carId: number, partId: number, teamId: number }
+ * Validaciones realizadas:
+ *   - Verifica que la parte existe en tabla PART, Verifica stock disponible en INVENTORY, Verifica presupuesto disponible del equipo, Verifica compatibilidad de categoría
+ *   - Instala parte (INSERT en CAR_CONFIGURATION), Actualiza inventario (UPDATE INVENTORY), Recalcula estadísticas del auto
+ * Respuesta exitosa: { success: true, message: "Parte instalada exitosamente" }
+ * Respuesta error: { error: "mensaje descriptivo del error" }
+ */
+router.post('/install-part', async (req, res) => {
+try {
+    // Extrae parámetros del body de la petición HTTP
+    const { carId, partId, teamId } = req.body;
+
+    // Validación básica de parámetros requeridos
+    // Si falta algún parámetro, retorna error 400 (Bad Request)
+    if (!carId || !partId || !teamId) {
+        return res.status(400).json({ error: 'carId, partId, teamId requeridos' });
+    }
+
+    // Establece conexión con SQL Server usando configuración centralizada
+    const pool = await require('../../config/database').mssqlConnect();
+
+    // Prepara la ejecución del Stored Procedure
+    // .request() crea una nueva petición SQL
+    // .input() define cada parámetro con su tipo de dato
+    const result = await pool.request()
+      .input('Car_id', require('../../config/database').sql.Int, carId)      // ID del auto
+      .input('Part_id', require('../../config/database').sql.Int, partId)    // ID de la parte a instalar
+      .input('Team_id', require('../../config/database').sql.Int, teamId)    // ID del equipo (para presupuesto)
+      .execute('sp_InstallPart');  // Ejecuta el SP específico
+
+    res.json({ success: true, message: 'Parte instalada exitosamente' }); // Si todo sale bien, retorna éxito
+    } catch (error) {
+    res.status(500).json({ error: error.message }); // Si ocurre cualquier error (validación, conexión, etc.) Retorna error 500 (Internal Server Error) con mensaje del error
+}
+});
+
+/**
+ * POST /api/sp/replace-part
+ * Reemplaza una parte existente en un auto por otra nueva
+ *
+ * Método: POST, Body esperado: { carId: number, oldPartId: number, newPartId: number, teamId: number }
+ * Validaciones realizadas:
+ *   - Verifica que la parte antigua esté instalada en el auto, Verifica que la nueva parte existe y hay stock, Verifica presupuesto para la diferencia de costo
+ *   - Verifica compatibilidad de categoría, Reemplaza parte (UPDATE en CAR_CONFIGURATION), Actualiza inventario (devuelve antigua, consume nueva), Recalcula estadísticas del auto
+ * Respuesta exitosa: { success: true, message: "Parte reemplazada exitosamente" }
+ */
+router.post('/replace-part', async (req, res) => {
+try {
+    // Extrae los 4 parámetros requeridos del body
+    const { carId, oldPartId, newPartId, teamId } = req.body;
+    // Validación de parámetros obligatorios
+    if (!carId || !oldPartId || !newPartId || !teamId) {
+        return res.status(400).json({ error: 'carId, oldPartId, newPartId, teamId requeridos' });
+    }
+    const pool = await require('../../config/database').mssqlConnect(); // Conexión a base de datos
+
+    // Ejecuta SP de reemplazo con 4 parámetros
+    const result = await pool.request()
+        .input('Car_id', require('../../config/database').sql.Int, carId)        // Auto objetivo
+        .input('OldPart_id', require('../../config/database').sql.Int, oldPartId) // Parte a quitar
+        .input('NewPart_id', require('../../config/database').sql.Int, newPartId) // Parte a poner
+        .input('Team_id', require('../../config/database').sql.Int, teamId)      // Equipo (presupuesto)
+        .execute('sp_ReplacePart');
+
+    res.json({ success: true, message: 'Parte reemplazada exitosamente' });
+    } catch (error) {
+    res.status(500).json({ error: error.message });
+}
+});
+
+/**
+ * GET /api/sp/car-stats/:carId
+ * Calcula y retorna las estadísticas actuales de un auto
+ * Método: GET (solo lectura, no modifica datos), Parámetros: carId en la URL (ej: /api/sp/car-stats/1)
+ * Lógica: Suma los valores P/A/M de todas las partes instaladas en el auto
+ * Respuesta: { success: true, stats: { Power: 150, Aerodynamics: 120, Maneuverability: 130, TotalPerformance: 400 } }, Uso típico: Se llama después de instalar/reemplazar partes para actualizar la UI
+ */
+router.get('/car-stats/:carId', async (req, res) => {
+try {
+    const { carId } = req.params;// Extrae carId de los parámetros de la URL
+    const pool = await require('../../config/database').mssqlConnect();// Conexión a BD
+
+    // Ejecuta SP que calcula estadísticas, parseInt() convierte string de URL a número
+    const result = await pool.request()
+        .input('Car_id', require('../../config/database').sql.Int, parseInt(carId))
+        .execute('sp_CalculateCarStats');
+    res.json({ success: true, stats: result.recordset[0] }); //Retorna las estadísticas calculadas, result.recordset[0] contiene la fila de resultado del SP
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+}
+});
+
+//falta que agrege otros endpoints aquí
+
+};

@@ -1,62 +1,63 @@
+/**
+ * =======================================================================
+ * RUTAS DE STORED PROCEDURES - F1 GARAGE MANAGER
+ * =======================================================================
+ *
+ * Este archivo define todas las rutas (endpoints) relacionadas con
+ * la ejecución de Stored Procedures en SQL Server.
+ *
+ * Arquitectura: REST API con Express.js
+ * Base URL: /api/sp/
+ * Puerto: 9090
+ */
+
+// ============================================================================
+// IMPORTACIONES Y CONFIGURACIÓN INICIAL
+// ============================================================================
+
+/**
+ * Importa Express.js - Framework web para Node.js
+ * Express nos permite crear rutas HTTP (GET, POST, PUT, DELETE)
+ */
 const express = require('express');
+
+/**
+ * Crea una instancia de Router de Express
+ * El router nos permite definir rutas modulares que luego se montan
+ * en la aplicación principal (app.js)
+ */
 const router = express.Router();
+
+//Importa el controlador de Stored Procedures
+// Este controlador contiene la lógica genérica para ejecutar SPs
 const spController = require('../controllers/spController');
 
-// GET - List Stored Procedures
-router.get('/list', spController.getStoredProcedures);
-
-// POST - Execute Stored Procedures
-router.post('/execute', spController.executeStoredProcedure);
-
 // ============================================================================
-// MÓDULO ARMADO: Endpoints específicos
+// ENDPOINTS GENÉRICOS (Existentes)
 // ============================================================================
 
-// POST - Instalar parte en auto
-router.post('/install-part', async (req, res) => {
-  try {
-    const { carId, partId, teamId } = req.body;
-    
-    if (!carId || !partId || !teamId) {
-      return res.status(400).json({ error: 'carId, partId, teamId requeridos' });
-    }
-    
-    const pool = await require('../config/database').mssqlConnect();
-    const result = await pool.request()
-      .input('Car_id', require('../config/database').sql.Int, carId)
-      .input('Part_id', require('../config/database').sql.Int, partId)
-      .input('Team_id', require('../config/database').sql.Int, teamId)
-      .execute('sp_InstallPart');
-    
-    res.json({ success: true, message: 'Parte instalada exitosamente' });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
+router.get('/list', spController.getStoredProcedures); //Lista todos los Stored Procedures disponibles en la base de datos
+router.post('/execute', spController.executeStoredProcedure); //Ejecuta cualquier Stored Procedure de forma genérica, para ejecutar cualquier SP desde el frontend
 
-// POST - Reemplazar parte en auto
-router.post('/replace-part', async (req, res) => {
-  try {
-    const { carId, oldPartId, newPartId, teamId } = req.body;
-    
-    if (!carId || !oldPartId || !newPartId || !teamId) {
-      return res.status(400).json({ error: 'carId, oldPartId, newPartId, teamId requeridos' });
-    }
-    
-    const pool = await require('../config/database').mssqlConnect();
-    const result = await pool.request()
-      .input('Car_id', require('../config/database').sql.Int, carId)
-      .input('OldPart_id', require('../config/database').sql.Int, oldPartId)
-      .input('NewPart_id', require('../config/database').sql.Int, newPartId)
-      .input('Team_id', require('../config/database').sql.Int, teamId)
-      .execute('sp_ReplacePart');
-    
-    res.json({ success: true, message: 'Parte reemplazada exitosamente' });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
+// ============================================================================
+// MÓDULOS ESPECÍFICOS - Importación
+// ============================================================================
 
+// MÓDULO ARMADO: ENDPOINTS ESPECÍFICOS - Encargado: Anthony :b
+require('./Modules/CarAssembly')(router);
 
+// Aquí se agregarán más módulos conforme el equipo los desarrolle
+// Ejemplo:
+// require('./Modules/CarrerasModule')(router);
+// require('./Modules/InventarioModule')(router);
 
+// ============================================================================
+// EXPORTACIÓN DEL MÓDULO
+// ============================================================================
+
+/**
+ * Exporta el router para que pueda ser importado en app.js
+ * En app.js se monta con: app.use('/api/sp', spRoutes);
+ * Esto hace que todas estas rutas estén disponibles bajo /api/sp/
+ */
 module.exports = router;
