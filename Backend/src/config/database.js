@@ -14,7 +14,7 @@ console.log('\n[LOG] MSSQL-SERVER CONFIG PARAM:', {
 const mssqlConfig = {
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
-  server: 'localhost',
+  server: process.env.DB_SERVER,
   port: 1433,
   database: process.env.DB_NAME,
   options: {
