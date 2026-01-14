@@ -44,7 +44,7 @@ router.post('/execute', spController.executeStoredProcedure); //Ejecuta cualquie
 // ============================================================================
 
 // MÓDULO ARMADO: ENDPOINTS ESPECÍFICOS - Encargado: Anthony :b
-require('./Modules/CarAssembly')(router);
+require('./modules/CarAssembly')(router);
 
 // Aquí se agregarán más módulos conforme el equipo los desarrolle
 // Ejemplo:

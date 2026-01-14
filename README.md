@@ -1,5 +1,9 @@
 # F1 Garage Manager
 
+## CEO
+
+![F1 Garage Manager CEO](./Important/CEO.jpg)
+
 ## Project Structure
 ```
 F1GarageManager/
