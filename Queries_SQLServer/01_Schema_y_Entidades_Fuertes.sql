@@ -57,14 +57,12 @@ GO
 CREATE TABLE TEAM (
     Team_id INT IDENTITY(1,1),
     Name VARCHAR(100) NOT NULL,
-    Total_Budget     DECIMAL(10,2)  -- Total recibido de aportes
-    Total_Spent      DECIMAL(10,2)  -- Total gastado en compras
-    Available_Budget AS (Total_Budget - Total_Spent)  
-
+    Total_Budget DECIMAL(10,2) DEFAULT 0,
+    Total_Spent DECIMAL(10,2) DEFAULT 0,
+    
     -- Constraints
     CONSTRAINT PK_Team PRIMARY KEY (Team_id)
 );
-GO
 
 PRINT 'Tabla TEAM creada exitosamente';
 GO

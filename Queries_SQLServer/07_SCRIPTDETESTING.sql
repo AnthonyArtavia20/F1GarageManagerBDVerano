@@ -169,3 +169,49 @@ SELECT
 FROM TEAM t
 ORDER BY t.Name;
 GO
+
+
+
+--TEST DATA INSERTION
+-- ============================================================================
+PRINT 'Insertando datos de prueba...';
+GO
+
+-- Insertar algunos patrocinadores
+INSERT INTO SPONSOR (Name, Industry, Country) VALUES
+('Red Bull', 'Energy Drinks', 'Austria'),
+('Petronas', 'Oil & Gas', 'Malaysia'),
+('Shell', 'Oil & Gas', 'Netherlands'),
+('Rolex', 'Luxury Watches', 'Switzerland'),
+('Pirelli', 'Tires', 'Italy');
+GO
+
+-- Insertar equipos
+INSERT INTO TEAM (Name) VALUES
+('Mercedes-AMG'),
+('Red Bull Racing'),
+('Ferrari'),
+('McLaren');
+GO
+
+-- Insertar partes de ejemplo
+INSERT INTO PART (Category, Price, Stock, p, a, m) VALUES
+('Power_Unit', 1000000.00, 5, 9, 3, 2),
+('Power_Unit', 800000.00, 8, 7, 4, 3),
+('Aerodynamics_pkg', 500000.00, 10, 2, 9, 4),
+('Aerodynamics_pkg', 300000.00, 15, 1, 7, 5),
+('Wheels', 200000.00, 20, 3, 4, 8),
+('Wheels', 150000.00, 25, 2, 3, 7),
+('Suspension', 400000.00, 12, 2, 5, 9),
+('Suspension', 250000.00, 18, 1, 4, 8),
+('Gearbox', 350000.00, 10, 4, 3, 6),
+('Gearbox', 200000.00, 15, 3, 2, 7);
+GO
+
+-- Insertar circuitos
+INSERT INTO CIRCUIT (Name, Total_distance, N_Curves) VALUES
+('Monza', 5.793, 11),
+('Silverstone', 5.891, 18),
+('Suzuka', 5.807, 18),
+('Circuit de Monaco', 3.337, 19);
+GO

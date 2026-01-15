@@ -58,9 +58,6 @@ BEGIN
 END
 GO
 
-PRINT 'SP sp_GetTeamBudget creado exitosamente';
-GO
-
 -- ============================================================================
 -- 2. SP: Ver inventario de un equipo
 -- ============================================================================
@@ -86,7 +83,7 @@ GO
 -- ============================================================================
 -- 3. SP: Registrar una compra simple
 -- ============================================================================
-CREATE OR ALTER PROCEDURE sp_RegisterPurchase
+CCREATE OR ALTER PROCEDURE sp_RegisterPurchase
     @Engineer_User_id INT,
     @Part_id INT,
     @Quantity INT,
@@ -105,7 +102,7 @@ BEGIN
         DECLARE @Stock INT;
         DECLARE @TotalIncome DECIMAL(10,2);
 
-        -- Obtener Team_id del Engineer
+        -- Obtener Team_id del Engineer (CORREGIDO: desde ENGINEER, no USER)
         SELECT @Team_id = Team_id
         FROM ENGINEER
         WHERE User_id = @Engineer_User_id;
@@ -140,7 +137,7 @@ BEGIN
         -- Calcular precio total
         SET @Total_price = @Unit_price * @Quantity;
 
-        -- Calcular presupuesto disponible
+        -- Calcular presupuesto disponible (CORREGIDO: cálculo correcto)
         SELECT @TotalIncome = ISNULL(SUM(Amount), 0)
         FROM CONTRIBUTION
         WHERE Team_id = @Team_id;
@@ -161,6 +158,8 @@ BEGIN
             THROW 53005, @ErrorMsg, 1;
         END
 
+        -- ========== REALIZAR COMPRA ==========
+        
         -- Insertar registro de compra
         INSERT INTO PURCHASE (Engineer_User_id, Part_id, Quantity, Unit_price, Total_price, Purchase_Date)
         VALUES (@Engineer_User_id, @Part_id, @Quantity, @Unit_price, @Total_price, GETDATE());
@@ -170,15 +169,16 @@ BEGIN
         SET Stock = Stock - @Quantity
         WHERE Part_id = @Part_id;
 
-        -- Actualizar Total_Spent en TEAM
+        -- Actualizar Total_Spent del equipo
         UPDATE TEAM
         SET Total_Spent = Total_Spent + @Total_price
         WHERE Team_id = @Team_id;
 
-        -- AGREGAR AL INVENTARIO
+        -- ========== AGREGAR AL INVENTARIO ==========
+        
         DECLARE @Inventory_id INT;
 
-        -- Obtener inventario del equipo
+        -- Obtener o crear inventario del equipo
         SELECT @Inventory_id = Inventory_id
         FROM INVENTORY
         WHERE Team_id = @Team_id;
@@ -206,18 +206,16 @@ BEGIN
             VALUES (@Inventory_id, @Part_id, @Quantity, GETDATE());
         END
 
-        -- Calcular nuevo presupuesto disponible
-        SELECT @TotalIncome = ISNULL(SUM(Amount), 0)
-        FROM CONTRIBUTION
-        WHERE Team_id = @Team_id;
-
-        SELECT @NewAvailableBudget = @TotalIncome - ISNULL(SUM(Total_price), 0)
+        -- Obtener nuevo presupuesto disponible
+        SELECT @NewAvailableBudget = (@TotalIncome - ISNULL(SUM(Total_price), 0))
         FROM PURCHASE p
         INNER JOIN ENGINEER e ON p.Engineer_User_id = e.User_id
         WHERE e.Team_id = @Team_id;
 
         SET @NewAvailableBudget = ISNULL(@NewAvailableBudget, @TotalIncome);
 
+        -- ========== CONFIRMAR TRANSACCIÓN ==========
+        
         COMMIT TRANSACTION;
 
         -- Retornar información de la compra
@@ -230,6 +228,7 @@ BEGIN
 
     END TRY
     BEGIN CATCH
+        -- Manejo de errores
         IF @@TRANCOUNT > 0
             ROLLBACK TRANSACTION;
 
@@ -240,9 +239,6 @@ BEGIN
         RAISERROR (@ErrorMessage, @ErrorSeverity, @ErrorState);
     END CATCH
 END
-GO
-
-PRINT 'SP sp_RegisterPurchase creado exitosamente';
 GO
 
 
@@ -510,33 +506,44 @@ GO
 -- 9 SP: Calcular Parámetros Reales del Auto
 -- Descripción: Calcula stats (p, a, m) basados en partes instaladas
 -- ============================================================================
-CREATE PROCEDURE sp_CalculateCarStats
-    @Car_id INT
+CREATE OR ALTER PROCEDURE sp_CalculateAvailableBudget
+    @Team_id INT
 AS
 BEGIN
-    DECLARE @TotalP INT = 0;
-    DECLARE @TotalA INT = 0;
-    DECLARE @TotalM INT = 0;
+    SET NOCOUNT ON;
 
-    -- Sumar parámetros de todas las partes instaladas
-    SELECT 
-        @TotalP = SUM(p.p),
-        @TotalA = SUM(p.a),
-        @TotalM = SUM(p.m)
-    FROM CAR_CONFIGURATION cc
-    JOIN PART p ON cc.Part_id = p.Part_id
-    WHERE cc.Car_id = @Car_id;
+    DECLARE @TotalIncome DECIMAL(10,2);
+    DECLARE @TotalSpent DECIMAL(10,2);
+    DECLARE @TeamName VARCHAR(100);
 
-    -- Si no hay partes, devolver 0
-    SELECT 
-        ISNULL(@TotalP, 0) AS Power,
-        ISNULL(@TotalA, 0) AS Aerodynamics,
-        ISNULL(@TotalM, 0) AS Maneuverability,
-        (ISNULL(@TotalP, 0) + ISNULL(@TotalA, 0) + ISNULL(@TotalM, 0)) AS TotalPerformance;
+    -- Obtener nombre del equipo
+    SELECT @TeamName = Name 
+    FROM TEAM 
+    WHERE Team_id = @Team_id;
+
+    --Total recibido de aporte--
+    SELECT @TotalIncome = ISNULL(SUM(Amount), 0)
+    FROM CONTRIBUTION
+    WHERE Team_id = @Team_id;
+
+    --Total gastado en compras-- (CORREGIDO: sin referencia a Role)
+    SELECT @TotalSpent = ISNULL(SUM(p.Total_price), 0)
+    FROM PURCHASE p
+    INNER JOIN ENGINEER e ON p.Engineer_User_id = e.User_id
+    WHERE e.Team_id = @Team_id;
+
+    --Resumen completo--
+    SELECT
+        @Team_id AS Team_ID,
+        @TeamName AS Team_Name,
+        @TotalIncome AS Total_Income,
+        @TotalSpent AS Total_Spent,
+        (@TotalIncome - @TotalSpent) AS Available_budget,
+        (SELECT COUNT(*) FROM CONTRIBUTION WHERE Team_id = @Team_id) AS Total_contributions,
+        (SELECT COUNT(*) FROM PURCHASE p 
+         INNER JOIN ENGINEER e ON p.Engineer_User_id = e.User_id
+         WHERE e.Team_id = @Team_id) AS Total_Purchases;
 END
-GO
-
-PRINT 'SP sp_CalculateCarStats creado';
 GO
 
 -- ============================================================================
@@ -706,52 +713,6 @@ GO
 PRINT 'SP sp_GetTeamContributionsDetailed creado';
 GO
 
--- ============================================================================
--- 13. SP: Calcular Presupuesto Disponible (Mejorado)
--- Descripción: Calcula presupuesto considerando ingresos y gastos
--- ============================================================================
-CREATE OR ALTER PROCEDURE sp_CalculateAvailableBudget
-    @Team_id INT
-AS
-BEGIN
-    SET NOCOUNT ON;
-
-    DECLARE @TotalIncome DECIMAL(10,2);
-    DECLARE @TotalSpent DECIMAL(10,2);
-    DECLARE @TeamName VARCHAR(100);
-
-    -- Obtener nombre del equipo
-    SELECT @TeamName = Name 
-    FROM TEAM 
-    WHERE Team_id = @Team_id;
-
-    -- Total recibido de aportes
-    SELECT @TotalIncome = ISNULL(SUM(Amount), 0)
-    FROM CONTRIBUTION
-    WHERE Team_id = @Team_id;
-
-    -- Total gastado en compras
-    SELECT @TotalSpent = ISNULL(SUM(p.Total_price), 0)
-    FROM PURCHASE p
-    INNER JOIN ENGINEER e ON p.Engineer_User_id = e.User_id
-    WHERE e.Team_id = @Team_id;
-
-    -- Resumen completo
-    SELECT
-        @Team_id AS Team_ID,
-        @TeamName AS Team_Name,
-        @TotalIncome AS Total_Income,
-        @TotalSpent AS Total_Spent,
-        (@TotalIncome - @TotalSpent) AS Available_Budget,
-        (SELECT COUNT(*) FROM CONTRIBUTION WHERE Team_id = @Team_id) AS Total_Contributions,
-        (SELECT COUNT(*) FROM PURCHASE p 
-         INNER JOIN ENGINEER e ON p.Engineer_User_id = e.User_id
-         WHERE e.Team_id = @Team_id) AS Total_Purchases;
-END
-GO
-
-PRINT 'SP sp_CalculateAvailableBudget creado exitosamente';
-GO
 
 -- ============================================================================
 -- 14. SP: Obtener Estadísticas de Sponsor
@@ -788,6 +749,7 @@ GO
 -- Útil para el frontend
 -- ============================================================================
 
+
 CREATE OR ALTER PROCEDURE sp_ValidatePurchase
     @Engineer_User_id INT,
     @Part_id INT,
@@ -803,7 +765,7 @@ BEGIN
     DECLARE @Stock INT;
     DECLARE @TotalIncome DECIMAL(10,2);
 
-    -- Obtener Team_id
+    -- Obtener Team_id (CORREGIDO: desde ENGINEER, no USER)
     SELECT @Team_id = Team_id
     FROM ENGINEER
     WHERE User_id = @Engineer_User_id;
@@ -813,7 +775,7 @@ BEGIN
     FROM PART
     WHERE Part_id = @Part_id;
 
-    -- Calcular presupuesto disponible
+    -- Calcular presupuesto disponible (CORREGIDO: cálculo correcto)
     SELECT @TotalIncome = ISNULL(SUM(Amount), 0)
     FROM CONTRIBUTION
     WHERE Team_id = @Team_id;
@@ -847,7 +809,4 @@ BEGIN
             ELSE 0
         END AS CanPurchase;
 END
-GO
-
-PRINT 'SP sp_ValidatePurchase creado exitosamente';
 GO
