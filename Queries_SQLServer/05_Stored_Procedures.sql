@@ -3,15 +3,12 @@
 -- Parte 5: Stored Procedures Preliminares (Versión Básica)
 -- Descripción: SPs simples para demostración inicial
 -- ============================================================================
-
 USE F1GarageManager;
-GO
 GO
 
 -- ============================================================================
 -- 1. SP: Calcular presupuesto de un equipo
 -- ============================================================================
-
 CREATE OR ALTER PROCEDURE sp_GetTeamBudget
     @Team_id INT
 AS
@@ -57,6 +54,8 @@ BEGIN
          WHERE e.Team_id = @Team_id) AS Total_Purchases;
 END
 GO
+PRINT 'SP sp_GetTeamBudget creado';
+GO
 
 -- ============================================================================
 -- 2. SP: Ver inventario de un equipo
@@ -76,14 +75,13 @@ BEGIN
     WHERE i.Team_id = @Team_id;
 END
 GO
-
 PRINT 'SP sp_GetTeamInventory creado';
 GO
 
 -- ============================================================================
 -- 3. SP: Registrar una compra simple
 -- ============================================================================
-CCREATE OR ALTER PROCEDURE sp_RegisterPurchase
+CREATE OR ALTER PROCEDURE sp_RegisterPurchase
     @Engineer_User_id INT,
     @Part_id INT,
     @Quantity INT,
@@ -241,7 +239,6 @@ BEGIN
 END
 GO
 
-
 -- ============================================================================
 -- 4. SP: Ver configuración de un carro
 -- ============================================================================
@@ -257,7 +254,6 @@ BEGIN
     WHERE Car_id = @Car_id;
 END
 GO
-
 PRINT 'SP sp_GetCarConfiguration creado';
 GO
 
@@ -301,7 +297,6 @@ BEGIN
     END
 END
 GO
-
 PRINT 'SP sp_AddSimulationParticipant creado';
 GO
 
@@ -313,17 +308,14 @@ WHERE schema_id = SCHEMA_ID('dbo')
 ORDER BY name;
 GO
 
-PRINT 'Iniciando creación de Stored Procedures...';
-PRINT '';
+PRINT 'Iniciando creación de Stored Procedures básicos...';
 PRINT '============================================================================';
-PRINT 'Stored Procedures preliminares creados exitosamente';
+PRINT 'Stored Procedures básicos creados exitosamente';
 PRINT '============================================================================';
-PRINT '';
-
-PRINT '';
 PRINT 'Total: 6 Stored Procedures básicos creados';
 GO
 
+PRINT 'Iniciando creación de Stored Procedures del Módulo de armado';
 -- ============================================================================
 -- MÓDULO ARMADO: Nuevos Stored Procedures para Ensamblaje de Autos
 -- ============================================================================
@@ -401,7 +393,6 @@ BEGIN
     PRINT 'Parte instalada exitosamente';
 END
 GO
-
 PRINT 'SP sp_InstallPart creado';
 GO
 
@@ -498,13 +489,82 @@ BEGIN
     PRINT 'Parte reemplazada exitosamente';
 END
 GO
-
 PRINT 'SP sp_ReplacePart creado';
 GO
 
 -- ============================================================================
 -- 9 SP: Calcular Parámetros Reales del Auto
--- Descripción: Calcula stats (p, a, m) basados en partes instaladas
+-- Descripción: Calcula stats (p - Power, a - Aerodynamics, m - Maneuverability) basados en partes instaladas
+-- ============================================================================
+CREATE OR ALTER PROCEDURE sp_CalculateCarStats
+    @Car_id INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    -- Sumar los valores P, A, M de todas las partes instaladas
+    SELECT 
+        @Car_id AS Car_id,
+        ISNULL(SUM(p.p), 0) AS Power,
+        ISNULL(SUM(p.a), 0) AS Aerodynamics,
+        ISNULL(SUM(p.m), 0) AS Maneuverability,
+        (ISNULL(SUM(p.p), 0) + ISNULL(SUM(p.a), 0) + ISNULL(SUM(p.m), 0)) AS TotalPerformance,
+        COUNT(cc.Part_id) AS Parts_Installed
+    FROM CAR_CONFIGURATION cc
+    INNER JOIN PART p ON cc.Part_id = p.Part_id
+    WHERE cc.Car_id = @Car_id
+    GROUP BY @Car_id;
+END
+GO
+PRINT 'SP sp_CalculateCarStats creado';
+GO
+
+-- ============================================================================
+-- 10 SP: Verificar Compatibilidad de Parte
+-- Descripción: Valida si una parte es compatible (ej: misma categoría)
+-- ============================================================================
+CREATE PROCEDURE sp_ValidatePartCompatibility
+    @Car_id INT,
+    @Part_id INT
+AS
+BEGIN
+    DECLARE @CarCategory VARCHAR(50);
+    DECLARE @PartCategory VARCHAR(50);
+
+    -- Obtener categoría de la parte
+    SELECT @PartCategory = Category FROM PART WHERE Part_id = @Part_id;
+
+    IF @PartCategory IS NULL
+    BEGIN
+        SELECT 'INVALID' AS Status, 'Parte no existe' AS Message;
+        RETURN;
+    END
+
+    -- Verificar si ya hay parte en esa categoría
+    IF EXISTS (SELECT 1 FROM CAR_CONFIGURATION WHERE Car_id = @Car_id AND Part_Category = @PartCategory)
+    BEGIN
+        SELECT 'REPLACE' AS Status, 'Ya hay parte instalada, se puede reemplazar' AS Message;
+    END
+    ELSE
+    BEGIN
+        SELECT 'INSTALL' AS Status, 'Parte compatible para instalación' AS Message;
+    END
+END
+GO
+PRINT 'SP sp_ValidatePartCompatibility creado';
+GO
+
+
+PRINT 'Módulo Armado implementado exitosamente !!';
+PRINT 'SPs agregados: sp_InstallPart, sp_ReplacePart, sp_CalculateCarStats, sp_ValidatePartCompatibility';
+GO
+
+-- ============================================================================
+-- MÓDULO SPONSORS: Stored Procedures para Gestión de Patrocinadores y Aportes
+-- ============================================================================
+
+-- ============================================================================
+-- 11 SP: Calcular el dinero disponible ?????????? Alexs? De qué es?
 -- ============================================================================
 CREATE OR ALTER PROCEDURE sp_CalculateAvailableBudget
     @Team_id INT
@@ -545,62 +605,14 @@ BEGIN
          WHERE e.Team_id = @Team_id) AS Total_Purchases;
 END
 GO
-
--- ============================================================================
--- 10 SP: Verificar Compatibilidad de Parte
--- Descripción: Valida si una parte es compatible (ej: misma categoría)
--- ============================================================================
-CREATE PROCEDURE sp_ValidatePartCompatibility
-    @Car_id INT,
-    @Part_id INT
-AS
-BEGIN
-    DECLARE @CarCategory VARCHAR(50);
-    DECLARE @PartCategory VARCHAR(50);
-
-    -- Obtener categoría de la parte
-    SELECT @PartCategory = Category FROM PART WHERE Part_id = @Part_id;
-
-    IF @PartCategory IS NULL
-    BEGIN
-        SELECT 'INVALID' AS Status, 'Parte no existe' AS Message;
-        RETURN;
-    END
-
-    -- Verificar si ya hay parte en esa categoría
-    IF EXISTS (SELECT 1 FROM CAR_CONFIGURATION WHERE Car_id = @Car_id AND Part_Category = @PartCategory)
-    BEGIN
-        SELECT 'REPLACE' AS Status, 'Ya hay parte instalada, se puede reemplazar' AS Message;
-    END
-    ELSE
-    BEGIN
-        SELECT 'INSTALL' AS Status, 'Parte compatible para instalación' AS Message;
-    END
-END
-GO
-
-PRINT 'SP sp_ValidatePartCompatibility creado';
-GO
-
-PRINT '';
-PRINT 'Módulo Armado implementado exitosamente';
-PRINT 'SPs agregados: sp_InstallPart, sp_ReplacePart, sp_CalculateCarStats, sp_ValidatePartCompatibility';
+PRINT 'SP sp_CalculateAvailableBudget creado';
 GO
 
 -- ============================================================================
--- MÓDULO SPONSORS: Stored Procedures para Gestión de Patrocinadores y Aportes
--- ============================================================================
-
--- ============================================================================
--- 11. SP: Registrar Aporte de Patrocinador (CON TRANSACCIÓN)
+-- 12. SP: Registrar Aporte de Patrocinador (CON TRANSACCIÓN)
 -- Descripción: Registra un aporte y actualiza el presupuesto del equipo
 -- IMPORTANTE: Usa transacción para garantizar consistencia
--- Cumple con requisitos del proyecto:
---   - Modifica datos críticos (presupuesto)
---   - Requiere consistencia entre tablas
---   - Aplica reglas de negocio
 -- ============================================================================
-
 CREATE OR ALTER PROCEDURE sp_RegisterContribution
     @Sponsor_id INT,
     @Team_id INT,
@@ -679,12 +691,11 @@ BEGIN
     END CATCH
 END
 GO
-
 PRINT 'SP sp_RegisterContribution actualizado';
 GO
 
 -- ============================================================================
--- 12. SP: Obtener Aportes de un Equipo con Detalles
+-- 13. SP: Obtener Aportes de un Equipo con Detalles
 -- Descripción: Retorna todos los aportes de un equipo con info del sponsor
 -- ============================================================================
 CREATE OR ALTER PROCEDURE sp_GetTeamContributionsDetailed
@@ -709,10 +720,8 @@ BEGIN
     ORDER BY c.Date DESC;
 END
 GO
-
 PRINT 'SP sp_GetTeamContributionsDetailed creado';
 GO
-
 
 -- ============================================================================
 -- 14. SP: Obtener Estadísticas de Sponsor
@@ -740,7 +749,6 @@ BEGIN
 
 END
 GO
-
 PRINT 'SP sp_GetSponsorStats creado';
 GO
 
@@ -748,8 +756,6 @@ GO
 -- 15. SP: Validar compra antes de realizar
 -- Útil para el frontend
 -- ============================================================================
-
-
 CREATE OR ALTER PROCEDURE sp_ValidatePurchase
     @Engineer_User_id INT,
     @Part_id INT,
@@ -809,4 +815,6 @@ BEGIN
             ELSE 0
         END AS CanPurchase;
 END
+GO
+PRINT 'SP sp_ValidatePurchase creado';
 GO
