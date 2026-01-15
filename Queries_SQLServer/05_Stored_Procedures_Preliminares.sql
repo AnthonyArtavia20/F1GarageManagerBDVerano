@@ -12,18 +12,50 @@ GO
 -- 1. SP: Calcular presupuesto de un equipo
 -- ============================================================================
 
-CREATE PROCEDURE sp_GetTeamBudget
+CREATE OR ALTER PROCEDURE sp_GetTeamBudget
     @Team_id INT
 AS
 BEGIN
-    -- Sumar todos los aportes del equipo
-    SELECT SUM(Amount) AS Total_Budget
+    SET NOCOUNT ON;
+
+    DECLARE @TotalIncome DECIMAL(10,2);
+    DECLARE @TotalSpent DECIMAL(10,2);
+    DECLARE @TeamName VARCHAR(100);
+
+    -- Obtener nombre del equipo
+    SELECT @TeamName = Name 
+    FROM TEAM 
+    WHERE Team_id = @Team_id;
+
+    -- Total recibido de aportes
+    SELECT @TotalIncome = ISNULL(SUM(Amount), 0)
     FROM CONTRIBUTION
     WHERE Team_id = @Team_id;
-END
-GO
 
-PRINT 'SP sp_GetTeamBudget creado';
+    -- Total gastado en compras
+    SELECT @TotalSpent = ISNULL(SUM(p.Total_price), 0)
+    FROM PURCHASE p
+    INNER JOIN ENGINEER e ON p.Engineer_User_id = e.User_id
+    WHERE e.Team_id = @Team_id;
+
+    -- Actualizar campos en TEAM
+    UPDATE TEAM 
+    SET Total_Budget = @TotalIncome,
+        Total_Spent = @TotalSpent
+    WHERE Team_id = @Team_id;
+
+    -- Retornar resultado
+    SELECT
+        @Team_id AS Team_id,
+        @TeamName AS Name,
+        @TotalIncome AS Total_Budget,
+        @TotalSpent AS Total_Spent,
+        (@TotalIncome - @TotalSpent) AS Available_Budget,
+        (SELECT COUNT(*) FROM CONTRIBUTION WHERE Team_id = @Team_id) AS Total_Contributions,
+        (SELECT COUNT(*) FROM PURCHASE p 
+         INNER JOIN ENGINEER e ON p.Engineer_User_id = e.User_id
+         WHERE e.Team_id = @Team_id) AS Total_Purchases;
+END
 GO
 
 -- ============================================================================
@@ -51,22 +83,164 @@ GO
 -- ============================================================================
 -- 3. SP: Registrar una compra simple
 -- ============================================================================
-CREATE PROCEDURE sp_RegisterPurchase
+CCREATE OR ALTER PROCEDURE sp_RegisterPurchase
     @Engineer_User_id INT,
     @Part_id INT,
-    @Quantity INT
+    @Quantity INT,
+    @NewAvailableBudget DECIMAL(10,2) OUTPUT
 AS
 BEGIN
-    -- Insertar compra (versión preliminar con valores fijos)
-    INSERT INTO PURCHASE (Engineer_User_id, Part_id, Quantity, Unit_price, Total_price)
-    VALUES (@Engineer_User_id, @Part_id, @Quantity, 100, 100 * @Quantity);
-    
-    PRINT 'Compra registrada';
+    SET NOCOUNT ON;
+
+    BEGIN TRANSACTION;
+
+    BEGIN TRY
+        DECLARE @Team_id INT;
+        DECLARE @Unit_price DECIMAL(10,2);
+        DECLARE @Total_price DECIMAL(10,2);
+        DECLARE @Available_Budget DECIMAL(10,2);
+        DECLARE @Stock INT;
+        DECLARE @TotalIncome DECIMAL(10,2);
+
+        -- Obtener Team_id del Engineer (CORREGIDO: desde ENGINEER, no USER)
+        SELECT @Team_id = Team_id
+        FROM ENGINEER
+        WHERE User_id = @Engineer_User_id;
+
+        IF @Team_id IS NULL
+        BEGIN
+            THROW 53001, 'Engineer no encontrado o no asignado a un equipo', 1;
+        END
+
+        -- Obtener precio y stock de la parte
+        SELECT @Unit_price = Price, @Stock = Stock
+        FROM PART
+        WHERE Part_id = @Part_id;
+
+        IF @Unit_price IS NULL
+        BEGIN
+            THROW 53002, 'Parte no encontrada', 1;
+        END
+
+        -- Validar cantidad
+        IF @Quantity <= 0
+        BEGIN
+            THROW 53003, 'La cantidad debe ser mayor a 0', 1;
+        END
+
+        -- Validar stock disponible
+        IF @Stock < @Quantity
+        BEGIN
+            THROW 53004, 'Stock insuficiente', 1;
+        END
+
+        -- Calcular precio total
+        SET @Total_price = @Unit_price * @Quantity;
+
+        -- Calcular presupuesto disponible (CORREGIDO: cálculo correcto)
+        SELECT @TotalIncome = ISNULL(SUM(Amount), 0)
+        FROM CONTRIBUTION
+        WHERE Team_id = @Team_id;
+
+        SELECT @Available_Budget = @TotalIncome - ISNULL(SUM(Total_price), 0)
+        FROM PURCHASE p
+        INNER JOIN ENGINEER e ON p.Engineer_User_id = e.User_id
+        WHERE e.Team_id = @Team_id;
+
+        SET @Available_Budget = ISNULL(@Available_Budget, @TotalIncome);
+
+        -- Validar presupuesto suficiente
+        IF @Available_Budget < @Total_price
+        BEGIN
+            DECLARE @ErrorMsg NVARCHAR(200) = 
+                'Presupuesto insuficiente. Disponible: ' + CAST(@Available_Budget AS VARCHAR(20)) + 
+                ', Necesario: ' + CAST(@Total_price AS VARCHAR(20));
+            THROW 53005, @ErrorMsg, 1;
+        END
+
+        -- ========== REALIZAR COMPRA ==========
+        
+        -- Insertar registro de compra
+        INSERT INTO PURCHASE (Engineer_User_id, Part_id, Quantity, Unit_price, Total_price, Purchase_Date)
+        VALUES (@Engineer_User_id, @Part_id, @Quantity, @Unit_price, @Total_price, GETDATE());
+
+        -- Reducir stock de la tienda
+        UPDATE PART
+        SET Stock = Stock - @Quantity
+        WHERE Part_id = @Part_id;
+
+        -- Actualizar Total_Spent del equipo
+        UPDATE TEAM
+        SET Total_Spent = Total_Spent + @Total_price
+        WHERE Team_id = @Team_id;
+
+        -- ========== AGREGAR AL INVENTARIO ==========
+        
+        DECLARE @Inventory_id INT;
+
+        -- Obtener o crear inventario del equipo
+        SELECT @Inventory_id = Inventory_id
+        FROM INVENTORY
+        WHERE Team_id = @Team_id;
+
+        IF @Inventory_id IS NULL
+        BEGIN
+            INSERT INTO INVENTORY (Team_id)
+            VALUES (@Team_id);
+            SET @Inventory_id = SCOPE_IDENTITY();
+        END
+
+        -- Verificar si la parte ya existe en el inventario
+        IF EXISTS (SELECT 1 FROM INVENTORY_PART WHERE Inventory_id = @Inventory_id AND Part_id = @Part_id)
+        BEGIN
+            -- Incrementar cantidad existente
+            UPDATE INVENTORY_PART
+            SET Quantity = Quantity + @Quantity,
+                Acquisition_date = GETDATE()
+            WHERE Inventory_id = @Inventory_id AND Part_id = @Part_id;
+        END
+        ELSE
+        BEGIN
+            -- Insertar nueva parte en inventario
+            INSERT INTO INVENTORY_PART (Inventory_id, Part_id, Quantity, Acquisition_date)
+            VALUES (@Inventory_id, @Part_id, @Quantity, GETDATE());
+        END
+
+        -- Obtener nuevo presupuesto disponible
+        SELECT @NewAvailableBudget = (@TotalIncome - ISNULL(SUM(Total_price), 0))
+        FROM PURCHASE p
+        INNER JOIN ENGINEER e ON p.Engineer_User_id = e.User_id
+        WHERE e.Team_id = @Team_id;
+
+        SET @NewAvailableBudget = ISNULL(@NewAvailableBudget, @TotalIncome);
+
+        -- ========== CONFIRMAR TRANSACCIÓN ==========
+        
+        COMMIT TRANSACTION;
+
+        -- Retornar información de la compra
+        SELECT
+            SCOPE_IDENTITY() AS Purchase_id,
+            @Total_price AS Total_Paid,
+            @NewAvailableBudget AS New_Available_Budget;
+
+        PRINT 'Compra registrada exitosamente. Presupuesto disponible: ' + CAST(@NewAvailableBudget AS VARCHAR(20));
+
+    END TRY
+    BEGIN CATCH
+        -- Manejo de errores
+        IF @@TRANCOUNT > 0
+            ROLLBACK TRANSACTION;
+
+        DECLARE @ErrorMessage NVARCHAR(4000) = ERROR_MESSAGE();
+        DECLARE @ErrorSeverity INT = ERROR_SEVERITY();
+        DECLARE @ErrorState INT = ERROR_STATE();
+
+        RAISERROR (@ErrorMessage, @ErrorSeverity, @ErrorState);
+    END CATCH
 END
 GO
 
-PRINT 'SP sp_RegisterPurchase creado';
-GO
 
 -- ============================================================================
 -- 4. SP: Ver configuración de un carro
@@ -332,33 +506,44 @@ GO
 -- 9 SP: Calcular Parámetros Reales del Auto
 -- Descripción: Calcula stats (p, a, m) basados en partes instaladas
 -- ============================================================================
-CREATE PROCEDURE sp_CalculateCarStats
-    @Car_id INT
+CREATE OR ALTER PROCEDURE sp_CalculateAvailableBudget
+    @Team_id INT
 AS
 BEGIN
-    DECLARE @TotalP INT = 0;
-    DECLARE @TotalA INT = 0;
-    DECLARE @TotalM INT = 0;
+    SET NOCOUNT ON;
 
-    -- Sumar parámetros de todas las partes instaladas
-    SELECT 
-        @TotalP = SUM(p.p),
-        @TotalA = SUM(p.a),
-        @TotalM = SUM(p.m)
-    FROM CAR_CONFIGURATION cc
-    JOIN PART p ON cc.Part_id = p.Part_id
-    WHERE cc.Car_id = @Car_id;
+    DECLARE @TotalIncome DECIMAL(10,2);
+    DECLARE @TotalSpent DECIMAL(10,2);
+    DECLARE @TeamName VARCHAR(100);
 
-    -- Si no hay partes, devolver 0
-    SELECT 
-        ISNULL(@TotalP, 0) AS Power,
-        ISNULL(@TotalA, 0) AS Aerodynamics,
-        ISNULL(@TotalM, 0) AS Maneuverability,
-        (ISNULL(@TotalP, 0) + ISNULL(@TotalA, 0) + ISNULL(@TotalM, 0)) AS TotalPerformance;
+    -- Obtener nombre del equipo
+    SELECT @TeamName = Name 
+    FROM TEAM 
+    WHERE Team_id = @Team_id;
+
+    --Total recibido de aporte--
+    SELECT @TotalIncome = ISNULL(SUM(Amount), 0)
+    FROM CONTRIBUTION
+    WHERE Team_id = @Team_id;
+
+    --Total gastado en compras-- (CORREGIDO: sin referencia a Role)
+    SELECT @TotalSpent = ISNULL(SUM(p.Total_price), 0)
+    FROM PURCHASE p
+    INNER JOIN ENGINEER e ON p.Engineer_User_id = e.User_id
+    WHERE e.Team_id = @Team_id;
+
+    --Resumen completo--
+    SELECT
+        @Team_id AS Team_ID,
+        @TeamName AS Team_Name,
+        @TotalIncome AS Total_Income,
+        @TotalSpent AS Total_Spent,
+        (@TotalIncome - @TotalSpent) AS Available_budget,
+        (SELECT COUNT(*) FROM CONTRIBUTION WHERE Team_id = @Team_id) AS Total_contributions,
+        (SELECT COUNT(*) FROM PURCHASE p 
+         INNER JOIN ENGINEER e ON p.Engineer_User_id = e.User_id
+         WHERE e.Team_id = @Team_id) AS Total_Purchases;
 END
-GO
-
-PRINT 'SP sp_CalculateCarStats creado';
 GO
 
 -- ============================================================================
@@ -400,4 +585,228 @@ GO
 PRINT '';
 PRINT 'Módulo Armado implementado exitosamente';
 PRINT 'SPs agregados: sp_InstallPart, sp_ReplacePart, sp_CalculateCarStats, sp_ValidatePartCompatibility';
+GO
+
+-- ============================================================================
+-- MÓDULO SPONSORS: Stored Procedures para Gestión de Patrocinadores y Aportes
+-- ============================================================================
+
+-- ============================================================================
+-- 11. SP: Registrar Aporte de Patrocinador (CON TRANSACCIÓN)
+-- Descripción: Registra un aporte y actualiza el presupuesto del equipo
+-- IMPORTANTE: Usa transacción para garantizar consistencia
+-- Cumple con requisitos del proyecto:
+--   - Modifica datos críticos (presupuesto)
+--   - Requiere consistencia entre tablas
+--   - Aplica reglas de negocio
+-- ============================================================================
+
+CREATE OR ALTER PROCEDURE sp_RegisterContribution
+    @Sponsor_id INT,
+    @Team_id INT,
+    @Amount DECIMAL(10,2),
+    @Description NVARCHAR(200) = NULL,
+    @NewBudget DECIMAL(10,2) OUTPUT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    -- Iniciar transacción para garantizar atomicidad
+    BEGIN TRANSACTION;
+
+    BEGIN TRY
+        -- ========== VALIDACIONES ==========
+        
+        -- Validar que el sponsor existe
+        IF NOT EXISTS (SELECT 1 FROM SPONSOR WHERE Sponsor_id = @Sponsor_id)
+        BEGIN
+            THROW 52001, 'Sponsor no existe', 1;
+        END
+
+        -- Validar que el equipo existe
+        IF NOT EXISTS (SELECT 1 FROM TEAM WHERE Team_id = @Team_id)
+        BEGIN
+            THROW 52002, 'Equipo no existe', 1;
+        END
+
+        -- Validar que el monto es positivo
+        IF @Amount <= 0
+        BEGIN
+            THROW 52003, 'El monto del aporte debe ser positivo', 1;
+        END
+
+        -- ========== INSERCIÓN DEL APORTE ==========
+        
+        INSERT INTO CONTRIBUTION (Sponsor_id, Team_id, Amount, Date, Description)
+        VALUES (@Sponsor_id, @Team_id, @Amount, GETDATE(), @Description);
+
+        -- ========== ACTUALIZAR PRESUPUESTO DEL EQUIPO ==========
+        
+        -- Incrementar Total_Budget del equipo
+        UPDATE TEAM
+        SET Total_Budget = Total_Budget + @Amount
+        WHERE Team_id = @Team_id;
+
+        -- Obtener el nuevo presupuesto total
+        SELECT @NewBudget = Total_Budget
+        FROM TEAM
+        WHERE Team_id = @Team_id;
+
+        -- ========== CONFIRMAR TRANSACCIÓN ==========
+        
+        COMMIT TRANSACTION;
+
+        -- Retornar el ID del aporte creado y el nuevo presupuesto
+        SELECT
+            SCOPE_IDENTITY() AS Contribution_id,
+            @NewBudget AS NewBudget;
+
+        PRINT 'Aporte registrado exitosamente. Nuevo presupuesto: ' + CAST(@NewBudget AS VARCHAR(20));
+
+    END TRY
+    BEGIN CATCH
+        -- Manejo de errores: revertir cambios
+        IF @@TRANCOUNT > 0
+            ROLLBACK TRANSACTION;
+
+        -- Obtener info del error
+        DECLARE @ErrorMessage NVARCHAR(4000) = ERROR_MESSAGE();
+        DECLARE @ErrorSeverity INT = ERROR_SEVERITY();
+        DECLARE @ErrorState INT = ERROR_STATE();
+
+        -- Relanzar el error para que llegue al controlador
+        RAISERROR (@ErrorMessage, @ErrorSeverity, @ErrorState);
+    END CATCH
+END
+GO
+
+PRINT 'SP sp_RegisterContribution actualizado';
+GO
+
+-- ============================================================================
+-- 12. SP: Obtener Aportes de un Equipo con Detalles
+-- Descripción: Retorna todos los aportes de un equipo con info del sponsor
+-- ============================================================================
+CREATE OR ALTER PROCEDURE sp_GetTeamContributionsDetailed
+    @Team_id INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SELECT
+        c.Contribution_id,
+        c.Sponsor_id,
+        s.Name AS Sponsor_Name,
+        s.Industry,
+        s.Country,
+        c.Team_id,
+        c.Amount,
+        c.Date,
+        c.Description
+    FROM CONTRIBUTION c
+    INNER JOIN SPONSOR s ON c.Sponsor_id = s.Sponsor_id
+    WHERE c.Team_id = @Team_id
+    ORDER BY c.Date DESC;
+END
+GO
+
+PRINT 'SP sp_GetTeamContributionsDetailed creado';
+GO
+
+
+-- ============================================================================
+-- 14. SP: Obtener Estadísticas de Sponsor
+-- Descripción: Retorna resumen de aportes por sponsor
+-- ============================================================================
+CREATE OR ALTER PROCEDURE sp_GetSponsorStats
+    @Sponsor_id INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SELECT
+        s.Sponsor_id,
+        s.Name,
+        s.Industry,
+        s.Country,
+        COUNT(c.Contribution_id) AS Total_Contributions,
+        ISNULL(SUM(c.Amount), 0) AS Total_Amount,
+        MAX(c.Date) AS Last_contribution_date,
+        COUNT(DISTINCT c.Team_id) AS Teams_Supported
+    FROM SPONSOR s
+    LEFT JOIN CONTRIBUTION c ON s.Sponsor_id = c.Sponsor_id
+    WHERE s.Sponsor_id = @Sponsor_id
+    GROUP BY s.Sponsor_id, s.Name, s.Industry, s.Country;
+
+END
+GO
+
+PRINT 'SP sp_GetSponsorStats creado';
+GO
+
+-- ============================================================================
+-- 15. SP: Validar compra antes de realizar
+-- Útil para el frontend
+-- ============================================================================
+
+
+CREATE OR ALTER PROCEDURE sp_ValidatePurchase
+    @Engineer_User_id INT,
+    @Part_id INT,
+    @Quantity INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    DECLARE @Team_id INT;
+    DECLARE @Unit_price DECIMAL(10,2);
+    DECLARE @Total_price DECIMAL(10,2);
+    DECLARE @Available_Budget DECIMAL(10,2);
+    DECLARE @Stock INT;
+    DECLARE @TotalIncome DECIMAL(10,2);
+
+    -- Obtener Team_id (CORREGIDO: desde ENGINEER, no USER)
+    SELECT @Team_id = Team_id
+    FROM ENGINEER
+    WHERE User_id = @Engineer_User_id;
+
+    -- Obtener datos de la parte
+    SELECT @Unit_price = Price, @Stock = Stock
+    FROM PART
+    WHERE Part_id = @Part_id;
+
+    -- Calcular presupuesto disponible (CORREGIDO: cálculo correcto)
+    SELECT @TotalIncome = ISNULL(SUM(Amount), 0)
+    FROM CONTRIBUTION
+    WHERE Team_id = @Team_id;
+
+    SELECT @Available_Budget = @TotalIncome - ISNULL(SUM(Total_price), 0)
+    FROM PURCHASE p
+    INNER JOIN ENGINEER e ON p.Engineer_User_id = e.User_id
+    WHERE e.Team_id = @Team_id;
+
+    SET @Available_Budget = ISNULL(@Available_Budget, @TotalIncome);
+
+    -- Calcular costo total
+    SET @Total_price = @Unit_price * @Quantity;
+
+    -- Retornar validación
+    SELECT
+        CASE 
+            WHEN @Team_id IS NULL THEN 'ERROR'
+            WHEN @Unit_price IS NULL THEN 'ERROR'
+            WHEN @Quantity <= 0 THEN 'ERROR'
+            WHEN @Stock < @Quantity THEN 'INSUFFICIENT_STOCK'
+            WHEN @Available_Budget < @Total_price THEN 'INSUFFICIENT_BUDGET'
+            ELSE 'OK'
+        END AS ValidationStatus,
+        @Available_Budget AS Available_Budget,
+        @Total_price AS Required_Amount,
+        @Stock AS Available_Stock,
+        @Quantity AS Requested_Quantity,
+        CASE 
+            WHEN @Available_Budget >= @Total_price AND @Stock >= @Quantity THEN 1
+            ELSE 0
+        END AS CanPurchase;
+END
 GO

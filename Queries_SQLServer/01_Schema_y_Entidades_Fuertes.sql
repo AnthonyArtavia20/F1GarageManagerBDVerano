@@ -57,11 +57,12 @@ GO
 CREATE TABLE TEAM (
     Team_id INT IDENTITY(1,1),
     Name VARCHAR(100) NOT NULL,
+    Total_Budget DECIMAL(10,2) DEFAULT 0,
+    Total_Spent DECIMAL(10,2) DEFAULT 0,
     
     -- Constraints
     CONSTRAINT PK_Team PRIMARY KEY (Team_id)
 );
-GO
 
 PRINT 'Tabla TEAM creada exitosamente';
 GO
@@ -73,6 +74,8 @@ GO
 CREATE TABLE SPONSOR (
     Sponsor_id INT IDENTITY(1,1),
     Name VARCHAR(100) NOT NULL,
+    Industry NVARCHAR(100),
+    Country NVARCHAR(50)
     
     -- Constraints
     CONSTRAINT PK_Sponsor PRIMARY KEY (Sponsor_id)
