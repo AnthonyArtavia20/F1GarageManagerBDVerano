@@ -3,7 +3,7 @@ import { Plus, Search, DollarSign, Calendar, Building2, TrendingUp } from "lucid
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { TeamSelector } from "@/components/TeamSelector"; // ← NUEVO
+import { TeamSelector } from "@/components/TeamSelector";
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:9090';
 
@@ -44,6 +44,13 @@ const Sponsors = () => {
   const [showAddSponsor, setShowAddSponsor] = useState(false);
   const [showAddContribution, setShowAddContribution] = useState(false);
   
+  // ✅ NUEVO: Estado para errores de validación
+  const [validationErrors, setValidationErrors] = useState({
+    teamId: false,
+    sponsorId: false,
+    amount: false
+  });
+
   const [newSponsor, setNewSponsor] = useState({
     Name: '',
     Industry: '',
@@ -52,8 +59,8 @@ const Sponsors = () => {
 
   const [newContribution, setNewContribution] = useState({
     sponsorId: '',
-    teamId: '1', // Temporal - deberías obtener esto del usuario logueado
-    teamName: '', // ← NUEVO: para mostrar el nombre
+    teamId: '',
+    teamName: '',
     amount: '',
     description: ''
   });
@@ -144,8 +151,31 @@ const Sponsors = () => {
     }
   };
 
+  // ✅ MEJORADO: Validación completa antes de enviar
   const handleCreateContribution = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Resetear errores de validación
+    setValidationErrors({
+      teamId: false,
+      sponsorId: false,
+      amount: false
+    });
+
+    // Validar campos obligatorios
+    const errors = {
+      teamId: !newContribution.teamId || newContribution.teamId.trim() === '',
+      sponsorId: !newContribution.sponsorId || newContribution.sponsorId.trim() === '',
+      amount: !newContribution.amount || parseFloat(newContribution.amount) <= 0
+    };
+
+    setValidationErrors(errors);
+
+    // Si hay errores, no continuar
+    if (errors.teamId || errors.sponsorId || errors.amount) {
+      alert('Por favor completa todos los campos obligatorios correctamente');
+      return;
+    }
     
     try {
       setLoading(true);
@@ -166,14 +196,22 @@ const Sponsors = () => {
         alert(`Aporte registrado. Nuevo presupuesto: $${data.data.newBudget}`);
         setNewContribution({
           sponsorId: '',
-          teamId: selectedTeamId,
-          teamName: '', // ← Limpiar también el nombre
+          teamId: '',
+          teamName: '',
           amount: '',
           description: ''
         });
+        setValidationErrors({
+          teamId: false,
+          sponsorId: false,
+          amount: false
+        });
         setShowAddContribution(false);
-        fetchTeamContributions();
-        fetchTeamBudget();
+        
+        // ✅ CORRECCIÓN: Recargar contribuciones Y sponsors para actualizar estadísticas
+        await fetchTeamContributions();
+        await fetchTeamBudget();
+        await fetchSponsors(); // ← Esto actualizará las estadísticas de aportes
       } else {
         alert('Error: ' + data.message);
       }
@@ -416,13 +454,18 @@ const Sponsors = () => {
               <h2 className="font-display text-xl font-bold mb-4">Register Contribution</h2>
               <form onSubmit={handleCreateContribution}>
                 <div className="space-y-4">
+                  {/* ✅ MEJORADO: Sponsor con validación visual */}
                   <div>
                     <label className="block text-sm font-medium mb-2">Sponsor *</label>
                     <select
                       value={newContribution.sponsorId}
-                      onChange={(e) => setNewContribution({...newContribution, sponsorId: e.target.value})}
-                      required
-                      className="w-full px-3 py-2 bg-background border border-border rounded-lg"
+                      onChange={(e) => {
+                        setNewContribution({...newContribution, sponsorId: e.target.value});
+                        setValidationErrors({...validationErrors, sponsorId: false});
+                      }}
+                      className={`w-full px-3 py-2 bg-background border rounded-lg ${
+                        validationErrors.sponsorId ? 'border-red-500' : 'border-border'
+                      }`}
                     >
                       <option value="">Select sponsor</option>
                       {sponsors.map(sponsor => (
@@ -431,36 +474,54 @@ const Sponsors = () => {
                         </option>
                       ))}
                     </select>
+                    {validationErrors.sponsorId && (
+                      <p className="text-xs text-red-400 mt-1">Please select a sponsor</p>
+                    )}
                   </div>
                   
-                  {/* ✅ NUEVO: Team Selector con búsqueda */}
+                  {/* ✅ MEJORADO: Team Selector con validación visual */}
                   <div>
                     <label className="block text-sm font-medium mb-2">Team *</label>
-                    <TeamSelector
-                      value={newContribution.teamId}
-                      onChange={(teamId, teamName) => 
-                        setNewContribution({
-                          ...newContribution, 
-                          teamId: teamId,
-                          teamName: teamName
-                        })
-                      }
-                      placeholder="Search and select team..."
-                      required
-                    />
+                    <div className={validationErrors.teamId ? 'border border-red-500 rounded-lg' : ''}>
+                      <TeamSelector
+                        value={newContribution.teamId}
+                        onChange={(teamId, teamName) => {
+                          setNewContribution({
+                            ...newContribution, 
+                            teamId: teamId,
+                            teamName: teamName
+                          });
+                          setValidationErrors({...validationErrors, teamId: false});
+                        }}
+                        placeholder="Search and select team..."
+                        required
+                      />
+                    </div>
+                    {validationErrors.teamId && (
+                      <p className="text-xs text-red-400 mt-1">Please select a team</p>
+                    )}
                   </div>
                   
+                  {/* ✅ MEJORADO: Amount con validación */}
                   <div>
                     <label className="block text-sm font-medium mb-2">Amount *</label>
                     <Input
                       type="number"
                       step="0.01"
+                      min="0.01"
                       value={newContribution.amount}
-                      onChange={(e) => setNewContribution({...newContribution, amount: e.target.value})}
-                      required
+                      onChange={(e) => {
+                        setNewContribution({...newContribution, amount: e.target.value});
+                        setValidationErrors({...validationErrors, amount: false});
+                      }}
                       placeholder="e.g., 100000.00"
+                      className={validationErrors.amount ? 'border-red-500' : ''}
                     />
+                    {validationErrors.amount && (
+                      <p className="text-xs text-red-400 mt-1">Amount must be greater than 0</p>
+                    )}
                   </div>
+                  
                   <div>
                     <label className="block text-sm font-medium mb-2">Description</label>
                     <Input
@@ -477,7 +538,14 @@ const Sponsors = () => {
                   <Button 
                     type="button" 
                     variant="outline" 
-                    onClick={() => setShowAddContribution(false)}
+                    onClick={() => {
+                      setShowAddContribution(false);
+                      setValidationErrors({
+                        teamId: false,
+                        sponsorId: false,
+                        amount: false
+                      });
+                    }}
                   >
                     Cancel
                   </Button>
