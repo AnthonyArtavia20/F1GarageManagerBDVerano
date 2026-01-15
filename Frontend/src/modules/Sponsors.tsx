@@ -3,6 +3,7 @@ import { Plus, Search, DollarSign, Calendar, Building2, TrendingUp } from "lucid
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { TeamSelector } from "@/components/TeamSelector"; // ← NUEVO
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:9090';
 
@@ -52,6 +53,7 @@ const Sponsors = () => {
   const [newContribution, setNewContribution] = useState({
     sponsorId: '',
     teamId: '1', // Temporal - deberías obtener esto del usuario logueado
+    teamName: '', // ← NUEVO: para mostrar el nombre
     amount: '',
     description: ''
   });
@@ -165,6 +167,7 @@ const Sponsors = () => {
         setNewContribution({
           sponsorId: '',
           teamId: selectedTeamId,
+          teamName: '', // ← Limpiar también el nombre
           amount: '',
           description: ''
         });
@@ -429,6 +432,24 @@ const Sponsors = () => {
                       ))}
                     </select>
                   </div>
+                  
+                  {/* ✅ NUEVO: Team Selector con búsqueda */}
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Team *</label>
+                    <TeamSelector
+                      value={newContribution.teamId}
+                      onChange={(teamId, teamName) => 
+                        setNewContribution({
+                          ...newContribution, 
+                          teamId: teamId,
+                          teamName: teamName
+                        })
+                      }
+                      placeholder="Search and select team..."
+                      required
+                    />
+                  </div>
+                  
                   <div>
                     <label className="block text-sm font-medium mb-2">Amount *</label>
                     <Input

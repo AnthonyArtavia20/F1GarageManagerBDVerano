@@ -5,7 +5,8 @@ const corsMiddleware = require('./middleware/corsMiddleware');
 // Import Routes
 const testRoutes = require('./routes/testRoutes');
 const spRoutes = require('./routes/spRoutes');
-const sponsorsRoutes = require('./routes/sponsorsRoutes'); // ← NUEVO
+const sponsorsRoutes = require('./routes/sponsorsRoutes');
+const teamsRoutes = require('./routes/teamsRoutes');
 
 const app = express();
 const PORT = process.env.PORT;
@@ -49,7 +50,8 @@ app.get('/status', async (req, res) => {
 // API Routes 
 app.use('/api/test', testRoutes);
 app.use('/api/sp', spRoutes);
-app.use('/api/sponsors', sponsorsRoutes); // ← NUEVO
+app.use('/api/sponsors', sponsorsRoutes);
+app.use('/api/teams', teamsRoutes);
 
 // Init Server 
 async function initServer() {
