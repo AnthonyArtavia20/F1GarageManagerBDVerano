@@ -73,6 +73,8 @@ GO
 CREATE TABLE SPONSOR (
     Sponsor_id INT IDENTITY(1,1),
     Name VARCHAR(100) NOT NULL,
+    Industry NVARCHAR(100),
+    Country NVARCHAR(50)
     
     -- Constraints
     CONSTRAINT PK_Sponsor PRIMARY KEY (Sponsor_id)

@@ -401,3 +401,201 @@ PRINT '';
 PRINT 'Módulo Armado implementado exitosamente';
 PRINT 'SPs agregados: sp_InstallPart, sp_ReplacePart, sp_CalculateCarStats, sp_ValidatePartCompatibility';
 GO
+
+-- ============================================================================
+-- MÓDULO SPONSORS: Stored Procedures para Gestión de Patrocinadores y Aportes
+-- ============================================================================
+
+-- ============================================================================
+-- 11. SP: Registrar Aporte de Patrocinador (CON TRANSACCIÓN)
+-- Descripción: Registra un aporte y actualiza el presupuesto del equipo
+-- IMPORTANTE: Usa transacción para garantizar consistencia
+-- Cumple con requisitos del proyecto:
+--   - Modifica datos críticos (presupuesto)
+--   - Requiere consistencia entre tablas
+--   - Aplica reglas de negocio
+-- ============================================================================
+
+CREATE OR ALTER PROCEDURE sp_RegisterContribution
+    @Sponsor_id INT,
+    @Team_id INT,
+    @Amount DECIMAL(10,2),
+    @Description NVARCHAR(200) = NULL,
+    @NewBudget DECIMAL(10,2) OUTPUT
+
+    AS
+    BEGIN
+
+    SET NOCOUNT ON;
+
+    --Iniciar transaccion para garantizar atomicidad
+    BEGIN TRANSACTION;
+
+    BEGIN TRY
+        -- VALIDACIONES --
+
+        --Validar que el sponsor existe
+        IF NOT EXISTS (SELECT 1 FROM SPONSOR WHERE Sponsor_id = @Sponsor_id)
+        BEGIN
+            THROW 52001, 'Sponsor no existe', 1;
+        END
+
+        --Validar que el equipo existe--
+        IF NOT EXISTS (SELECT 1 FROM TEAM WHERE Team_id = @Team_id)
+        BEGIN
+            THROW 52002, 'Equipo no existe', 1;
+        END
+
+        --Validar que el monto es positivo--
+        IF @Amount <= 0
+        BEGIN
+            THROW 52003, 'El monto del aporte debe ser positivo', 1;
+        END
+
+        --Insercion de aporte--
+        INSERT INTO CONTRIBUTION (Sponsor_id, Team_id, Amount, Date, Description)
+        VALUES (@Sponsor_id, @Team_id, @Amount, GETDATE(), @Description);
+
+        --CALCULO DE PRESUPUESTO --
+
+        -- Calcular nuevo presupuesto (suma de todos los aportes del equipo)
+        -- Esto cumple con el requisito: "el presupuesto se calcula únicamente 
+        -- a partir de aportes registrados"
+
+        SELECT @NewBudget = ISNULL(SUM(Amount), 0)
+        FROM CONTRIBUTION
+        WHERE Team_id = @Team_id;
+
+        --CONFIRMAR TRANSACCION --
+        COMMIT TRANSACTION;
+
+        --Retornar el ID del aporte creado y el nuevo presupuesto--
+        SELECT
+            SCOPE_IDENTITY() AS Contribution_id,
+            @NewBudget AS NewBudget;
+
+        PRINT 'Aporte registrado exitosamente';
+
+    END TRY
+    BEGIN CATCH
+
+    --Manejo de errores-
+
+    --Revertir cambios en caso de error--
+    IF @@TRANCOUNT > 0
+        ROLLBACK TRANSACTION;
+
+        --Obtener info del error--
+        DECLARE @ErrorMessage NVARCHAR(4000) = ERROR_MESSAGE();
+        DECLARE @ErrorSeverity INT = ERROR_SEVERITY();
+        DECLARE @ErrorState INT = ERROR_STATE();
+
+        --Relanzar el error para que llegue al controlador--
+        RAISERROR (@ErrorMessage, @ErrorSeverity, @ErrorState);
+    END CATCH
+END
+GO
+
+PRINT 'SP sp_RegisterContribution creado';
+GO
+
+-- ============================================================================
+-- 12. SP: Obtener Aportes de un Equipo con Detalles
+-- Descripción: Retorna todos los aportes de un equipo con info del sponsor
+-- ============================================================================
+CREATE OR ALTER PROCEDURE sp_GetTeamContributionsDetailed
+    @Team_id INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SELECT
+        c.Contribution_id,
+        c.Sponsor_id,
+        s.Name AS Sponsor_Name,
+        s.Industry,
+        s.Country,
+        c.Team_id,
+        c.Amount,
+        c.Date,
+        c.Description
+    FROM CONTRIBUTION c
+    INNER JOIN SPONSOR s ON c.Sponsor_id = s.Sponsor_id
+    WHERE c.Team_id = @Team_id
+    ORDER BY c.Date DESC;
+END
+GO
+
+PRINT 'SP sp_GetTeamContributionsDetailed creado';
+GO
+
+-- ============================================================================
+-- 13. SP: Calcular Presupuesto Disponible (Mejorado)
+-- Descripción: Calcula presupuesto considerando ingresos y gastos
+-- ============================================================================
+CREATE OR ALTER PROCEDURE sp_CalculateAvailableBudget
+    @Team_id INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    DECLARE @TotalIncome DECIMAL(10,2);
+    DECLARE @TotalSpent DECIMAL(10,2);
+
+    --Total recibido de aporte--
+    SELECT @TotalIncome = ISNULL(SUM(Amount), 0)
+    FROM CONTRIBUTION
+    WHERE Team_id = @Team_id;
+
+    --Total gastado en compras--
+    SELECT @TotalSpent = ISNULL(SUM(Total_price), 0)
+    FROM PURCHASE 
+    WHERE Engineer_User_id IN (
+        SELECT User_id 
+        FROM [USER] 
+        WHERE Team_id = @Team_id AND Role = 'Engineer'
+    );
+
+    --Resumen completo--
+    SELECT
+        @Team_id AS Team_ID,
+        @TotalIncome AS Total_Income,
+        @TotalSpent AS Total_Spent,
+        (@TotalIncome - @TotalSpent) AS Available_budget,  -- Coma
+        (SELECT COUNT(*) FROM CONTRIBUTION WHERE Team_id = @Team_id) AS Total_contributions;
+    END
+    GO
+
+PRINT 'SP sp_CalculateAvailableBudget creado';
+GO
+
+-- ============================================================================
+-- 14. SP: Obtener Estadísticas de Sponsor
+-- Descripción: Retorna resumen de aportes por sponsor
+-- ============================================================================
+CREATE OR ALTER PROCEDURE sp_GetSponsorStats
+    @Sponsor_id INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SELECT
+        s.Sponsor_id,
+        s.Name,
+        s.Industry,
+        s.Country,
+        COUNT(c.Contribution_id) AS Total_Contributions,
+        ISNULL(SUM(c.Amount), 0) AS Total_Amount,
+        MAX(c.Date) AS Last_contribution_date,
+        COUNT(DISTINCT c.Team_id) AS Teams_Supported
+    FROM SPONSOR s
+    LEFT JOIN CONTRIBUTION c ON s.Sponsor_id = c.Sponsor_id
+    WHERE s.Sponsor_id = @Sponsor_id
+    GROUP BY s.Sponsor_id, s.Name, s.Industry, s.Country;
+
+END
+GO
+
+PRINT 'SP sp_GetSponsorStats creado';
+GO
+
