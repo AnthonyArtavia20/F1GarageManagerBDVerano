@@ -53,7 +53,7 @@ try {
     res.json({ success: true, message: 'Parte instalada exitosamente' }); // Si todo sale bien, retorna éxito
     } catch (error) {
     res.status(500).json({ error: error.message }); // Si ocurre cualquier error (validación, conexión, etc.) Retorna error 500 (Internal Server Error) con mensaje del error
-}
+    }
 });
 
 /**
@@ -87,7 +87,7 @@ try {
     res.json({ success: true, message: 'Parte reemplazada exitosamente' });
     } catch (error) {
     res.status(500).json({ error: error.message });
-}
+    }
 });
 
 /**
@@ -109,7 +109,7 @@ try {
     res.json({ success: true, stats: result.recordset[0] }); //Retorna las estadísticas calculadas, result.recordset[0] contiene la fila de resultado del SP
     } catch (error) {
         res.status(500).json({ error: error.message });
-}
+    }
 });
 
 /**
@@ -131,7 +131,26 @@ try {
     res.json({ success: true, validation: result.recordset[0] });
     } catch (error) {
     res.status(500).json({ error: error.message });
-}
+    }
+});
+
+//Endpoint opcional que sirve para Mostrar en el frontend la lista de partes instaladas antes de calcular stats.
+router.get('/car-parts/:carId', async (req, res) => {
+    try {
+    const { carId } = req.params;
+    const pool = await require('../../config/database').mssqlConnect();
+    
+    const result = await pool.request()
+        .input('Car_id', require('../../config/database').sql.Int, parseInt(carId))
+        .execute('sp_GetCarConfiguration');
+    
+    res.json({ 
+        success: true, 
+        parts: result.recordset 
+    });
+    } catch (error) {
+    res.status(500).json({ error: error.message });
+    }
 });
 
 };
