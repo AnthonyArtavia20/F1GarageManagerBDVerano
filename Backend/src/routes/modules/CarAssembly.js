@@ -112,6 +112,26 @@ try {
 }
 });
 
-//falta que agrege otros endpoints aquí
+/**
+ * GET /api/sp/validate-part/:carId/:partId, Valida si una parte puede instalarse en un auto específico
+ * Método: GET (solo lectura), Parámetros: carId y partId en la URL (ej: /api/sp/validate-part/1/5)
+ * Validaciones realizadas: Verifica que el auto existe, Verifica que la parte existe, Verifica compatibilidad de categoría, Verifica que no haya conflicto con partes ya instaladas
+ * Respuesta: { success: true, validation: { Status: "VALID"|"INVALID", Message: "descripción" } }, Uso típico: Antes de mostrar opción de instalar, para deshabilitar partes incompatibles
+ */
+router.get('/validate-part/:carId/:partId', async (req, res) => {
+try {
+    const { carId, partId } = req.params;// Extrae ambos IDs de la URL
+    const pool = await require('../../config/database').mssqlConnect();// Conexión a BD
+    const result = await pool.request()    // Ejecuta SP de validación
+        .input('Car_id', require('../../config/database').sql.Int, parseInt(carId))
+        .input('Part_id', require('../../config/database').sql.Int, parseInt(partId))
+        .execute('sp_ValidatePartCompatibility');
+
+    // Retorna resultado de validación
+    res.json({ success: true, validation: result.recordset[0] });
+    } catch (error) {
+    res.status(500).json({ error: error.message });
+}
+});
 
 };
