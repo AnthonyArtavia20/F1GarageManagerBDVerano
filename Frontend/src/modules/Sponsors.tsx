@@ -282,38 +282,6 @@ const Sponsors = () => {
           </div>
         )}
 
-        {/* Budget Card */}
-        {budget && (
-          <div className="glass-card rounded-xl p-6 mb-6 opacity-0 animate-fade-in" style={{ animationDelay: "50ms" }}>
-            <div className="flex items-center gap-4 mb-4">
-              <TrendingUp className="w-8 h-8 text-primary" />
-              <h2 className="font-display text-xl font-semibold text-foreground">
-                Team Budget Overview
-              </h2>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <p className="text-sm text-muted-foreground mb-1">Total Contributions</p>
-                <p className="font-display text-2xl font-bold text-success">
-                  ${budget.totalBudget.toFixed(2)}
-                </p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground mb-1">Total Spent</p>
-                <p className="font-display text-2xl font-bold text-red-400">
-                  ${budget.totalSpent.toFixed(2)}
-                </p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground mb-1">Available Budget</p>
-                <p className="font-display text-2xl font-bold text-primary">
-                  ${budget.availableBudget.toFixed(2)}
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
-
         {/* Search */}
         <div className="relative max-w-md mb-8 opacity-0 animate-fade-in" style={{ animationDelay: "100ms" }}>
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
