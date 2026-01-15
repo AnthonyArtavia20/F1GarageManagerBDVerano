@@ -59,7 +59,7 @@ export const TeamSelector = ({
   // Obtener todos los equipos
   const fetchTeams = async () => {
     try {
-      const response = await fetch(`${API_URL}/api/teams`);
+      const response = await fetch(`${API_URL}/api/sp/teams`); //ACTUALIZADO: /api/teams → /api/sp/teams
       const data = await response.json();
       
       if (data.success) {
@@ -74,8 +74,8 @@ export const TeamSelector = ({
   // Buscar equipos con filtro
   const searchTeams = async (searchTerm: string) => {
     try {
-      const response = await fetch(
-        `${API_URL}/api/teams/search?search=${encodeURIComponent(searchTerm)}`
+      const response = await fetch( // ACTUALIZADO: /api/teams/search → /api/sp/teams/search
+        `${API_URL}/api/sp/teams/search?search=${encodeURIComponent(searchTerm)}`
       );
       const data = await response.json();
       

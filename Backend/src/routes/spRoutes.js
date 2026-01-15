@@ -43,13 +43,19 @@ router.post('/execute', spController.executeStoredProcedure); //Ejecuta cualquie
 // MÓDULOS ESPECÍFICOS - Importación
 // ============================================================================
 
-// MÓDULO ARMADO: ENDPOINTS ESPECÍFICOS - Encargado: Anthony :b
+// MÓDULO ARMADO: ENDPOINTS ESPECÍFICOS - Encargado: ANTHONY :b
 require('./modules/CarAssembly')(router);
+
+// MÓDULO SPONSORS: Gestión de patrocinadores y aportes - Encargado: ALEXS
+require('./modules/sponsorsRoutes')(router);
+
+// MÓDULO TEAMS: Gestión de equipos - Encargado: ALEXS
+require('./modules/teamsRoutes')(router);
 
 // Aquí se agregarán más módulos conforme el equipo los desarrolle
 // Ejemplo:
-// require('./Modules/CarrerasModule')(router);
-// require('./Modules/InventarioModule')(router);
+// require('./modules/CarrerasModule')(router);
+// require('./modules/InventarioModule')(router);
 
 // ============================================================================
 // EXPORTACIÓN DEL MÓDULO
