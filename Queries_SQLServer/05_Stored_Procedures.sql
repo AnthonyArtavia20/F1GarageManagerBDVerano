@@ -818,3 +818,83 @@ END
 GO
 PRINT 'SP sp_ValidatePurchase creado';
 GO
+
+-- ============================================================================
+-- SP: Agregar Nueva Parte al Catálogo
+-- ============================================================================
+CREATE OR ALTER PROCEDURE sp_AddPart
+    @Name NVARCHAR(100),
+    @Category VARCHAR(50),
+    @Price DECIMAL(10,2),
+    @Stock INT,
+    @p INT,
+    @a INT,
+    @m INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    BEGIN TRANSACTION;
+
+    BEGIN TRY
+        -- Validar categoría
+        IF @Category NOT IN ('Power_Unit', 'Aerodynamics_pkg', 'Wheels', 'Suspension', 'Gearbox')
+        BEGIN
+            THROW 54001, 'Categoría inválida', 1;
+        END
+
+        -- Validar valores P, A, M
+        IF @p < 0 OR @p > 9 OR @a < 0 OR @a > 9 OR @m < 0 OR @m > 9
+        BEGIN
+            THROW 54002, 'Los valores P, A, M deben estar entre 0 y 9', 1;
+        END
+
+        -- Validar precio y stock
+        IF @Price <= 0
+        BEGIN
+            THROW 54003, 'El precio debe ser mayor a 0', 1;
+        END
+
+        IF @Stock < 0
+        BEGIN
+            THROW 54004, 'El stock no puede ser negativo', 1;
+        END
+
+        -- Insertar nueva parte
+        INSERT INTO PART (Category, Price, Stock, p, a, m)
+        VALUES (@Category, @Price, @Stock, @p, @a, @m);
+
+        -- Obtener ID de la nueva parte
+        DECLARE @NewPartID INT = SCOPE_IDENTITY();
+
+        COMMIT TRANSACTION;
+
+        -- Retornar la parte creada
+        SELECT 
+            Part_id,
+            Category,
+            Price,
+            Stock,
+            p,
+            a,
+            m
+        FROM PART
+        WHERE Part_id = @NewPartID;
+
+        PRINT 'Parte agregada exitosamente al catálogo';
+
+    END TRY
+    BEGIN CATCH
+        IF @@TRANCOUNT > 0
+            ROLLBACK TRANSACTION;
+
+        DECLARE @ErrorMessage NVARCHAR(4000) = ERROR_MESSAGE();
+        DECLARE @ErrorSeverity INT = ERROR_SEVERITY();
+        DECLARE @ErrorState INT = ERROR_STATE();
+
+        RAISERROR (@ErrorMessage, @ErrorSeverity, @ErrorState);
+    END CATCH
+END
+GO
+PRINT 'SP sp_AddPart creado';
+GO
