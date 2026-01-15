@@ -79,7 +79,7 @@ const Sponsors = () => {
   const fetchSponsors = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${API_URL}/api/sponsors`);
+      const response = await fetch(`${API_URL}/api/sp/sponsors`);
       const data = await response.json();
       
       if (data.success) {
@@ -97,7 +97,7 @@ const Sponsors = () => {
 
   const fetchTeamContributions = async () => {
     try {
-      const response = await fetch(`${API_URL}/api/sponsors/contributions/${selectedTeamId}`);
+      const response = await fetch(`${API_URL}/api/sp/sponsors/contributions/${selectedTeamId}`);
       const data = await response.json();
       
       if (data.success) {
@@ -110,7 +110,7 @@ const Sponsors = () => {
 
   const fetchTeamBudget = async () => {
     try {
-      const response = await fetch(`${API_URL}/api/sponsors/budget/${selectedTeamId}`);
+      const response = await fetch(`${API_URL}/api/sp/sponsors/budget/${selectedTeamId}`);
       const data = await response.json();
       
       if (data.success) {
@@ -126,7 +126,7 @@ const Sponsors = () => {
     
     try {
       setLoading(true);
-      const response = await fetch(`${API_URL}/api/sponsors`, {
+      const response = await fetch(`${API_URL}/api/sp/sponsors`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -179,7 +179,7 @@ const Sponsors = () => {
     
     try {
       setLoading(true);
-      const response = await fetch(`${API_URL}/api/sponsors/contributions`, {
+      const response = await fetch(`${API_URL}/api/sp/sponsors/contributions`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
