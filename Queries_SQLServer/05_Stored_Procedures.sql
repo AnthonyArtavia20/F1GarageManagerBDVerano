@@ -60,7 +60,7 @@ GO
 -- ============================================================================
 -- 2. SP: Ver inventario de un equipo
 -- ============================================================================
-CREATE PROCEDURE sp_GetTeamInventory
+CREATE OR ALTER PROCEDURE sp_GetTeamInventory
     @Team_id INT
 AS
 BEGIN
@@ -242,7 +242,7 @@ GO
 -- ============================================================================
 -- 4. SP: Ver configuración de un carro
 -- ============================================================================
-CREATE PROCEDURE sp_GetCarConfiguration
+CREATE OR ALTER PROCEDURE sp_GetCarConfiguration
     @Car_id INT
 AS
 BEGIN
@@ -260,7 +260,7 @@ GO
 -- ============================================================================
 -- 5 SP: Crear Simulación Básica
 -- ============================================================================
-CREATE PROCEDURE sp_CreateSimulationBasic
+CREATE OR ALTER PROCEDURE sp_CreateSimulationBasic
     @AdminID INT,
     @CircuitID INT
 AS
@@ -275,7 +275,7 @@ GO
 -- ============================================================================
 -- 6 SP: Agregar Participante
 -- ============================================================================
-CREATE PROCEDURE sp_AddSimulationParticipant
+CREATE OR ALTER PROCEDURE sp_AddSimulationParticipant
     @SimulationID INT,
     @CarID INT,
     @DriverID INT,
@@ -324,7 +324,7 @@ PRINT 'Iniciando creación de Stored Procedures del Módulo de armado';
 -- 7 SP: Instalar Parte en Auto
 -- Descripción: Instala una parte en un auto, validando inventario y compatibilidad
 -- ============================================================================
-CREATE PROCEDURE sp_InstallPart
+CREATE OR ALTER PROCEDURE sp_InstallPart
     @Car_id INT,
     @Part_id INT,
     @Team_id INT
@@ -400,7 +400,7 @@ GO
 -- 8 SP: Reemplazar Parte en Auto
 -- Descripción: Reemplaza una parte existente por otra, validando todo
 -- ============================================================================
-CREATE PROCEDURE sp_ReplacePart
+CREATE OR ALTER PROCEDURE sp_ReplacePart
     @Car_id INT,
     @OldPart_id INT,
     @NewPart_id INT,
@@ -512,8 +512,7 @@ BEGIN
         COUNT(cc.Part_id) AS Parts_Installed
     FROM CAR_CONFIGURATION cc
     INNER JOIN PART p ON cc.Part_id = p.Part_id
-    WHERE cc.Car_id = @Car_id
-    GROUP BY @Car_id;
+    WHERE cc.Car_id = @Car_id;
 END
 GO
 PRINT 'SP sp_CalculateCarStats creado';
@@ -523,7 +522,7 @@ GO
 -- 10 SP: Verificar Compatibilidad de Parte
 -- Descripción: Valida si una parte es compatible (ej: misma categoría)
 -- ============================================================================
-CREATE PROCEDURE sp_ValidatePartCompatibility
+CREATE OR ALTER PROCEDURE sp_ValidatePartCompatibility
     @Car_id INT,
     @Part_id INT
 AS
