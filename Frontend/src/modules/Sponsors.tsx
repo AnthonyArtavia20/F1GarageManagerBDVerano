@@ -79,7 +79,7 @@ const Sponsors = () => {
   const fetchSponsors = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${API_URL}/api/sp/sponsors`);
+      const response = await fetch(`${API_URL}/api/sponsors`);
       const data = await response.json();
       
       if (data.success) {
@@ -97,7 +97,7 @@ const Sponsors = () => {
 
   const fetchTeamContributions = async () => {
     try {
-      const response = await fetch(`${API_URL}/api/sp/sponsors/contributions/${selectedTeamId}`);
+      const response = await fetch(`${API_URL}/api/sponsors/contributions/${selectedTeamId}`);
       const data = await response.json();
       
       if (data.success) {
@@ -110,7 +110,7 @@ const Sponsors = () => {
 
   const fetchTeamBudget = async () => {
     try {
-      const response = await fetch(`${API_URL}/api/sp/sponsors/budget/${selectedTeamId}`);
+      const response = await fetch(`${API_URL}/api/sponsors/budget/${selectedTeamId}`);
       const data = await response.json();
       
       if (data.success) {
@@ -126,7 +126,7 @@ const Sponsors = () => {
     
     try {
       setLoading(true);
-      const response = await fetch(`${API_URL}/api/sp/sponsors`, {
+      const response = await fetch(`${API_URL}/api/sponsors`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -179,7 +179,7 @@ const Sponsors = () => {
     
     try {
       setLoading(true);
-      const response = await fetch(`${API_URL}/api/sp/sponsors/contributions`, {
+      const response = await fetch(`${API_URL}/api/sponsors/contributions`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -279,6 +279,38 @@ const Sponsors = () => {
         {error && (
           <div className="glass-card rounded-xl p-4 mb-6 bg-red-500/10 border-red-500/20">
             <p className="text-red-400">{error}</p>
+          </div>
+        )}
+
+        {/* Budget Card */}
+        {budget && (
+          <div className="glass-card rounded-xl p-6 mb-6 opacity-0 animate-fade-in" style={{ animationDelay: "50ms" }}>
+            <div className="flex items-center gap-4 mb-4">
+              <TrendingUp className="w-8 h-8 text-primary" />
+              <h2 className="font-display text-xl font-semibold text-foreground">
+                Team Budget Overview
+              </h2>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <p className="text-sm text-muted-foreground mb-1">Total Contributions</p>
+                <p className="font-display text-2xl font-bold text-success">
+                  ${budget.totalBudget.toFixed(2)}
+                </p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground mb-1">Total Spent</p>
+                <p className="font-display text-2xl font-bold text-red-400">
+                  ${budget.totalSpent.toFixed(2)}
+                </p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground mb-1">Available Budget</p>
+                <p className="font-display text-2xl font-bold text-primary">
+                  ${budget.availableBudget.toFixed(2)}
+                </p>
+              </div>
+            </div>
           </div>
         )}
 

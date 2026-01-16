@@ -60,7 +60,7 @@ GO
 -- ============================================================================
 -- 2. SP: Ver inventario de un equipo
 -- ============================================================================
-CREATE PROCEDURE sp_GetTeamInventory
+CREATE OR ALTER PROCEDURE sp_GetTeamInventory
     @Team_id INT
 AS
 BEGIN
@@ -242,7 +242,7 @@ GO
 -- ============================================================================
 -- 4. SP: Ver configuración de un carro
 -- ============================================================================
-CREATE PROCEDURE sp_GetCarConfiguration
+CREATE OR ALTER PROCEDURE sp_GetCarConfiguration
     @Car_id INT
 AS
 BEGIN
@@ -260,7 +260,7 @@ GO
 -- ============================================================================
 -- 5 SP: Crear Simulación Básica
 -- ============================================================================
-CREATE PROCEDURE sp_CreateSimulationBasic
+CREATE OR ALTER PROCEDURE sp_CreateSimulationBasic
     @AdminID INT,
     @CircuitID INT
 AS
@@ -275,7 +275,7 @@ GO
 -- ============================================================================
 -- 6 SP: Agregar Participante
 -- ============================================================================
-CREATE PROCEDURE sp_AddSimulationParticipant
+CREATE OR ALTER PROCEDURE sp_AddSimulationParticipant
     @SimulationID INT,
     @CarID INT,
     @DriverID INT,
@@ -332,6 +332,7 @@ GO
 CREATE OR ALTER PROCEDURE sp_InstallPart
     @Car_id INT,
     @Part_id INT
+    @Team_id INT
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -339,13 +340,14 @@ BEGIN
     BEGIN TRANSACTION;
 
     BEGIN TRY
-        DECLARE @Category VARCHAR(50);
-        DECLARE @Inventory_id INT;
-        DECLARE @Team_id INT;
-        DECLARE @Quantity INT;
+            DECLARE @Category VARCHAR(50);
+            DECLARE @Stock INT;
+            DECLARE @TeamInventory INT;
+            DECLARE @Budget DECIMAL(10,2);
+            DECLARE @PartPrice DECIMAL(10,2);
 
-        -- Obtener categoría de la parte
-        SELECT @Category = Category
+        -- Obtener categoría y precio de la parte
+        SELECT @Category = Category, @PartPrice = Price, @Stock = Stock
         FROM PART
         WHERE Part_id = @Part_id;
 
@@ -353,6 +355,9 @@ BEGIN
         BEGIN
             THROW 50001, 'Parte no encontrada', 1;
         END
+
+        -- Verificar si ya hay una parte instalada en esa categoría
+        IF EXISTS (SELECT 1 FROM CAR_CONFIGURATION WHERE Car_id = @Car_id AND Part_Category = @Category)
 
         -- Obtener Team_id del carro
         SELECT @Team_id = Team_id
@@ -373,6 +378,11 @@ BEGIN
         SELECT @Quantity = Quantity
         FROM INVENTORY_PART
         WHERE Inventory_id = @Inventory_id AND Part_id = @Part_id;
+
+        IF @Stock <= 0
+        BEGIN
+            THROW 51003, 'Parte sin stock disponible', 1;
+        END
 
         IF @Quantity IS NULL OR @Quantity <= 0
         BEGIN
@@ -400,10 +410,14 @@ BEGIN
         INSERT INTO CAR_CONFIGURATION (Car_id, Part_Category, Part_id)
         VALUES (@Car_id, @Category, @Part_id);
 
-        -- Reducir cantidad en inventario
-        UPDATE INVENTORY_PART
+        -- Reducir stock global y del equipo
+        UPDATE PART SET Stock = Stock - 1 WHERE Part_id = @Part_id;
+
+        UPDATE ip
         SET Quantity = Quantity - 1
-        WHERE Inventory_id = @Inventory_id AND Part_id = @Part_id;
+        FROM INVENTORY_PART ip
+        JOIN INVENTORY i ON ip.Inventory_id = i.Inventory_id
+        WHERE i.Team_id = @Team_id AND ip.Part_id = @Part_id;
 
         -- Si cantidad llega a 0, opcional: eliminar fila, pero por ahora solo decrementar
 
@@ -445,8 +459,9 @@ GO
 -- ============================================================================
 CREATE OR ALTER PROCEDURE sp_ReplacePart
     @Car_id INT,
-    @Old_Part_id INT,
-    @New_Part_id INT
+    @OldPart_id INT,
+    @NewPart_id INT,
+    @Team_id INT
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -455,10 +470,11 @@ BEGIN
 
     BEGIN TRY
         DECLARE @Category VARCHAR(50);
-        DECLARE @Inventory_id INT;
-        DECLARE @Team_id INT;
-        DECLARE @New_Quantity INT;
-        DECLARE @Old_Quantity INT;
+        DECLARE @NewCategory VARCHAR(50);
+        DECLARE @Stock INT;
+        DECLARE @TeamInventory INT;
+        DECLARE @Budget DECIMAL(10,2);
+        DECLARE @PartPrice DECIMAL(10,2);
 
         -- Obtener categoría de la nueva parte
         SELECT @Category = Category
@@ -535,9 +551,27 @@ CREATE OR ALTER PROCEDURE sp_ValidatePartCompatibility
     @Message NVARCHAR(200) OUTPUT
 AS
 BEGIN
-    -- Lógica de validación...
-    SET @Status = 'OK';
-    SET @Message = 'Parte compatible';
+    DECLARE @CarCategory VARCHAR(50);
+    DECLARE @PartCategory VARCHAR(50);
+
+    -- Obtener categoría de la parte
+    SELECT @PartCategory = Category FROM PART WHERE Part_id = @Part_id;
+
+    IF @PartCategory IS NULL
+    BEGIN
+        SELECT 'INVALID' AS Status, 'Parte no existe' AS Message;
+        RETURN;
+    END
+
+    -- Verificar si ya hay parte en esa categoría
+    IF EXISTS (SELECT 1 FROM CAR_CONFIGURATION WHERE Car_id = @Car_id AND Part_Category = @PartCategory)
+    BEGIN
+        SELECT 'REPLACE' AS Status, 'Ya hay parte instalada, se puede reemplazar' AS Message;
+    END
+    ELSE
+    BEGIN
+        SELECT 'INSTALL' AS Status, 'Parte compatible para instalación' AS Message;
+    END
 END
 GO
 PRINT 'SP sp_ValidatePartCompatibility creado';
@@ -807,4 +841,84 @@ BEGIN
 END
 GO
 PRINT 'SP sp_ValidatePurchase creado';
+GO
+
+-- ============================================================================
+-- SP: Agregar Nueva Parte al Catálogo
+-- ============================================================================
+CREATE OR ALTER PROCEDURE sp_AddPart
+    @Name NVARCHAR(100),
+    @Category VARCHAR(50),
+    @Price DECIMAL(10,2),
+    @Stock INT,
+    @p INT,
+    @a INT,
+    @m INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    BEGIN TRANSACTION;
+
+    BEGIN TRY
+        -- Validar categoría
+        IF @Category NOT IN ('Power_Unit', 'Aerodynamics_pkg', 'Wheels', 'Suspension', 'Gearbox')
+        BEGIN
+            THROW 54001, 'Categoría inválida', 1;
+        END
+
+        -- Validar valores P, A, M
+        IF @p < 0 OR @p > 9 OR @a < 0 OR @a > 9 OR @m < 0 OR @m > 9
+        BEGIN
+            THROW 54002, 'Los valores P, A, M deben estar entre 0 y 9', 1;
+        END
+
+        -- Validar precio y stock
+        IF @Price <= 0
+        BEGIN
+            THROW 54003, 'El precio debe ser mayor a 0', 1;
+        END
+
+        IF @Stock < 0
+        BEGIN
+            THROW 54004, 'El stock no puede ser negativo', 1;
+        END
+
+        -- Insertar nueva parte
+        INSERT INTO PART (Category, Price, Stock, p, a, m)
+        VALUES (@Category, @Price, @Stock, @p, @a, @m);
+
+        -- Obtener ID de la nueva parte
+        DECLARE @NewPartID INT = SCOPE_IDENTITY();
+
+        COMMIT TRANSACTION;
+
+        -- Retornar la parte creada
+        SELECT 
+            Part_id,
+            Category,
+            Price,
+            Stock,
+            p,
+            a,
+            m
+        FROM PART
+        WHERE Part_id = @NewPartID;
+
+        PRINT 'Parte agregada exitosamente al catálogo';
+
+    END TRY
+    BEGIN CATCH
+        IF @@TRANCOUNT > 0
+            ROLLBACK TRANSACTION;
+
+        DECLARE @ErrorMessage NVARCHAR(4000) = ERROR_MESSAGE();
+        DECLARE @ErrorSeverity INT = ERROR_SEVERITY();
+        DECLARE @ErrorState INT = ERROR_STATE();
+
+        RAISERROR (@ErrorMessage, @ErrorSeverity, @ErrorState);
+    END CATCH
+END
+GO
+PRINT 'SP sp_AddPart creado';
 GO
