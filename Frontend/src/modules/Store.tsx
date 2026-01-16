@@ -726,69 +726,17 @@ const Store = () => {
                       </div>
                     </div>
                   </div>
-                  
-                  <div className="p-4 rounded-xl bg-gradient-to-br from-secondary/10 to-secondary/5 border border-secondary/20">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-lg bg-secondary/20 flex items-center justify-center">
-                        <ShoppingCart className="w-5 h-5 text-secondary-foreground" />
-                      </div>
-                      <div>
-                        <p className="text-xs text-muted-foreground">Total Purchases</p>
-                        <p className="font-display font-bold text-secondary-foreground text-lg">
-                          {teamBudget.totalPurchases}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
                 </div>
 
-                {/* Información adicional */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="p-4 rounded-lg bg-accent/30">
-                    <p className="text-sm font-medium text-foreground mb-2">Contributions Summary</p>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-muted-foreground">Total Contributions</span>
-                      <span className="font-display font-bold text-foreground">{teamBudget.totalContributions}</span>
-                    </div>
-                    <div className="flex items-center justify-between mt-2">
-                      <span className="text-sm text-muted-foreground">Average per Contribution</span>
-                      <span className="font-display font-bold text-success">
-                        ${teamBudget.totalContributions > 0 
-                          ? (teamBudget.totalBudget / teamBudget.totalContributions).toLocaleString(undefined, { maximumFractionDigits: 0 })
-                          : '0'}
-                      </span>
-                    </div>
-                  </div>
-                  
-                  <div className="p-4 rounded-lg bg-accent/30">
-                    <p className="text-sm font-medium text-foreground mb-2">Spending Efficiency</p>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-muted-foreground">Spending Rate</span>
-                      <span className="font-display font-bold text-foreground">
-                        {teamBudget.totalBudget > 0 
-                          ? `${((teamBudget.totalSpent / teamBudget.totalBudget) * 100).toFixed(1)}%`
-                          : '0%'}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between mt-2">
-                      <span className="text-sm text-muted-foreground">Remaining Percentage</span>
-                      <span className="font-display font-bold text-primary">
-                        {teamBudget.totalBudget > 0 
-                          ? `${((teamBudget.availableBudget / teamBudget.totalBudget) * 100).toFixed(1)}%`
-                          : '0%'}
-                      </span>
-                    </div>
-                  </div>
-                </div>
+    
+              
               </div>
             ) : (
-              <div className="text-center py-8">
-                <p className="text-muted-foreground">No budget information available for this team</p>
-              </div>
+              <p className="text-muted-foreground">No budget information available for this team.</p>
             )}
           </div>
         )}
-
+          
         {/* Sección 3: Grid de Partes */}
         <div className="opacity-0 animate-fade-in" style={{ animationDelay: "200ms" }}>
           <div className="flex items-center justify-between mb-6">

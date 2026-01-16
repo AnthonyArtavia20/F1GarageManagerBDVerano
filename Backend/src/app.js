@@ -6,6 +6,7 @@ const corsMiddleware = require('./middleware/corsMiddleware');
 const testRoutes = require('./routes/testRoutes');
 const spRoutes = require('./routes/spRoutes');
 const partsRoutes = require('./routes/partsRoutes'); // Nueva línea
+const teamsRoutes = require('./routes/teamsRoutes');
 
 const app = express();
 const PORT = process.env.PORT;
@@ -50,6 +51,7 @@ app.get('/status', async (req, res) => {
 app.use('/api/test', testRoutes);
 app.use('/api/sp', spRoutes);
 app.use('/api/parts', partsRoutes); // Nueva línea
+app.use('/api/teams', teamsRoutes);
 
 // Init Server 
 async function initServer() {
