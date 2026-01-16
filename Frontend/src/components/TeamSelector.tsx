@@ -58,39 +58,39 @@ export const TeamSelector = ({
 
   // Obtener todos los equipos
   const fetchTeams = async () => {
-  try {
-    const response = await fetch(`${API_URL}/api/teams`);
-    const data = await response.json();
-    
-    if (data.success) {
-      setTeams(data.data);
-      setFilteredTeams(data.data);
+    try {
+      const response = await fetch(`${API_URL}/api/sp/teams`); // CORREGIDO: /api/sp/teams
+      const data = await response.json();
+      
+      if (data.success) {
+        setTeams(data.data);
+        setFilteredTeams(data.data);
+      }
+    } catch (err) {
+      console.error('Error al cargar equipos:', err);
     }
-  } catch (err) {
-    console.error('Error al cargar equipos:', err);
-  }
-};
+  };
 
-// Buscar equipos con filtro
-const searchTeams = async (searchTerm: string) => {
-  try {
-    const response = await fetch(
-      `${API_URL}/api/teams/search?search=${encodeURIComponent(searchTerm)}`
-    );
-    const data = await response.json();
-    
-    if (data.success) {
-      setFilteredTeams(data.data);
+  // Buscar equipos con filtro
+  const searchTeams = async (searchTerm: string) => {
+    try {
+      const response = await fetch( // CORREGIDO: /api/sp/teams/search
+        `${API_URL}/api/sp/teams/search?search=${encodeURIComponent(searchTerm)}`
+      );
+      const data = await response.json();
+      
+      if (data.success) {
+        setFilteredTeams(data.data);
+      }
+    } catch (err) {
+      console.error('Error al buscar equipos:', err);
+      // Fallback: filtrar localmente
+      const filtered = teams.filter(team =>
+        team.Name.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+      setFilteredTeams(filtered);
     }
-  } catch (err) {
-    console.error('Error al buscar equipos:', err);
-    // Fallback: filtrar localmente
-    const filtered = teams.filter(team =>
-      team.Name.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-    setFilteredTeams(filtered);
-  }
-};
+  };
 
   // Manejar selección
   const handleSelect = (team: Team) => {
