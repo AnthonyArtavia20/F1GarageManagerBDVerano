@@ -9,9 +9,29 @@ const spRoutes = require('./routes/spRoutes');
 const app = express();
 const PORT = process.env.PORT;
 
+const session = require("express-session");
+
+const authRoutes = require('./routes/modules/authRoutes');
+app.use('/api/auth', authRoutes);
+
+
+app.use(session({
+  secret: process.env.SESSION_SECRET || "dev_secret",
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    httpOnly: true,
+    secure: false,     // true solo con https
+    sameSite: "lax",
+    maxAge: 1000 * 60 * 60 // 1 hora
+  }
+}));
+
 // Middleware 
 app.use(corsMiddleware);
-app.use(express.json());
+app.use(express.json());   
+app.use(express.urlencoded({ extended: true })); 
+
 
 // ─────── PUBLIC ROUTES ───────
 // Simple test route
