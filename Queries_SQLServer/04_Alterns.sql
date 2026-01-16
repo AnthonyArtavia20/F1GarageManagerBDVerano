@@ -75,7 +75,6 @@ GO
 PRINT 'FKs de INVENTORY agregadas';
 GO
 
-
 -- *¨*¨*¨*¨*¨*¨*¨*¨*¨*¨¨*
 -- CAR FKs
 PRINT 'Agregando FKs a CAR...';
@@ -108,7 +107,6 @@ GO
 PRINT 'FKs de SIMULATION agregadas';
 GO
 
-
 -- *¨*¨*¨*¨*¨*¨*¨*¨*¨*¨¨*
 -- CONTRIBUTION FKs
 PRINT 'Agregando FKs a CONTRIBUTION...';
@@ -126,7 +124,6 @@ GO
 
 PRINT 'FKs de CONTRIBUTION agregadas';
 GO
-
 
 -- *¨*¨*¨*¨*¨*¨*¨*¨*¨*¨¨*
 -- PURCHASE FKs
@@ -146,7 +143,6 @@ GO
 PRINT 'FKs de PURCHASE agregadas';
 GO
 
-
 -- *¨*¨*¨*¨*¨*¨*¨*¨*¨*¨¨*
 -- INVENTORY_PART FKs (CORREGIDO: era INVENTROY)
 PRINT 'Agregando FKs a INVENTORY_PART...';
@@ -164,7 +160,6 @@ GO
 
 PRINT 'FKs de INVENTORY_PART agregadas';
 GO
-
 
 -- *¨*¨*¨*¨*¨*¨*¨*¨*¨*¨¨*
 -- CAR_CONFIGURATION FKs
@@ -191,18 +186,22 @@ GO
 ALTER TABLE SIMULATION_PARTICIPANT
 ADD CONSTRAINT FK_SimPart_Simulation FOREIGN KEY (simulation_id)
 REFERENCES SIMULATION(Simulation_id);
+GO
 
 ALTER TABLE SIMULATION_PARTICIPANT
 ADD CONSTRAINT FK_SimPart_Car FOREIGN KEY (car_id)
 REFERENCES CAR(Car_id);
+GO
 
 ALTER TABLE SIMULATION_PARTICIPANT
 ADD CONSTRAINT FK_SimPart_Driver FOREIGN KEY (driver_id)
 REFERENCES DRIVER(User_id);
+GO
 
 ALTER TABLE SIMULATION_PARTICIPANT
 ADD CONSTRAINT FK_SimPart_Team FOREIGN KEY (team_id)
 REFERENCES TEAM(Team_id);
+GO
 
 PRINT 'FKs de SIMULATION_PARTICIPANT agregadas';
 GO

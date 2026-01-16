@@ -17,6 +17,15 @@ const teamsData = [
     color: "#1E41FF",
     logo: "•_•",
   },
+  {
+    id: "TEST-001",
+    name: "Red Bull Racing",
+    budget: 15000000,
+    cars: 2,
+    drivers: ["Max Verstappen", "Sergio Pérez"],
+    color: "#0600EF",
+    logo: "RB",
+  },
 ];
 
 const Teams = () => {
