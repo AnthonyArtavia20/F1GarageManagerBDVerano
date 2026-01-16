@@ -91,6 +91,7 @@ GO
 
 CREATE TABLE PART (
     Part_id INT IDENTITY(1,1),
+    Name VARCHAR(100) NOT NULL,
     Category VARCHAR(50) NOT NULL,
     Price DECIMAL(10,2) NOT NULL,
     Stock INT NOT NULL,

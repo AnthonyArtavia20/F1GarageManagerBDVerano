@@ -11,7 +11,7 @@ exports.getAllParts = async (req, res) => {
     // Mapear los datos al formato esperado por el frontend
     const parts = result.recordset.map(row => ({
       id: row.Part_id,
-      name: `${row.Category} #${row.Part_id}`,
+      name: row.Name,
       category: row.Category,
       price: row.Price,
       stock: row.Stock,
@@ -73,28 +73,20 @@ exports.createPart = async (req, res) => {
 
     const pool = await mssqlConnect();
     
-    // Primero, contar cuántas partes existen de esta categoría para generar nombre
-    const countResult = await pool.request()
-      .input('Category', sql.VarChar(50), Category)
-      .query('SELECT COUNT(*) as count FROM PART WHERE Category = @Category');
-    
-    const count = countResult.recordset[0].count + 1;
-    const partName = Name || `${Category.replace('_', ' ')} ${count}`;
-    
-    // Insertar en la base de datos
     const result = await pool.request()
       .input('Category', sql.VarChar(50), Category)
+      .input('Name', sql.VarChar(100), Name)
       .input('Price', sql.Decimal(10, 2), Price)
       .input('Stock', sql.Int, Stock)
       .input('p', sql.Int, p)
       .input('a', sql.Int, a)
       .input('m', sql.Int, m)
       .query(`
-        INSERT INTO PART (Category, Price, Stock, p, a, m)
+        INSERT INTO PART (Category, Name, Price, Stock, p, a, m)
         OUTPUT INSERTED.*
-        VALUES (@Category, @Price, @Stock, @p, @a, @m)
+        VALUES (@Category, @Name, @Price, @Stock, @p, @a, @m)
       `);
-    
+
     const newPart = result.recordset[0];
     
     res.status(201).json({
@@ -102,7 +94,7 @@ exports.createPart = async (req, res) => {
       message: 'Parte creada exitosamente',
       data: {
         id: newPart.Part_id,
-        name: partName,
+        name: newPart.Name,
         category: newPart.Category,
         price: newPart.Price,
         stock: newPart.Stock,
