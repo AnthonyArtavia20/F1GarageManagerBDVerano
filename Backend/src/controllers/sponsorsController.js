@@ -7,7 +7,6 @@ exports.getAllSponsors = async (req, res) => {
   try {
     const pool = await mssqlConnect();
     
-    // Query directa 
     const result = await pool.request()
       .query('SELECT * FROM SPONSOR ORDER BY Name');
     
@@ -16,6 +15,7 @@ exports.getAllSponsors = async (req, res) => {
       data: result.recordset
     });
   } catch (error) {
+    console.error('Error en getAllSponsors:', error);
     res.status(500).json({
       success: false,
       message: 'Error al obtener patrocinadores',
@@ -29,7 +29,6 @@ exports.createSponsor = async (req, res) => {
   try {
     const { Name, Industry, Country } = req.body;
     
-    // Validación básica
     if (!Name) {
       return res.status(400).json({
         success: false,
@@ -39,7 +38,6 @@ exports.createSponsor = async (req, res) => {
 
     const pool = await mssqlConnect();
     
-    // Query directa 
     const result = await pool.request()
       .input('Name', sql.NVarChar(100), Name)
       .input('Industry', sql.NVarChar(100), Industry || null)
@@ -56,6 +54,7 @@ exports.createSponsor = async (req, res) => {
       data: result.recordset[0]
     });
   } catch (error) {
+    console.error('Error en createSponsor:', error);
     res.status(500).json({
       success: false,
       message: 'Error al crear patrocinador',
@@ -73,7 +72,6 @@ exports.getTeamContributions = async (req, res) => {
     
     const pool = await mssqlConnect();
     
-    // Usar stored procedure
     const result = await pool.request()
       .input('Team_id', sql.Int, parseInt(teamId))
       .execute('sp_GetTeamContributionsDetailed');
@@ -83,6 +81,7 @@ exports.getTeamContributions = async (req, res) => {
       data: result.recordset
     });
   } catch (error) {
+    console.error('Error en getTeamContributions:', error);
     res.status(500).json({
       success: false,
       message: 'Error al obtener aportes',
@@ -95,6 +94,8 @@ exports.getTeamContributions = async (req, res) => {
 exports.createContribution = async (req, res) => {
   try {
     const { sponsorId, teamId, amount, description } = req.body;
+    
+    console.log('Datos recibidos para crear aporte:', { sponsorId, teamId, amount, description });
     
     // Validaciones
     if (!sponsorId || !teamId || !amount) {
@@ -113,7 +114,7 @@ exports.createContribution = async (req, res) => {
 
     const pool = await mssqlConnect();
     
-    // ✅ USAR STORED PROCEDURE ACTUALIZADO
+    // USAR STORED PROCEDURE 
     const result = await pool.request()
       .input('Sponsor_id', sql.Int, parseInt(sponsorId)) 
       .input('Team_id', sql.Int, parseInt(teamId))
@@ -121,6 +122,8 @@ exports.createContribution = async (req, res) => {
       .input('Description', sql.NVarChar(200), description || null)
       .output('NewBudget', sql.Decimal(10, 2))
       .execute('sp_RegisterContribution');
+    
+    console.log('Resultado del SP:', result);
     
     res.status(201).json({
       success: true,
@@ -142,18 +145,21 @@ exports.createContribution = async (req, res) => {
 
 // ========== CÁLCULO DE PRESUPUESTO ==========
 
-// ✅ ACTUALIZADO: Obtener presupuesto actual de un equipo
-// Ahora usa el SP actualizado que lee directamente de TEAM
+// Obtener presupuesto actual de un equipo
 exports.getTeamBudget = async (req, res) => {
   try {
     const { teamId } = req.params;
     
+    console.log('Obteniendo presupuesto para equipo:', teamId);
+    
     const pool = await mssqlConnect();
     
-    // Usar sp_GetTeamBudget actualizado
+    // Usar sp_GetTeamBudget
     const result = await pool.request()
       .input('Team_id', sql.Int, parseInt(teamId))
       .execute('sp_GetTeamBudget');
+    
+    console.log('Resultado del SP sp_GetTeamBudget:', result.recordset);
     
     if (result.recordset.length === 0) {
       return res.status(404).json({
@@ -164,17 +170,22 @@ exports.getTeamBudget = async (req, res) => {
 
     const budgetData = result.recordset[0];
     
+    // Construir respuesta con los datos correctos
+    const response = {
+      teamId: budgetData.Team_id,
+      teamName: budgetData.Name,
+      totalBudget: parseFloat(budgetData.Total_Budget) || 0,
+      totalSpent: parseFloat(budgetData.Total_Spent) || 0,
+      availableBudget: parseFloat(budgetData.Available_Budget) || 0,
+      totalContributions: budgetData.Total_Contributions || 0,
+      totalPurchases: budgetData.Total_Purchases || 0
+    };
+    
+    console.log('Respuesta formateada:', response);
+    
     res.json({
       success: true,
-      data: {
-        teamId: budgetData.Team_id,
-        teamName: budgetData.Name,
-        totalBudget: budgetData.Total_Budget,
-        totalSpent: budgetData.Total_Spent,
-        availableBudget: budgetData.Available_Budget,
-        totalContributions: budgetData.Total_Contributions,
-        totalPurchases: budgetData.Total_Purchases
-      }
+      data: response
     });
   } catch (error) {
     console.error('Error en getTeamBudget:', error);
@@ -188,7 +199,7 @@ exports.getTeamBudget = async (req, res) => {
 
 // ========== FUNCIONES ADICIONALES ==========
 
-// ✅ NUEVO: Obtener estadísticas de un sponsor
+// Obtener estadísticas de un sponsor
 exports.getSponsorStats = async (req, res) => {
   try {
     const { sponsorId } = req.params;
@@ -204,6 +215,7 @@ exports.getSponsorStats = async (req, res) => {
       data: result.recordset[0]
     });
   } catch (error) {
+    console.error('Error en getSponsorStats:', error);
     res.status(500).json({
       success: false,
       message: 'Error al obtener estadísticas del sponsor',
@@ -212,21 +224,41 @@ exports.getSponsorStats = async (req, res) => {
   }
 };
 
-// ✅ NUEVO: Recalcular presupuestos de todos los equipos
-// Útil para sincronizar datos después de actualizaciones
+// Recalcular presupuestos de todos los equipos
 exports.recalculateAllBudgets = async (req, res) => {
   try {
     const pool = await mssqlConnect();
     
-    const result = await pool.request()
-      .execute('sp_RecalculateAllTeamBudgets');
+    // Ejecutar recalculo para cada equipo
+    const teamsResult = await pool.request()
+      .query('SELECT Team_id FROM TEAM');
+    
+    for (const team of teamsResult.recordset) {
+      await pool.request()
+        .input('Team_id', sql.Int, team.Team_id)
+        .execute('sp_GetTeamBudget');
+    }
+    
+    // Obtener todos los presupuestos actualizados
+    const budgetsResult = await pool.request()
+      .query(`
+        SELECT 
+          Team_id,
+          Name,
+          Total_Budget,
+          Total_Spent,
+          Total_Budget - Total_Spent AS Available_Budget
+        FROM TEAM
+        ORDER BY Team_id
+      `);
     
     res.json({
       success: true,
       message: 'Presupuestos recalculados exitosamente',
-      data: result.recordset
+      data: budgetsResult.recordset
     });
   } catch (error) {
+    console.error('Error en recalculateAllBudgets:', error);
     res.status(500).json({
       success: false,
       message: 'Error al recalcular presupuestos',

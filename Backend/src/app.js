@@ -5,7 +5,8 @@ const corsMiddleware = require('./middleware/corsMiddleware');
 // Import Routes
 const testRoutes = require('./routes/testRoutes');
 const spRoutes = require('./routes/spRoutes');
-const partsRoutes = require('./routes/partsRoutes'); // Nueva línea
+const partsRoutes = require('./routes/partsRoutes');
+const sponsorsRoutes = require('./routes/sponsorsRoutes'); // ← IMPORTANTE: Agregar esta línea
 const teamsRoutes = require('./routes/teamsRoutes');
 
 const app = express();
@@ -50,7 +51,8 @@ app.get('/status', async (req, res) => {
 // API Routes 
 app.use('/api/test', testRoutes);
 app.use('/api/sp', spRoutes);
-app.use('/api/parts', partsRoutes); // Nueva línea
+app.use('/api/parts', partsRoutes);
+app.use('/api/sponsors', sponsorsRoutes); // ← IMPORTANTE: Agregar esta línea
 app.use('/api/teams', teamsRoutes);
 
 // Init Server 
@@ -62,6 +64,15 @@ async function initServer() {
     // Init web server
     app.listen(PORT, () => {
       console.log(`[SUCCESS] (◪_◪)- http://localhost:${PORT}`);
+      console.log('');
+      console.log('Rutas disponibles:');
+      console.log('  - GET  /');
+      console.log('  - GET  /status');
+      console.log('  - GET  /api/teams');
+      console.log('  - GET  /api/parts');
+      console.log('  - GET  /api/sponsors');
+      console.log('  - GET  /api/sponsors/budget/:teamId'); // ← Nueva ruta importante
+      console.log('');
     });
     
   } catch (error) {
