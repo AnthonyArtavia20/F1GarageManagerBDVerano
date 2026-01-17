@@ -335,3 +335,116 @@ exports.deletePart = async (req, res) => {
     });
   }
 };
+
+exports.purchasePart = async (req, res) => {
+  try {
+    const { teamId, partId, userId } = req.body;
+    
+    if (!teamId || !partId || !userId) {
+      return res.status(400).json({
+        success: false,
+        message: 'teamId, partId y userId son obligatorios'
+      });
+    }
+    
+    const pool = await mssqlConnect();
+    
+    const query = `
+      DECLARE @Success BIT
+      DECLARE @Message NVARCHAR(500)
+      DECLARE @NewAvailableBudget DECIMAL(10,2)
+      
+      EXEC sp_RegisterTeamPurchase 
+        @Team_id = @TeamId,
+        @Part_id = @PartId,
+        @User_id = @UserId,
+        @Success = @Success OUTPUT,
+        @Message = @Message OUTPUT,
+        @NewAvailableBudget = @NewAvailableBudget OUTPUT
+      
+      SELECT 
+        @Success as Success,
+        @Message as Message,
+        @NewAvailableBudget as NewAvailableBudget
+    `;
+    
+    const spResult = await pool.request()
+      .input('TeamId', sql.Int, parseInt(teamId))
+      .input('PartId', sql.Int, parseInt(partId))
+      .input('UserId', sql.Int, parseInt(userId))
+      .query(query);
+    
+    const success = spResult.recordset[0].Success;
+    const message = spResult.recordset[0].Message;
+    const newAvailableBudget = spResult.recordset[0].NewAvailableBudget;
+    
+    const successBool = success === 1 || success === true;
+    const budgetNum = parseFloat(newAvailableBudget || 0);
+    
+    if (successBool) {
+      const teamResult = await pool.request()
+        .input('TeamId', sql.Int, parseInt(teamId))
+        .query(`
+          SELECT Team_id as teamId, Name as teamName, 
+                 Total_Budget as totalBudget, Total_Spent as totalSpent
+          FROM TEAM WHERE Team_id = @TeamId
+        `);
+      
+      const partResult = await pool.request()
+        .input('PartId', sql.Int, parseInt(partId))
+        .query('SELECT Name as partName, Stock as currentStock FROM PART WHERE Part_id = @PartId');
+      
+      const team = teamResult.recordset[0];
+      const part = partResult.recordset[0];
+      
+      const userResult = await pool.request()
+        .input('UserId', sql.Int, parseInt(userId))
+        .query(`
+          SELECT 
+            u.User_id,
+            u.Username,
+            CASE 
+              WHEN a.User_id IS NOT NULL THEN 'ADMIN'
+              WHEN e.User_id IS NOT NULL THEN 'ENGINEER'
+              ELSE 'USER'
+            END as UserType
+          FROM [USER] u
+          LEFT JOIN ADMIN a ON u.User_id = a.User_id
+          LEFT JOIN ENGINEER e ON u.User_id = e.User_id
+          WHERE u.User_id = @UserId
+        `);
+      
+      const user = userResult.recordset[0];
+      
+      return res.status(200).json({
+        success: true,
+        message: message,
+        data: {
+          teamId: parseInt(teamId),
+          teamName: team.teamName,
+          partId: parseInt(partId),
+          partName: part.partName,
+          userId: parseInt(userId),
+          userName: user.Username,
+          userType: user.UserType,
+          newAvailableBudget: budgetNum,
+          totalBudget: parseFloat(team.totalBudget),
+          totalSpent: parseFloat(team.totalSpent),
+          currentStock: part.currentStock
+        }
+      });
+    } else {
+      return res.status(200).json({
+        success: false,
+        message: message,
+        data: { newAvailableBudget: budgetNum }
+      });
+    }
+    
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: 'Error al procesar la compra'
+    });
+  }
+};

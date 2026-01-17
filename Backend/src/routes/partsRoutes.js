@@ -20,4 +20,7 @@ router.put('/:partId', partsController.updatePart);
 // DELETE /api/parts/:partId - Eliminar parte
 router.delete('/:partId', partsController.deletePart);
 
+// POST /api/purchase - Purchase a Part for a Team
+router.post('/purchase', partsController.purchasePart);
+
 module.exports = router;

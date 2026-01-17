@@ -11,6 +11,12 @@
 USE master;
 GO
 
+IF EXISTS (SELECT name FROM sys.databases WHERE name = 'F1GarageManager')
+BEGIN
+    DROP DATABASE F1GarageManager;
+END
+GO
+
 CREATE DATABASE F1GarageManager; -- Crear la base de datos
 GO
 

@@ -284,52 +284,96 @@ const Store = () => {
   };
 
   // Función para manejar compra de parte
-  const handlePurchasePart = async (part: Part) => {
-    if (!selectedTeamId || selectedTeamId.trim() === '') {
-      alert('Por favor selecciona un equipo primero');
-      return;
-    }
-
-    if (part.stock === 0) {
-      alert('Esta parte no tiene stock disponible');
-      return;
-    }
-
-    // Validar presupuesto
-    if (teamBudget && teamBudget.availableBudget < part.price) {
-      alert(`Presupuesto insuficiente. Disponible: $${teamBudget.availableBudget.toLocaleString()}\nNecesario: $${part.price.toLocaleString()}`);
-      return;
-    }
-
-    const confirmPurchase = window.confirm(
-      `¿Confirmar compra de "${part.name}"?\n\n` +
-      `📋 Detalles:\n` +
-      `• Precio: $${part.price.toLocaleString()}\n` +
-      `• Equipo: ${selectedTeamName}\n` +
-      `• Presupuesto disponible: $${teamBudget?.availableBudget.toLocaleString()}\n\n` +
-      `¿Deseas continuar?`
-    );
-
-    if (confirmPurchase) {
-      try {
-        // TODO: Implementar llamada a API para comprar la parte
-        // Por ahora simulamos la compra
-        alert(`✅ Compra realizada exitosamente!\n\n"${part.name}" ha sido agregado al inventario de ${selectedTeamName}.`);
-        
-        // Actualizar el presupuesto localmente (simulación)
-        if (teamBudget) {
-          setTeamBudget({
-            ...teamBudget,
-            totalSpent: teamBudget.totalSpent + part.price,
-            availableBudget: teamBudget.availableBudget - part.price,
-            totalPurchases: teamBudget.totalPurchases + 1
-          });
-        }
-      } catch (err: any) {
-        alert('Error al procesar la compra: ' + err.message);
+// Función para manejar compra de parte
+    const handlePurchasePart = async (part: Part) => {
+      if (!selectedTeamId || selectedTeamId.trim() === '') {
+        alert('Por favor selecciona un equipo primero');
+        return;
       }
-    }
-  };
+
+      if (part.stock === 0) {
+        alert('Esta parte no tiene stock disponible');
+        return;
+      }
+
+      if (teamBudget && teamBudget.availableBudget < part.price) {
+        alert(`Presupuesto insuficiente. Disponible: $${teamBudget.availableBudget.toLocaleString()}\nNecesario: $${part.price.toLocaleString()}`);
+        return;
+      }
+
+      const confirmPurchase = window.confirm(
+        `¿Confirmar compra de "${part.name}"?\n\n` +
+        `Detalles:\n` +
+        `• Precio: $${part.price.toLocaleString()}\n` +
+        `• Equipo: ${selectedTeamName}\n` +
+        `• Presupuesto disponible: $${teamBudget?.availableBudget.toLocaleString()}\n\n` +
+        `¿Deseas continuar?`
+      );
+
+      if (confirmPurchase) {
+        try {
+          // Llamar al endpoint de compra
+          const response = await fetch(`${API_URL}/api/parts/purchase`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              teamId: parseInt(selectedTeamId),
+              partId: part.id,
+              userId: 1
+            })
+          });
+
+          const data = await response.json();
+          
+          if (data.success) {
+            alert(`Compra realizada exitosamente!\n\n` +
+                  `${data.message}\n\n` +
+                  `"${part.name}" ha sido agregado al inventario de ${data.data.teamName}.\n` +
+                  `Nuevo presupuesto disponible: $${data.data.newAvailableBudget.toLocaleString()}`);
+            
+            if (teamBudget) {
+              setTeamBudget({
+                ...teamBudget,
+                totalSpent: data.data.totalSpent,
+                availableBudget: data.data.newAvailableBudget,
+                totalPurchases: teamBudget.totalPurchases + 1
+              });
+            }
+            
+            setParts(prevParts => 
+              prevParts.map(p => 
+                p.id === part.id 
+                  ? { ...p, stock: data.data.currentStock } 
+                  : p
+              )
+            );
+            
+            // Recargar el presupuesto para obtener datos actualizados
+            await fetchTeamBudget(selectedTeamId);
+            
+            // Recargar las partes para actualizar stock
+            await fetchParts();
+            
+          } else {
+            alert(`❌ Error en la compra:\n${data.message}\n\n` +
+                  `Presupuesto disponible: $${data.data?.newAvailableBudget?.toLocaleString() || 'N/A'}`);
+            
+            // Si hay nuevo presupuesto en la respuesta, actualizar
+            if (data.data?.newAvailableBudget && teamBudget) {
+              setTeamBudget({
+                ...teamBudget,
+                availableBudget: data.data.newAvailableBudget
+              });
+            }
+          }
+        } catch (err: any) {
+          console.error('Error en la compra:', err);
+          alert('Error al procesar la compra: ' + err.message);
+        }
+      }
+    };
 
   // Filtrar partes
   const filteredParts = parts.filter((part) => {

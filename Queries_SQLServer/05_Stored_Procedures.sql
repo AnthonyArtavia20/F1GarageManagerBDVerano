@@ -23,15 +23,17 @@ BEGIN
 
     SELECT @TotalIncome = ISNULL(SUM(Amount), 0)
     FROM CONTRIBUTION WHERE Team_id = @Team_id;
-
+    
+    -- Both Admin and Engineers allowed to make a purchase
     SELECT @TotalSpent = ISNULL(SUM(p.Total_price), 0)
     FROM PURCHASE p
-    INNER JOIN ENGINEER e ON p.Engineer_User_id = e.User_id
-    WHERE e.Team_id = @Team_id;
-
-    UPDATE TEAM 
-    SET Total_Budget = @TotalIncome, Total_Spent = @TotalSpent
-    WHERE Team_id = @Team_id;
+    WHERE EXISTS (
+        SELECT 1 FROM ENGINEER e 
+        WHERE e.User_id = p.Engineer_User_id AND e.Team_id = @Team_id
+    ) OR EXISTS (
+        SELECT 1 FROM ADMIN a 
+        WHERE a.User_id = p.Engineer_User_id
+    );
 
     SELECT
         @Team_id AS Team_id,
@@ -71,82 +73,201 @@ GO
 -- ============================================================================
 -- 3. SP: Registrar una compra simple
 -- ============================================================================
-CREATE OR ALTER PROCEDURE sp_RegisterPurchase
-    @Engineer_User_id INT,
+CREATE OR ALTER PROCEDURE sp_RegisterTeamPurchase
+    @Team_id INT,
     @Part_id INT,
-    @Quantity INT,
+    @User_id INT,
+    @Success BIT OUTPUT,
+    @Message NVARCHAR(500) OUTPUT,
     @NewAvailableBudget DECIMAL(10,2) OUTPUT
 AS
 BEGIN
     SET NOCOUNT ON;
-    BEGIN TRANSACTION;
+    
+    SET @Success = 0;
+    SET @Message = '';
+    SET @NewAvailableBudget = 0;
+    
+    DECLARE @UserType NVARCHAR(20);
+    DECLARE @UserTeam_id INT;
+    DECLARE @IsAuthorized BIT = 0;
+    
     BEGIN TRY
-        DECLARE @Team_id INT, @Unit_price DECIMAL(10,2), @Total_price DECIMAL(10,2);
-        DECLARE @Available_Budget DECIMAL(10,2), @Stock INT, @TotalIncome DECIMAL(10,2);
-
-        SELECT @Team_id = Team_id FROM ENGINEER WHERE User_id = @Engineer_User_id;
-        IF @Team_id IS NULL THROW 53001, 'Engineer no encontrado', 1;
-
-        SELECT @Unit_price = Price, @Stock = Stock FROM PART WHERE Part_id = @Part_id;
-        IF @Unit_price IS NULL THROW 53002, 'Parte no encontrada', 1;
-        IF @Quantity <= 0 THROW 53003, 'Cantidad debe ser mayor a 0', 1;
-        IF @Stock < @Quantity THROW 53004, 'Stock insuficiente', 1;
-
-        SET @Total_price = @Unit_price * @Quantity;
-
-        SELECT @TotalIncome = ISNULL(SUM(Amount), 0) FROM CONTRIBUTION WHERE Team_id = @Team_id;
-        SELECT @Available_Budget = @TotalIncome - ISNULL(SUM(Total_price), 0)
-        FROM PURCHASE p INNER JOIN ENGINEER e ON p.Engineer_User_id = e.User_id
-        WHERE e.Team_id = @Team_id;
-        SET @Available_Budget = ISNULL(@Available_Budget, @TotalIncome);
-
-        IF @Available_Budget < @Total_price
+        BEGIN TRANSACTION;
+        
+        -- User Authentication 
+        IF EXISTS (SELECT 1 FROM ADMIN WHERE User_id = @User_id)
         BEGIN
-            DECLARE @ErrorMsg NVARCHAR(200) = 
-                'Presupuesto insuficiente. Disponible: ' + CAST(@Available_Budget AS VARCHAR(20)) + 
-                ', Necesario: ' + CAST(@Total_price AS VARCHAR(20));
-            THROW 53005, @ErrorMsg, 1;
+            SET @UserType = 'ADMIN';
+            SET @IsAuthorized = 1;
         END
-
-        INSERT INTO PURCHASE (Engineer_User_id, Part_id, Quantity, Unit_price, Total_price, Purchase_Date)
-        VALUES (@Engineer_User_id, @Part_id, @Quantity, @Unit_price, @Total_price, GETDATE());
-
-        UPDATE PART SET Stock = Stock - @Quantity WHERE Part_id = @Part_id;
-        UPDATE TEAM SET Total_Spent = Total_Spent + @Total_price WHERE Team_id = @Team_id;
-
+        ELSE IF EXISTS (
+            SELECT 1 
+            FROM ENGINEER 
+            WHERE User_id = @User_id AND Team_id = @Team_id
+        )
+        BEGIN
+            SET @UserType = 'ENGINEER';
+            SET @IsAuthorized = 1;
+        END
+        ELSE
+        BEGIN
+            SET @Message = 'WARNING: Unauthorized user trying to make a purchase';
+            ROLLBACK TRANSACTION;
+            RETURN;
+        END;
+        
+        -- Validate Team existence
+        IF NOT EXISTS (SELECT 1 FROM TEAM WHERE Team_id = @Team_id)
+        BEGIN
+            SET @Message = 'Equipo no encontrado';
+            ROLLBACK TRANSACTION;
+            RETURN;
+        END;
+        
+        -- Part Availability and Information
+        DECLARE @PartPrice DECIMAL(10,2);
+        DECLARE @PartStock INT;
+        DECLARE @PartName NVARCHAR(100);
+        
+        SELECT 
+            @PartPrice = Price, 
+            @PartStock = Stock,
+            @PartName = Name
+        FROM PART 
+        WHERE Part_id = @Part_id;
+        
+        IF @PartPrice IS NULL
+        BEGIN
+            SET @Message = '!ERROR: Missing Part';
+            ROLLBACK TRANSACTION;
+            RETURN;
+        END;
+        
+        IF @PartStock < 1
+        BEGIN
+            SET @Message = '!ERROR: Part [' + @PartName + '] Out of Stock';
+            ROLLBACK TRANSACTION;
+            RETURN;
+        END;
+        
+        -- Check Team Budget 
+        DECLARE @TotalBudget DECIMAL(10,2);
+        DECLARE @CurrentSpent DECIMAL(10,2);
+        DECLARE @TeamName NVARCHAR(100);
+        
+        SELECT 
+            @TotalBudget = Total_Budget, 
+            @CurrentSpent = Total_Spent,
+            @TeamName = Name
+        FROM TEAM
+        WHERE Team_id = @Team_id;
+        
+        DECLARE @AvailableBudget DECIMAL(10,2) = @TotalBudget - @CurrentSpent;
+        
+        IF @AvailableBudget < @PartPrice
+        BEGIN
+            SET @Message = 'Insuficient Budget ' + @TeamName + 
+                          ', Available: $' + CAST(@AvailableBudget AS VARCHAR(20)) + 
+                          ', Needed: $' + CAST(@PartPrice AS VARCHAR(20));
+            SET @NewAvailableBudget = @AvailableBudget;
+            ROLLBACK TRANSACTION;
+            RETURN;
+        END;
+        
+        -- ============================================
+        -- PROCESS PURCHASE
+        -- ============================================
+        
+        -- Reduce Stock
+        UPDATE PART 
+        SET Stock = Stock - 1
+        WHERE Part_id = @Part_id;
+        
+        -- Update Team Total_Spent
+        UPDATE TEAM
+        SET Total_Spent = Total_Spent + @PartPrice
+        WHERE Team_id = @Team_id;
+        
+        -- Insert transaction in PURCHASE 
+        DECLARE @PurchaseQuantity INT = 1;
+        DECLARE @TotalPrice DECIMAL(10,2) = @PartPrice * @PurchaseQuantity;
+        
+        INSERT INTO PURCHASE (
+            Engineer_User_id,
+            Part_id,
+            Purchase_Date,
+            Quantity,
+            Unit_price,
+            Total_price
+        ) VALUES (
+            @User_id,
+            @Part_id,
+            GETDATE(),
+            @PurchaseQuantity,
+            @PartPrice,
+            @TotalPrice
+        );
+        
+        -- Create/Manage Inventory
         DECLARE @Inventory_id INT;
-        SELECT @Inventory_id = Inventory_id FROM INVENTORY WHERE Team_id = @Team_id;
+        
+        SELECT @Inventory_id = Inventory_id 
+        FROM INVENTORY 
+        WHERE Team_id = @Team_id;
         
         IF @Inventory_id IS NULL
         BEGIN
-            INSERT INTO INVENTORY (Team_id) VALUES (@Team_id);
+            INSERT INTO INVENTORY (Team_id)
+            VALUES (@Team_id);
             SET @Inventory_id = SCOPE_IDENTITY();
+        END;
+        
+        -- Add Part to respective Inventory
+        IF EXISTS (SELECT 1 FROM INVENTORY_PART 
+                  WHERE Inventory_id = @Inventory_id AND Part_id = @Part_id)
+        BEGIN
+            UPDATE INVENTORY_PART
+            SET Quantity = Quantity + 1,
+                Acquisition_date = GETDATE()
+            WHERE Inventory_id = @Inventory_id 
+              AND Part_id = @Part_id;
+            PRINT 'Inventario actualizado (Quantity +1)';
         END
-
-        IF EXISTS (SELECT 1 FROM INVENTORY_PART WHERE Inventory_id = @Inventory_id AND Part_id = @Part_id)
-            UPDATE INVENTORY_PART SET Quantity = Quantity + @Quantity, Acquisition_date = GETDATE()
-            WHERE Inventory_id = @Inventory_id AND Part_id = @Part_id;
         ELSE
-            INSERT INTO INVENTORY_PART (Inventory_id, Part_id, Quantity, Acquisition_date)
-            VALUES (@Inventory_id, @Part_id, @Quantity, GETDATE());
-
-        SELECT @NewAvailableBudget = (@TotalIncome - ISNULL(SUM(Total_price), 0))
-        FROM PURCHASE p INNER JOIN ENGINEER e ON p.Engineer_User_id = e.User_id
-        WHERE e.Team_id = @Team_id;
-        SET @NewAvailableBudget = ISNULL(@NewAvailableBudget, @TotalIncome);
-
+        BEGIN
+            INSERT INTO INVENTORY_PART (Inventory_id, Part_id, Quantity)
+            VALUES (@Inventory_id, @Part_id, 1);
+            PRINT 'Nueva entrada en inventario creada';
+        END;
+       
+        -- Calculate New Available Budget
+        SELECT @CurrentSpent = Total_Spent
+        FROM TEAM
+        WHERE Team_id = @Team_id;
+        
+        SET @NewAvailableBudget = @TotalBudget - @CurrentSpent;
+        
+        -- Finalize Transaction 
         COMMIT TRANSACTION;
-
-        SELECT SCOPE_IDENTITY() AS Purchase_id, @Total_price AS Total_Paid, 
-                @NewAvailableBudget AS New_Available_Budget;
+        
+        SET @Success = 1;
+        SET @Message = '($  ͜ʖ $) Purchase successfully completed by [' + @UserType + 
+                      '] [' + @PartName + '] now in inventory for  [' + @TeamName + 
+                      '] with and available budget of: $' + CAST(@NewAvailableBudget AS NVARCHAR(20));
     END TRY
     BEGIN CATCH
-        IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
-        THROW;
-    END CATCH
-END
+        IF @@TRANCOUNT > 0
+            ROLLBACK TRANSACTION;
+        
+        SET @Success = 0;
+        SET @Message = '!ERROR is sp_RegisterTeamPurchase: ' + ERROR_MESSAGE();
+        SET @NewAvailableBudget = 0;
+    END CATCH;
+END;
 GO
-PRINT 'SP sp_RegisterPurchase creado';
+
+PRINT '...SP sp_RegisterTeamPurchase creado';
 GO
 
 -- ============================================================================
