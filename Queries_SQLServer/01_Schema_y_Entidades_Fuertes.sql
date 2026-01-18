@@ -11,6 +11,12 @@
 USE master;
 GO
 
+IF EXISTS (SELECT name FROM sys.databases WHERE name = 'F1GarageManager')
+BEGIN
+    DROP DATABASE F1GarageManager;
+END
+GO
+
 CREATE DATABASE F1GarageManager; -- Crear la base de datos
 GO
 
@@ -91,6 +97,7 @@ GO
 
 CREATE TABLE PART (
     Part_id INT IDENTITY(1,1),
+    Name VARCHAR(100) NOT NULL,
     Category VARCHAR(50) NOT NULL,
     Price DECIMAL(10,2) NOT NULL,
     Stock INT NOT NULL,

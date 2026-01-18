@@ -8,15 +8,20 @@ const corsMiddleware = require('./middleware/corsMiddleware');
 // Routes
 const testRoutes = require('./routes/testRoutes');
 const spRoutes = require('./routes/spRoutes');
+const partsRoutes = require('./routes/partsRoutes');
+const sponsorsRoutes = require('./routes/sponsorsRoutes');
+const teamsRoutes = require('./routes/teamsRoutes');
 const authRoutes = require('./routes/authRoutes');
+const inventoryRoutes = require('./routes/inventoryRoutes');
 
 const app = express();
-const PORT = process.env.PORT || 9090;
+const PORT = process.env.PORT;
 
-// ─────── MIDDLEWARES BASE ───────
-app.use(corsMiddleware);
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+const session = require("express-session");
+
+const authRoutes = require('./routes/modules/authRoutes');
+app.use('/api/auth', authRoutes);
+
 
 app.use(session({
   secret: process.env.SESSION_SECRET || "dev_secret",
@@ -24,7 +29,7 @@ app.use(session({
   saveUninitialized: false,
   cookie: {
     httpOnly: true,
-    secure: false,   // solo true con HTTPS
+    secure: false,     // true solo con https
     sameSite: "lax",
     maxAge: 1000 * 60 * 60
   }
@@ -39,7 +44,6 @@ app.use('/api/sp', spRoutes);
 app.use(corsMiddleware);
 app.use(express.json());   
 app.use(express.urlencoded({ extended: true })); 
-app.use('/api/auth', authRoutes);
 
 
 // ─────── PUBLIC ROUTES ───────
@@ -71,14 +75,21 @@ app.get('/status', async (req, res) => {
   }
 });
 
-// ─────── INIT SERVER ───────
+// API Routes 
+app.use('/api/test', testRoutes);
+app.use('/api/sp', spRoutes);
+
+// Init Server 
 async function initServer() {
   try {
-    await mssqlConnect();
-
+    // Start connection with mssql-server
+    await mssqlConnect(); 
+    
+    // Init web server
     app.listen(PORT, () => {
-      console.log(`[SUCCESS] API running → http://localhost:${PORT}`);
+      console.log(`[SUCCESS] (◪_◪)- http://localhost:${PORT}`);
     });
+    
   } catch (error) {
     console.error('!ERROR: Web server could not be initialized:', error.message);
     process.exit(1);
