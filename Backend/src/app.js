@@ -9,6 +9,7 @@ const partsRoutes = require('./routes/partsRoutes');
 const sponsorsRoutes = require('./routes/sponsorsRoutes');
 const teamsRoutes = require('./routes/teamsRoutes');
 const authRoutes = require('./routes/authRoutes');
+const inventoryRoutes = require('./routes/inventoryRoutes');
 
 const app = express();
 const PORT = process.env.PORT;
@@ -69,6 +70,7 @@ app.use('/api/sp', spRoutes);
 app.use('/api/parts', partsRoutes);
 app.use('/api/sponsors', sponsorsRoutes);
 app.use('/api/teams', teamsRoutes);
+app.use('/api/inventory', inventoryRoutes);
 
 // Init Server 
 async function initServer() {
