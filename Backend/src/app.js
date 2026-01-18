@@ -42,6 +42,9 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true })); 
 app.use('/api/auth', authRoutes);
 
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
 
 // ─────── PUBLIC ROUTES ───────
