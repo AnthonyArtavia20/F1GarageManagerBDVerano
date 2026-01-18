@@ -30,22 +30,17 @@ app.use(session({
   }
 }));
 
-<<<<<<< Updated upstream
 // ─────── ROUTES ───────
 app.use('/api/auth', authRoutes);
 app.use('/api/test', testRoutes);
 app.use('/api/sp', spRoutes);
-=======
+
 // Middleware 
 app.use(corsMiddleware);
 app.use(express.json());   
 app.use(express.urlencoded({ extended: true })); 
 app.use('/api/auth', authRoutes);
 
-<<<<<<< Updated upstream
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
 
 // ─────── PUBLIC ROUTES ───────
 app.get('/', (req, res) => {
