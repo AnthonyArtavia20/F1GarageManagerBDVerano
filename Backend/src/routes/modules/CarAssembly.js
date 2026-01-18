@@ -31,15 +31,11 @@ router.post('/install-part', async (req, res) => {
 try {
     // Extrae parámetros del body de la petición HTTP
     const { carId, partId, teamId } = req.body;
-
-    // Validación básica de parámetros requeridos
-    // Si falta algún parámetro, retorna error 400 (Bad Request)
+    // Validación básica de parámetros requeridos, Si falta algún parámetro, retorna error 400 (Bad Request)
     if (!carId || !partId || !teamId) {
         return res.status(400).json({ error: 'carId, partId, teamId requeridos' });
     }
-
-    // Establece conexión con SQL Server usando configuración centralizada
-    const pool = await require('../../config/database').mssqlConnect();
+    const pool = await require('../../config/database').mssqlConnect(); // Establece conexión con SQL Server usando configuración centralizada
 
     // Prepara la ejecución del Stored Procedure
     // .request() crea una nueva petición SQL
@@ -68,16 +64,12 @@ try {
  */
 router.post('/replace-part', async (req, res) => {
 try {
-    // Extrae los 4 parámetros requeridos del body
-    const { carId, oldPartId, newPartId, teamId } = req.body;
-    // Validación de parámetros obligatorios
-    if (!carId || !oldPartId || !newPartId || !teamId) {
+    const { carId, oldPartId, newPartId, teamId } = req.body;//Extrae los 4 parámetros requeridos del body
+    if (!carId || !oldPartId || !newPartId || !teamId) {// Validación de parámetros obligatorios
         return res.status(400).json({ error: 'carId, oldPartId, newPartId, teamId requeridos' });
     }
     const pool = await require('../../config/database').mssqlConnect(); // Conexión a base de datos
-
-    // Ejecuta SP de reemplazo con 4 parámetros
-    const result = await pool.request()
+    const result = await pool.request() // Ejecuta SP de reemplazo con 4 parámetros
         .input('Car_id', require('../../config/database').sql.Int, carId)        // Auto objetivo
         .input('OldPart_id', require('../../config/database').sql.Int, oldPartId) // Parte a quitar
         .input('NewPart_id', require('../../config/database').sql.Int, newPartId) // Parte a poner
@@ -101,7 +93,6 @@ router.get('/car-stats/:carId', async (req, res) => {
 try {
     const { carId } = req.params;// Extrae carId de los parámetros de la URL
     const pool = await require('../../config/database').mssqlConnect();// Conexión a BD
-
     // Ejecuta SP que calcula estadísticas, parseInt() convierte string de URL a número
     const result = await pool.request()
         .input('Car_id', require('../../config/database').sql.Int, parseInt(carId))
@@ -126,24 +117,20 @@ try {
         .input('Car_id', require('../../config/database').sql.Int, parseInt(carId))
         .input('Part_id', require('../../config/database').sql.Int, parseInt(partId))
         .execute('sp_ValidatePartCompatibility');
-
-    // Retorna resultado de validación
-    res.json({ success: true, validation: result.recordset[0] });
+    res.json({ success: true, validation: result.recordset[0] });    // Retorna resultado de validación
     } catch (error) {
     res.status(500).json({ error: error.message });
     }
 });
 
-//Endpoint opcional que sirve para Mostrar en el frontend la lista de partes instaladas antes de calcular stats.
+ // * GET /api/sp/car-parts/:carId,  * Obtiene la lista de partes instaladas en un carro (con nombres)
 router.get('/car-parts/:carId', async (req, res) => {
     try {
     const { carId } = req.params;
     const pool = await require('../../config/database').mssqlConnect();
-    
     const result = await pool.request()
         .input('Car_id', require('../../config/database').sql.Int, parseInt(carId))
         .execute('sp_GetCarConfiguration');
-    
     res.json({ 
         success: true, 
         parts: result.recordset 
@@ -153,4 +140,80 @@ router.get('/car-parts/:carId', async (req, res) => {
     }
 });
 
+// ---------------EndPoints finales para la parte de configuración del Carro---------------
+
+/**
+ * ENDPOINT: GET /api/sp/team-inventory/:teamId
+ * Obtiene el inventario de un equipo CON NOMBRES de las partes,
+ */
+router.get('/team-inventory/:teamId', async (req, res) => {
+    try {
+        const { teamId } = req.params;
+        const pool = await require('../../config/database').mssqlConnect();
+        
+        // Query SQL directo que obtiene datos de INVENTORY_PART + PART
+        const result = await pool.request()
+            .input('Team_id', require('../../config/database').sql.Int, parseInt(teamId))
+            .query(`
+                SELECT 
+                    p.Part_id,
+                    p.Name,
+                    p.Category,
+                    p.Price,
+                    ip.Quantity AS Stock,
+                    p.p,
+                    p.a,
+                    p.m
+                FROM INVENTORY i
+                INNER JOIN INVENTORY_PART ip ON i.Inventory_id = ip.Inventory_id
+                INNER JOIN PART p ON ip.Part_id = p.Part_id
+                WHERE i.Team_id = @Team_id AND ip.Quantity > 0
+                ORDER BY p.Category, p.Part_id
+            `);
+        res.json({ 
+            success: true, 
+            data: result.recordset 
+        });
+    } catch (error) {
+        console.error('Error a la hora de obtener el inventario de un equipo(Con nombres de las piezas):', error);
+        res.status(500).json({ 
+            success: false, 
+            error: error.message 
+        });
+    }
+});
+
+/**
+ * ENDPOINT: GET /api/sp/car-configuration/:carId
+ * Obtiene la configuración actual del carro CON NOMBRES
+ */
+router.get('/car-configuration/:carId', async (req, res) => {
+    try {
+        const { carId } = req.params;
+        const pool = await require('../../config/database').mssqlConnect();
+        
+        // Query que obtiene Part_Category, Part_id Y Name
+        const result = await pool.request()
+            .input('Car_id', require('../../config/database').sql.Int, parseInt(carId))
+            .query(`
+                SELECT 
+                    cc.Part_Category,
+                    cc.Part_id,
+                    p.Name AS Part_Name
+                FROM CAR_CONFIGURATION cc
+                INNER JOIN PART p ON cc.Part_id = p.Part_id
+                WHERE cc.Car_id = @Car_id
+            `);
+        res.json({ 
+            success: true, 
+            parts: result.recordset 
+        });
+    } catch (error) {
+        console.error('Error a la hora de obtener la configuración actual de un carro(Con nombres):', error);
+        res.status(500).json({ 
+            success: false, 
+            error: error.message 
+        });
+    }
+});
 };

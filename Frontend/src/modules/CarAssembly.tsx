@@ -17,9 +17,10 @@ import { cn } from "@/lib/utils";
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:9090';
 
-// Interfaces
+//Interfaces para obtener datos con las consutas a la BD
 interface Part {
   Part_id: number;
+  Name: string;//Agregado luego de crear los dos endpoints que hacen los inner joins para obtener el nombre de la parte.
   Category: string;
   Price: number;
   Stock: number;
@@ -40,6 +41,7 @@ interface CarStats {
 interface InstalledPart {
   Part_Category: string;
   Part_id: number;
+  Part_Name: string;// Ahora permite el nombre de la parte instalada
 }
 
 const categories = [
@@ -51,15 +53,15 @@ const categories = [
 ];
 
 const CarAssembly = () => {
-  // Estados
   const [selectedTeam, setSelectedTeam] = useState("");
   const [selectedTeamName, setSelectedTeamName] = useState("");
-  const [selectedCar, setSelectedCar] = useState("1"); // Temporal, después cargar desde API
+  const [selectedCar, setSelectedCar] = useState("1");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
   const [availableParts, setAvailableParts] = useState<Part[]>([]);
   const [installedParts, setInstalledParts] = useState<Record<string, number | null>>({});
+  const [installedPartsNames, setInstalledPartsNames] = useState<Record<string, string>>({});
   const [carStats, setCarStats] = useState<CarStats | null>(null);
   const [hasChanges, setHasChanges] = useState(false);
 
@@ -76,32 +78,46 @@ const CarAssembly = () => {
   const fetchAvailableParts = async () => {
     try {
       setLoading(true);
+      setError(null);
+      
       const response = await fetch(`${API_URL}/api/sp/team-inventory/${selectedTeam}`);
       const data = await response.json();
       
       if (data.success) {
+        console.log('Partes cargadas:', data.data);
         setAvailableParts(data.data);
+      } else {
+        setError('No se pudieron cargar las partes');
+        setAvailableParts([]);
       }
     } catch (err: any) {
       console.error('Error al cargar partes:', err);
       setError('Error al cargar partes disponibles');
+      setAvailableParts([]);
     } finally {
       setLoading(false);
     }
   };
 
-  // Obtener configuración actual del carro
+  //FETCH CONFIGURATION (Obtener config actual del carro)- Ahora incluye nombres
   const fetchCarConfiguration = async () => {
     try {
       const response = await fetch(`${API_URL}/api/sp/car-configuration/${selectedCar}`);
       const data = await response.json();
       
       if (data.success) {
+        console.log('Configuración cargada:', data.parts);
+        
         const config: Record<string, number | null> = {};
+        const names: Record<string, string> = {};
+        
         data.parts.forEach((part: InstalledPart) => {
           config[part.Part_Category] = part.Part_id;
+          names[part.Part_Category] = part.Part_Name; //Aquí se gurada el nombre ahora.
         });
+        
         setInstalledParts(config);
+        setInstalledPartsNames(names);
       }
     } catch (err) {
       console.error('Error al cargar configuración:', err);
@@ -136,6 +152,8 @@ const CarAssembly = () => {
         ? { carId: parseInt(selectedCar), oldPartId, newPartId: partId, teamId: parseInt(selectedTeam) }
         : { carId: parseInt(selectedCar), partId, teamId: parseInt(selectedTeam) };
 
+      console.log('Enviando:', endpoint, body);
+
       const response = await fetch(`${API_URL}${endpoint}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -145,20 +163,20 @@ const CarAssembly = () => {
       const data = await response.json();
 
       if (data.success) {
-        // Actualizar estado local
-        setInstalledParts(prev => ({ ...prev, [category]: partId }));
-        setHasChanges(true);
-        
-        // Recargar stats
+        alert('Éxito: ' + data.message);
+        // Recargar todo
+        await fetchAvailableParts();
+        await fetchCarConfiguration();
         await fetchCarStats();
         
-        alert(data.message);
+        setHasChanges(true);
       } else {
         setError(data.error || 'Error al instalar parte');
+        alert('Error:' + (data.error || ' al instalar parte'));
       }
     } catch (err: any) {
       setError(err.message);
-      alert('Error: ' + err.message);
+      alert('❌ Error: ' + err.message);
     } finally {
       setLoading(false);
     }
@@ -172,7 +190,7 @@ const CarAssembly = () => {
       
       if (data.success) {
         if (data.validation.Status === 'INVALID') {
-          alert(data.validation.Message);
+          alert('Alerta, lo siguiente salió mal: ' + data.validation.Message);
           return false;
         }
         return true;
@@ -197,8 +215,7 @@ const CarAssembly = () => {
 
   // Guardar configuración final
   const handleSaveConfiguration = async () => {
-    // Aquí podrías agregar lógica adicional como marcar el carro como finalizado
-    alert('Configuración guardada exitosamente');
+    alert('Configuración guardada exitosamente !');
     setHasChanges(false);
   };
 
@@ -268,6 +285,7 @@ const CarAssembly = () => {
                 const selectedPartId = installedParts[category.id];
                 const partsInCategory = availableParts.filter(p => p.Category === category.id);
                 const selectedPart = partsInCategory.find(p => p.Part_id === selectedPartId);
+                const installedName = installedPartsNames[category.id];// Obtener nombre instalado
                 
                 return (
                   <div
@@ -284,7 +302,7 @@ const CarAssembly = () => {
                           {category.name}
                         </h3>
                         <p className="text-sm text-muted-foreground">
-                          {selectedPart ? `Part #${selectedPart.Part_id}` : "None installed"}
+                          {installedName ? installedName : "None installed"}
                         </p>
                       </div>
                       {selectedPart && (
@@ -316,7 +334,7 @@ const CarAssembly = () => {
                         {partsInCategory.map((part) => (
                           <SelectItem key={part.Part_id} value={part.Part_id.toString()}>
                             <div className="flex items-center justify-between w-full gap-4">
-                              <span>Part #{part.Part_id}</span>
+                              <span className="font-medium">{part.Name}</span>
                               <span className="text-xs text-muted-foreground">
                                 P:{part.p} A:{part.a} M:{part.m} | ${part.Price.toLocaleString()}
                               </span>
