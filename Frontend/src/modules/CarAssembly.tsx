@@ -354,18 +354,15 @@ const CarAssembly = () => {
                 const selectedPart = partsInCategory.find(p => p.Part_id === selectedPartId);
                 const installedName = installedPartsNames[category.id];// Obtener nombre instalado
                 
-                // ⭐ SOLUCIÓN ERROR: Obtener la parte instalada desde installedPartsData (siempre disponible)
+                // Obtener la parte instalada desde installedPartsData (siempre disponible)
                 // En lugar de buscarla solo en availableParts (que puede no tenerla si se consumió del inventario)
                 const installedPartInfo = installedPartsData[category.id];
-                
                 // Buscar también en inventario disponible por si acaso
                 const partInInventory = partsInCategory.find(p => p.Part_id === selectedPartId);
-                
-                // ⭐ SOLUCIÓN ERROR: Usar installedPartInfo o partInInventory para mostrar nombre y stats
+                //Usar installedPartInfo o partInInventory para mostrar nombre y stats
                 const displayName = installedPartInfo?.Part_Name || "None installed";
                 const displayStats = partInInventory || installedPartInfo;
-                
-                // ✅ SOLUCIÓN SELECT: Combinar partes del inventario + parte instalada (si no está en inventario)
+                //SOLUCIÓN ERROR SELECT: Combinar partes del inventario + parte instalada (si no está en inventario)
                 const allPartsForSelect = [...partsInCategory];
                 if (installedPartInfo && !partsInCategory.some(p => p.Part_id === installedPartInfo.Part_id)) {
                   // Si la parte instalada NO está en el inventario, agregarla temporalmente para el Select
@@ -415,7 +412,7 @@ const CarAssembly = () => {
                               <p className="font-display font-bold text-green-400">{displayStats.m}</p>
                             </div>
                           </div>
-                          {/* ✅ BOTÓN DESINSTALAR - Ahora llama a handleUninstallPart */}
+                          {/*BOTÓN DESINSTALAR - Ahora llama a handleUninstallPart */}
                           <button
                             onClick={() => handleUninstallPart(category.id, installedPartInfo.Part_id)}
                             className="w-8 h-8 rounded-lg bg-red-500/10 hover:bg-red-500/20 flex items-center justify-center transition-colors text-red-400 hover:text-red-300"
@@ -433,7 +430,7 @@ const CarAssembly = () => {
                       disabled={loading}
                     >
                       <SelectTrigger className="bg-card/50 border-border">
-                        {/* ✅ SOLUCIÓN SELECT: Usar solo placeholder, no children personalizados */}
+                        {/*SOLUCIÓN ERROR SELECT: Usar solo placeholder, no children personalizados */}
                         <SelectValue placeholder={partsInCategory.length > 0 ? "Select part..." : "No parts available"} />
                       </SelectTrigger>
                       <SelectContent>
