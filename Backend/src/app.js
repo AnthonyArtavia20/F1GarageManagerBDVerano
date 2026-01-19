@@ -15,35 +15,27 @@ const authRoutes = require('./routes/authRoutes');
 const inventoryRoutes = require('./routes/inventoryRoutes');
 
 const app = express();
-const PORT = process.env.PORT;
+const PORT = process.env.PORT || 9090;
 
-const session = require("express-session");
-
-const authRoutes = require('./routes/modules/authRoutes');
-app.use('/api/auth', authRoutes);
+//  Middleware primero
+app.use(corsMiddleware);
 
 
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// Session después 
 app.use(session({
   secret: process.env.SESSION_SECRET || "dev_secret",
   resave: false,
   saveUninitialized: false,
   cookie: {
     httpOnly: true,
-    secure: false,     // true solo con https
+    secure: false,
     sameSite: "lax",
     maxAge: 1000 * 60 * 60
   }
 }));
-
-// ─────── ROUTES ───────
-app.use('/api/auth', authRoutes);
-app.use('/api/test', testRoutes);
-app.use('/api/sp', spRoutes);
-
-// Middleware 
-app.use(corsMiddleware);
-app.use(express.json());   
-app.use(express.urlencoded({ extended: true })); 
 
 
 // ─────── PUBLIC ROUTES ───────
@@ -75,21 +67,24 @@ app.get('/status', async (req, res) => {
   }
 });
 
-// API Routes 
+// ─────── API ROUTES (una sola vez) ───────
+app.use('/api/auth', authRoutes);
 app.use('/api/test', testRoutes);
 app.use('/api/sp', spRoutes);
+app.use('/api/parts', partsRoutes);
+app.use('/api/sponsors', sponsorsRoutes);
+app.use('/api/teams', teamsRoutes);
+app.use('/api/inventory', inventoryRoutes);
 
-// Init Server 
+// ─────── INIT SERVER ───────
 async function initServer() {
   try {
-    // Start connection with mssql-server
-    await mssqlConnect(); 
-    
-    // Init web server
+    await mssqlConnect();
+
     app.listen(PORT, () => {
       console.log(`[SUCCESS] (◪_◪)- http://localhost:${PORT}`);
     });
-    
+
   } catch (error) {
     console.error('!ERROR: Web server could not be initialized:', error.message);
     process.exit(1);
