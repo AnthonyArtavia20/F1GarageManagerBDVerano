@@ -62,41 +62,36 @@ const CarAssembly = () => {
   const [selectedCar, setSelectedCar] = useState("1");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  
   const [availableParts, setAvailableParts] = useState<Part[]>([]);
   const [installedParts, setInstalledParts] = useState<Record<string, number | null>>({});
   const [installedPartsNames, setInstalledPartsNames] = useState<Record<string, string>>({});
-  // ⭐ SOLUCIÓN ERROR: Nuevo estado para guardar TODA la información de las partes instaladas, no solo el nombre
-  // Esto permite que el Select muestre la parte correctamente incluso si ya no está en el inventario disponible
+  //Nuevo estado para guardar TODA la información de las partes instaladas, no solo el nombre
+  //Esto permite que el Select muestre la parte correctamente incluso si ya no está en el inventario disponible
   const [installedPartsData, setInstalledPartsData] = useState<Record<string, InstalledPart>>({});
   const [carStats, setCarStats] = useState<CarStats | null>(null);
   const [hasChanges, setHasChanges] = useState(false);
 
-  // Cargar partes disponibles del inventario del equipo
-  useEffect(() => {
+  useEffect(() => {   // Cargar partes disponibles del inventario del equipo
     if (selectedTeam) {
       fetchAllData();
     }
   }, [selectedTeam, selectedCar]);
 
-  // ✅ NUEVA FUNCIÓN: Recargar todos los datos en orden correcto
+  //NUEVA FUNCIÓN: Recargar todos los datos en orden correcto
   const fetchAllData = async () => {
-    console.log('🔄 Recargando todos los datos...');
+    console.log('Recargando todos los datos...');
     await fetchCarConfiguration();
     await fetchAvailableParts();
     await fetchCarStats();
-    console.log('✅ Recarga completa');
+    console.log('Recarga de datos completa');
   };
 
-  // Obtener partes disponibles del inventario
-  const fetchAvailableParts = async () => {
+  const fetchAvailableParts = async () => {//Obtener partes disponibles del inventario
     try {
       setLoading(true);
       setError(null);
-      
       const response = await fetch(`${API_URL}/api/sp/team-inventory/${selectedTeam}`);
       const data = await response.json();
-      
       if (data.success) {
         console.log('Partes cargadas:', data.data);
         setAvailableParts(data.data);
@@ -113,7 +108,7 @@ const CarAssembly = () => {
     }
   };
 
-  //FETCH CONFIGURATION (Obtener config actual del carro)- Ahora incluye nombres
+  //FETCH CONFIGURATION (Obtener config actual del carro) - Ahora incluye nombres de las piezas en lugar del código
   const fetchCarConfiguration = async () => {
     try {
       const response = await fetch(`${API_URL}/api/sp/car-configuration/${selectedCar}`);
@@ -121,31 +116,25 @@ const CarAssembly = () => {
       
       if (data.success) {
         console.log('Configuración cargada:', data.parts);
-        
         const config: Record<string, number | null> = {};
         const names: Record<string, string> = {};
-        // ⭐ SOLUCIÓN ERROR: Nuevo objeto para guardar toda la info de partes instaladas
-        const partsData: Record<string, InstalledPart> = {};
+        const partsData: Record<string, InstalledPart> = {}; //Nuevo objeto para guardar toda la info de partes instaladas
         
         data.parts.forEach((part: InstalledPart) => {
           config[part.Part_Category] = part.Part_id;
           names[part.Part_Category] = part.Part_Name; //Aquí se gurada el nombre ahora.
-          // ⭐ SOLUCIÓN ERROR: Guardamos TODO el objeto de la parte instalada, no solo el nombre
-          partsData[part.Part_Category] = part;
+          partsData[part.Part_Category] = part;//Guardamos TODO el objeto de la parte instalada, no solo el nombre
         });
-        
         setInstalledParts(config);
         setInstalledPartsNames(names);
-        // ⭐ SOLUCIÓN ERROR: Actualizar el nuevo estado con toda la data de las partes instaladas
-        setInstalledPartsData(partsData);
+        setInstalledPartsData(partsData);//Actualizar el nuevo estado con toda la data de las partes instaladas
       }
     } catch (err) {
       console.error('Error al cargar configuración:', err);
     }
   };
 
-  // Obtener estadísticas del carro
-  const fetchCarStats = async () => {
+  const fetchCarStats = async () => { // Obtener estadísticas del carro
     try {
       const response = await fetch(`${API_URL}/api/sp/car-stats/${selectedCar}`);
       const data = await response.json();
@@ -159,21 +148,19 @@ const CarAssembly = () => {
     }
   };
 
-  // Instalar o reemplazar parte
-  const handleInstallPart = async (category: string, partId: number) => {
+  const handleInstallPart = async (category: string, partId: number) => { // Instalar o reemplazar parte
     const oldPartId = installedParts[category];
     const isReplacement = oldPartId !== null && oldPartId !== undefined;
 
     try {
       setLoading(true);
       setError(null);
-
       const endpoint = isReplacement ? '/api/sp/replace-part' : '/api/sp/install-part';
       const body = isReplacement
         ? { carId: parseInt(selectedCar), oldPartId, newPartId: partId, teamId: parseInt(selectedTeam) }
         : { carId: parseInt(selectedCar), partId, teamId: parseInt(selectedTeam) };
 
-      console.log('📤 Enviando al backend:', endpoint, body);
+      console.log('Enviando al backend:', endpoint, body);
 
       const response = await fetch(`${API_URL}${endpoint}`, {
         method: 'POST',
@@ -181,45 +168,43 @@ const CarAssembly = () => {
         body: JSON.stringify(body)
       });
 
-      console.log('📥 Response status:', response.status);
+      console.log('Response status:', response.status);
 
       const data = await response.json();
-      console.log('📥 Response data:', data);
+      console.log('Response data:', data);
 
       if (data.success) {
-        console.log('✅ Éxito! Recargando datos...');
+        console.log('Éxito! Recargando datos...');
         // Recargar todo
-        // ⭐ SOLUCIÓN ERROR: Recargar configuración PRIMERO para actualizar installedPartsData antes del inventario
+        //Recargar configuración PRIMERO para actualizar installedPartsData antes del inventario
         await fetchAllData();
         
         setHasChanges(true);
-        console.log('✅ Datos recargados correctamente');
+        console.log('Yeah! Datos recargados correctamente');
       } else {
         const errorMsg = data.error || 'Error al instalar parte';
         setError(errorMsg);
-        alert('❌ Error: ' + errorMsg);
-        console.error('❌ Error del backend:', errorMsg);
+        alert('Error: ' + errorMsg);
+        console.error('Error del backend:', errorMsg);
       }
     } catch (err: any) {
       const errorMsg = err.message || 'Error desconocido';
       setError(errorMsg);
-      alert('❌ Error de red: ' + errorMsg);
-      console.error('❌ Error en handleInstallPart:', err);
+      alert('Error de red: ' + errorMsg);
+      console.error('Error en handleInstallPart:', err);
     } finally {
       setLoading(false);
     }
   };
 
-  // ✅ NUEVA FUNCIÓN: Desinstalar una parte y devolverla al inventario
+  //NUEVA FUNCIÓN: Desinstalar una parte y devolverla al inventario
   const handleUninstallPart = async (category: string, partId: number) => {
     const partName = installedPartsData[category]?.Part_Name || "esta parte";
     
     if (!confirm(`¿Desinstalar ${partName}?`)) return;
-
     try {
       setLoading(true);
       setError(null);
-
       console.log('Desinstalando parte:', { carId: selectedCar, partId, teamId: selectedTeam });
 
       const response = await fetch(`${API_URL}/api/sp/uninstall-part`, {
@@ -233,18 +218,17 @@ const CarAssembly = () => {
       });
 
       const data = await response.json();
-
       if (data.success) {
-        alert('✅ Parte desinstalada exitosamente');
+        alert('Parte desinstalada exitosamente');
         await fetchAllData();
         setHasChanges(true);
       } else {
         setError(data.error || 'Error al desinstalar parte');
-        alert('❌ Error: ' + (data.error || 'al desinstalar parte'));
+        alert('Error: ' + (data.error || 'al desinstalar parte'));
       }
     } catch (err: any) {
       setError(err.message);
-      alert('❌ Error: ' + err.message);
+      alert('Error: ' + err.message);
     } finally {
       setLoading(false);
     }
@@ -253,11 +237,10 @@ const CarAssembly = () => {
   // Validar parte antes de instalar
   const validatePart = async (category: string, partId: number) => {
     try {
-      console.log('🔍 Validando parte:', category, partId);
+      console.log('Validando parte antes de instalar:', category, partId);
       const response = await fetch(`${API_URL}/api/sp/validate-part/${selectedCar}/${partId}`);
       const data = await response.json();
-      
-      console.log('📋 Resultado validación:', data);
+      console.log('Resultado de la validación antes de instalar:', data);
       
       if (data.success) {
         if (data.validation.Status === 'INVALID') {
@@ -275,27 +258,25 @@ const CarAssembly = () => {
 
   // Manejar cambio de parte
   const handlePartChange = async (category: string, partId: string) => {
-    console.log('🔄 handlePartChange llamado:', category, partId);
+    console.log('handlePartChange llamado:', category, partId);
     const numericPartId = parseInt(partId);
     
     if (!numericPartId || isNaN(numericPartId)) {
-      console.error('❌ Part ID inválido:', partId);
+      console.error('Part ID inválido:', partId);
       return;
     }
-
-    console.log('✅ Instalando parte ID:', numericPartId);
+    console.log('Instalando parte ID:', numericPartId);
     
     // Validar antes de instalar
     const isValid = await validatePart(category, numericPartId);
-    console.log('🔍 Validación resultado:', isValid);
-    
+    console.log('Validación resultado:', isValid);
     if (!isValid) {
-      console.log('⛔ Validación falló, abortando');
+      console.log('Validación falló, abortando');
       return;
     }
 
     // Instalar o reemplazar
-    console.log('🚀 Llamando a handleInstallPart...');
+    console.log('Llamando a handleInstallPart...');
     await handleInstallPart(category, numericPartId);
   };
 
