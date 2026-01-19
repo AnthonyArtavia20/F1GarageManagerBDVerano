@@ -29,6 +29,7 @@ try {
     }
 
     const pool = await require('../../config/database').mssqlConnect();
+
     const result = await pool.request()
         .input('Car_id', require('../../config/database').sql.Int, carId)
         .input('Part_id', require('../../config/database').sql.Int, partId)
@@ -54,6 +55,7 @@ try {
     }
     
     const pool = await require('../../config/database').mssqlConnect();
+
     const result = await pool.request()
         .input('Car_id', require('../../config/database').sql.Int, carId)
         .input('OldPart_id', require('../../config/database').sql.Int, oldPartId)
@@ -75,6 +77,7 @@ router.get('/car-stats/:carId', async (req, res) => {
 try {
     const { carId } = req.params;
     const pool = await require('../../config/database').mssqlConnect();
+
     const result = await pool.request()
         .input('Car_id', require('../../config/database').sql.Int, parseInt(carId))
         .execute('sp_CalculateCarStats');
@@ -93,6 +96,7 @@ router.get('/validate-part/:carId/:partId', async (req, res) => {
 try {
     const { carId, partId } = req.params;
     const pool = await require('../../config/database').mssqlConnect();
+    
     const result = await pool.request()
         .input('Car_id', require('../../config/database').sql.Int, parseInt(carId))
         .input('Part_id', require('../../config/database').sql.Int, parseInt(partId))
@@ -112,6 +116,7 @@ router.get('/car-parts/:carId', async (req, res) => {
     try {
     const { carId } = req.params;
     const pool = await require('../../config/database').mssqlConnect();
+    
     const result = await pool.request()
         .input('Car_id', require('../../config/database').sql.Int, parseInt(carId))
         .execute('sp_GetCarConfiguration');
@@ -132,9 +137,11 @@ router.get('/car-parts/:carId', async (req, res) => {
 router.post('/uninstall-part', async (req, res) => {
     try {
         const { carId, partId, teamId } = req.body;
+        
         if (!carId || !partId || !teamId) {
             return res.status(400).json({ error: 'carId, partId, teamId requeridos' });
         }
+        
         const pool = await require('../../config/database').mssqlConnect();
         
         // Obtener categoría de la parte
@@ -145,8 +152,11 @@ router.post('/uninstall-part', async (req, res) => {
         if (partInfo.recordset.length === 0) {
             return res.status(404).json({ error: 'Parte no encontrada' });
         }
+        
         const category = partInfo.recordset[0].Category;
-        await pool.request()// Eliminar de CAR_CONFIGURATION
+        
+        // Eliminar de CAR_CONFIGURATION
+        await pool.request()
             .input('Car_id', require('../../config/database').sql.Int, carId)
             .input('Part_Category', require('../../config/database').sql.VarChar, category)
             .query('DELETE FROM CAR_CONFIGURATION WHERE Car_id = @Car_id AND Part_Category = @Part_Category');
@@ -228,7 +238,7 @@ router.get('/team-inventory/:teamId', async (req, res) => {
 });
 
 /**
- * GET /api/sp/car-configuration/:carId
+ * NUEVO ENDPOINT para obtener la config del carro: GET /api/sp/car-configuration/:carId
  * Obtiene la configuración actual del carro CON NOMBRES Y STATS (p, a, m)
  */
 router.get('/car-configuration/:carId', async (req, res) => {
