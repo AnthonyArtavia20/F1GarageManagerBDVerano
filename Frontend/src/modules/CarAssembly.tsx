@@ -42,6 +42,9 @@ interface InstalledPart {
   Part_Category: string;
   Part_id: number;
   Part_Name: string;// Ahora permite el nombre de la parte instalada
+  p?: number;
+  a?: number;
+  m?: number;
 }
 
 const categories = [
@@ -62,6 +65,9 @@ const CarAssembly = () => {
   const [availableParts, setAvailableParts] = useState<Part[]>([]);
   const [installedParts, setInstalledParts] = useState<Record<string, number | null>>({});
   const [installedPartsNames, setInstalledPartsNames] = useState<Record<string, string>>({});
+  //Nuevo estado para guardar TODA la información de las partes instaladas, no solo el nombre, esto permite 
+  //que el Select muestre la parte correctamente incluso si ya no está en el inventario disponible
+  const [installedPartsData, setInstalledPartsData] = useState<Record<string, InstalledPart>>({});
   const [carStats, setCarStats] = useState<CarStats | null>(null);
   const [hasChanges, setHasChanges] = useState(false);
 
@@ -107,17 +113,17 @@ const CarAssembly = () => {
       
       if (data.success) {
         console.log('Configuración cargada:', data.parts);
-        
         const config: Record<string, number | null> = {};
         const names: Record<string, string> = {};
-        
+        const partsData: Record<string, InstalledPart> = {}; //Nuevo objeto para guardar toda la info de partes instaladas
         data.parts.forEach((part: InstalledPart) => {
           config[part.Part_Category] = part.Part_id;
           names[part.Part_Category] = part.Part_Name; //Aquí se gurada el nombre ahora.
+          partsData[part.Part_Category] = part; //Guardamos TODO el objeto de la parte instalada, no solo el nombre
         });
-        
         setInstalledParts(config);
         setInstalledPartsNames(names);
+        setInstalledPartsData(partsData); //Actualizar el nuevo estado con toda la data de las partes instaladas
       }
     } catch (err) {
       console.error('Error al cargar configuración:', err);
@@ -164,9 +170,11 @@ const CarAssembly = () => {
 
       if (data.success) {
         alert('Éxito: ' + data.message);
-        // Recargar todo
-        await fetchAvailableParts();
+        // Recargar todo:
+        //Solución al error de selección de items(no mantenía el item en el selector): 
+        //Recargar configuración PRIMERO para actualizar installedPartsData antes del inventario
         await fetchCarConfiguration();
+        await fetchAvailableParts();
         await fetchCarStats();
         
         setHasChanges(true);
@@ -176,18 +184,16 @@ const CarAssembly = () => {
       }
     } catch (err: any) {
       setError(err.message);
-      alert('❌ Error: ' + err.message);
+      alert('Error: ' + err.message);
     } finally {
       setLoading(false);
     }
   };
 
-  // Validar parte antes de instalar
-  const validatePart = async (category: string, partId: number) => {
+  const validatePart = async (category: string, partId: number) => {  // Validar parte antes de instalar
     try {
       const response = await fetch(`${API_URL}/api/sp/validate-part/${selectedCar}/${partId}`);
       const data = await response.json();
-      
       if (data.success) {
         if (data.validation.Status === 'INVALID') {
           alert('Alerta, lo siguiente salió mal: ' + data.validation.Message);
@@ -201,20 +207,13 @@ const CarAssembly = () => {
     }
   };
 
-  // Manejar cambio de parte
-  const handlePartChange = async (category: string, partId: string) => {
+  const handlePartChange = async (category: string, partId: string) => {  // Manejar cambio de parte
     const numericPartId = parseInt(partId);
-    
-    // Validar antes de instalar
-    const isValid = await validatePart(category, numericPartId);
+    const isValid = await validatePart(category, numericPartId);//Validar antes de instalar
     if (!isValid) return;
-
-    // Instalar o reemplazar
-    await handleInstallPart(category, numericPartId);
+    await handleInstallPart(category, numericPartId);// Instalar o reemplazar
   };
-
-  // Guardar configuración final
-  const handleSaveConfiguration = async () => {
+  const handleSaveConfiguration = async () => {// Guardar configuración final
     alert('Configuración guardada exitosamente !');
     setHasChanges(false);
   };
@@ -286,6 +285,16 @@ const CarAssembly = () => {
                 const partsInCategory = availableParts.filter(p => p.Category === category.id);
                 const selectedPart = partsInCategory.find(p => p.Part_id === selectedPartId);
                 const installedName = installedPartsNames[category.id];// Obtener nombre instalado
+                //Error de que no mantenía el item seleccionado en el selector:
+                //Obtener la parte instalada desde installedPartsData (siempre disponible)
+                // En lugar de buscarla solo en availableParts (que puede no tenerla si se consumió del inventario)
+                const installedPartInfo = installedPartsData[category.id];
+                
+                // Buscar también en inventario disponible por si acaso
+                const partInInventory = partsInCategory.find(p => p.Part_id === selectedPartId);
+                //Solución al error del selector: Usar installedPartInfo o partInInventory para mostrar nombre y stats
+                const displayName = installedPartInfo?.Part_Name || "None installed";
+                const displayStats = partInInventory || installedPartInfo;
                 
                 return (
                   <div
@@ -302,22 +311,22 @@ const CarAssembly = () => {
                           {category.name}
                         </h3>
                         <p className="text-sm text-muted-foreground">
-                          {installedName ? installedName : "None installed"}
+                          {displayName}
                         </p>
                       </div>
-                      {selectedPart && (
+                      {displayStats && displayStats.p !== undefined && (
                         <div className="flex gap-3">
                           <div className="text-center">
                             <p className="text-xs text-muted-foreground">P</p>
-                            <p className="font-display font-bold text-red-400">{selectedPart.p}</p>
+                            <p className="font-display font-bold text-red-400">{displayStats.p}</p>
                           </div>
                           <div className="text-center">
                             <p className="text-xs text-muted-foreground">A</p>
-                            <p className="font-display font-bold text-blue-400">{selectedPart.a}</p>
+                            <p className="font-display font-bold text-blue-400">{displayStats.a}</p>
                           </div>
                           <div className="text-center">
                             <p className="text-xs text-muted-foreground">M</p>
-                            <p className="font-display font-bold text-green-400">{selectedPart.m}</p>
+                            <p className="font-display font-bold text-green-400">{displayStats.m}</p>
                           </div>
                         </div>
                       )}
@@ -328,7 +337,24 @@ const CarAssembly = () => {
                       disabled={loading}
                     >
                       <SelectTrigger className="bg-card/50 border-border">
-                        <SelectValue placeholder={partsInCategory.length > 0 ? "Select part..." : "No parts available"} />
+                        {/*SelectValue customizado para mostrar la parte seleccionada correctamente */}
+                        {/* En lugar de usar placeholder, renderizamos manualmente el contenido */}
+                        <SelectValue>
+                          {selectedPartId && installedPartInfo ? (
+                            <div className="flex items-center justify-between w-full gap-2">
+                              <span className="font-medium truncate">{installedPartInfo.Part_Name}</span>
+                              {displayStats && displayStats.p !== undefined && (
+                                <span className="text-xs text-muted-foreground whitespace-nowrap">
+                                  P:{displayStats.p} A:{displayStats.a} M:{displayStats.m}
+                                </span>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground">
+                              {partsInCategory.length > 0 ? "Select part..." : "No parts available"}
+                            </span>
+                          )}
+                        </SelectValue>
                       </SelectTrigger>
                       <SelectContent>
                         {partsInCategory.map((part) => (
