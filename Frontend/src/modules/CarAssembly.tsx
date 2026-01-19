@@ -17,10 +17,10 @@ import { cn } from "@/lib/utils";
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:9090';
 
-//Interfaces para obtener datos con las consutas a la BD
+// Interfaces para obtener datos con las consultas a la BD
 interface Part {
   Part_id: number;
-  Name: string;//Agregado luego de crear los dos endpoints que hacen los inner joins para obtener el nombre de la parte.
+  Name: string; // Agregado luego de crear los dos endpoints que hacen los inner joins para obtener el nombre de la parte.
   Category: string;
   Price: number;
   Stock: number;
@@ -38,11 +38,18 @@ interface CarStats {
   Parts_Installed: number;
 }
 
+// Nueva interfaz: Para los carros del equipo
+interface TeamCar {
+  Car_id: number;
+  Team_id: number;
+  isFinalized: boolean;
+}
+
 interface InstalledPart {
   Part_Category: string;
   Part_id: number;
-  Part_Name: string;// Ahora permite el nombre de la parte instalada
-  // ⭐ Ya NO son opcionales porque el backend los retorna siempre
+  Part_Name: string; // Ahora permite el nombre de la parte instalada
+  // Ya NO son opcionales porque el backend los retorna siempre
   p: number;
   a: number;
   m: number;
@@ -59,39 +66,96 @@ const categories = [
 const CarAssembly = () => {
   const [selectedTeam, setSelectedTeam] = useState("");
   const [selectedTeamName, setSelectedTeamName] = useState("");
-  const [selectedCar, setSelectedCar] = useState("1");
+  
+  // Cambio importante: En lugar de selectedCar string, usamos:
+  // - teamCars: array de carros del equipo
+  // - selectedCarIndex: índice del carro seleccionado (0 o 1)
+  const [teamCars, setTeamCars] = useState<TeamCar[]>([]);
+  const [selectedCarIndex, setSelectedCarIndex] = useState(0);
+  
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  
   const [availableParts, setAvailableParts] = useState<Part[]>([]);
   const [installedParts, setInstalledParts] = useState<Record<string, number | null>>({});
   const [installedPartsNames, setInstalledPartsNames] = useState<Record<string, string>>({});
-  //Nuevo estado para guardar TODA la información de las partes instaladas, no solo el nombre
-  //Esto permite que el Select muestre la parte correctamente incluso si ya no está en el inventario disponible
+  // SOLUCIÓN ERROR: Nuevo estado para guardar TODA la información de las partes instaladas, no solo el nombre
+  // Esto permite que el Select muestre la parte correctamente incluso si ya no está en el inventario disponible
   const [installedPartsData, setInstalledPartsData] = useState<Record<string, InstalledPart>>({});
   const [carStats, setCarStats] = useState<CarStats | null>(null);
   const [hasChanges, setHasChanges] = useState(false);
+  
+  // OBTENER EL CAR_ID REAL DEL CARRO SELECCIONADO
+  const selectedCarId = teamCars[selectedCarIndex]?.Car_id?.toString();
 
-  useEffect(() => {   // Cargar partes disponibles del inventario del equipo
+  // Cargar datos cuando cambia el equipo seleccionado
+  useEffect(() => {
     if (selectedTeam) {
+      fetchTeamCars();
+    } else {
+      // Resetear estados cuando no hay equipo seleccionado
+      setTeamCars([]);
+      setSelectedCarIndex(0);
+      setAvailableParts([]);
+      setInstalledParts({});
+      setInstalledPartsNames({});
+      setInstalledPartsData({});
+      setCarStats(null);
+      setHasChanges(false);
+    }
+  }, [selectedTeam]);
+
+  // Cargar datos cuando cambia el carro seleccionado
+  useEffect(() => {
+    if (selectedTeam && selectedCarId) {
       fetchAllData();
     }
-  }, [selectedTeam, selectedCar]);
+  }, [selectedTeam, selectedCarId]);
 
-  //NUEVA FUNCIÓN: Recargar todos los datos en orden correcto
+  // Nueva función: Recargar todos los datos en orden correcto
   const fetchAllData = async () => {
     console.log('Recargando todos los datos...');
     await fetchCarConfiguration();
     await fetchAvailableParts();
     await fetchCarStats();
-    console.log('Recarga de datos completa');
+    console.log('Recarga completa');
   };
 
-  const fetchAvailableParts = async () => {//Obtener partes disponibles del inventario
+  // Obtener los carros del equipo
+  const fetchTeamCars = async () => {
     try {
       setLoading(true);
       setError(null);
+      
+      // Asumimos que cada equipo tiene exactamente 2 carros
+      // En una implementación real, esto vendría de un endpoint del backend
+      // Por ahora, simulamos que los carros tienen IDs baseados en el teamId
+      const teamIdNum = parseInt(selectedTeam);
+      const mockTeamCars: TeamCar[] = [
+        { Car_id: (teamIdNum * 2) - 1, Team_id: teamIdNum, isFinalized: false },
+        { Car_id: teamIdNum * 2, Team_id: teamIdNum, isFinalized: false }
+      ];
+      
+      setTeamCars(mockTeamCars);
+      setSelectedCarIndex(0);
+      
+      console.log('Carros del equipo cargados:', mockTeamCars);
+    } catch (err: any) {
+      console.error('Error al cargar carros del equipo:', err);
+      setError('Error al cargar los carros del equipo');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Obtener partes disponibles del inventario
+  const fetchAvailableParts = async () => {
+    try {
+      setLoading(true);
+      
       const response = await fetch(`${API_URL}/api/sp/team-inventory/${selectedTeam}`);
       const data = await response.json();
+      
       if (data.success) {
         console.log('Partes cargadas:', data.data);
         setAvailableParts(data.data);
@@ -108,57 +172,91 @@ const CarAssembly = () => {
     }
   };
 
-  //FETCH CONFIGURATION (Obtener config actual del carro) - Ahora incluye nombres de las piezas en lugar del código
+  // FETCH CONFIGURATION (Obtener config actual del carro) - Ahora incluye nombres
   const fetchCarConfiguration = async () => {
+    if (!selectedCarId) return;
+    
     try {
-      const response = await fetch(`${API_URL}/api/sp/car-configuration/${selectedCar}`);
+      const response = await fetch(`${API_URL}/api/sp/car-configuration/${selectedCarId}`);
       const data = await response.json();
       
       if (data.success) {
         console.log('Configuración cargada:', data.parts);
+        
         const config: Record<string, number | null> = {};
         const names: Record<string, string> = {};
-        const partsData: Record<string, InstalledPart> = {}; //Nuevo objeto para guardar toda la info de partes instaladas
+        // SOLUCIÓN ERROR: Nuevo objeto para guardar toda la info de partes instaladas
+        const partsData: Record<string, InstalledPart> = {};
         
         data.parts.forEach((part: InstalledPart) => {
           config[part.Part_Category] = part.Part_id;
-          names[part.Part_Category] = part.Part_Name; //Aquí se gurada el nombre ahora.
-          partsData[part.Part_Category] = part;//Guardamos TODO el objeto de la parte instalada, no solo el nombre
+          names[part.Part_Category] = part.Part_Name; // Aquí se guarda el nombre ahora.
+          // SOLUCIÓN ERROR: Guardamos TODO el objeto de la parte instalada, no solo el nombre
+          partsData[part.Part_Category] = part;
         });
+        
         setInstalledParts(config);
         setInstalledPartsNames(names);
-        setInstalledPartsData(partsData);//Actualizar el nuevo estado con toda la data de las partes instaladas
+        // SOLUCIÓN ERROR: Actualizar el nuevo estado con toda la data de las partes instaladas
+        setInstalledPartsData(partsData);
+      } else {
+        // Si no hay partes instaladas, resetear los estados
+        setInstalledParts({});
+        setInstalledPartsNames({});
+        setInstalledPartsData({});
       }
     } catch (err) {
       console.error('Error al cargar configuración:', err);
+      setInstalledParts({});
+      setInstalledPartsNames({});
+      setInstalledPartsData({});
     }
   };
 
-  const fetchCarStats = async () => { // Obtener estadísticas del carro
+  // Obtener estadísticas del carro
+  const fetchCarStats = async () => {
+    if (!selectedCarId) return;
+    
     try {
-      const response = await fetch(`${API_URL}/api/sp/car-stats/${selectedCar}`);
+      const response = await fetch(`${API_URL}/api/sp/car-stats/${selectedCarId}`);
       const data = await response.json();
       
       if (data.success) {
         console.log('Stats cargadas:', data.stats);
         setCarStats(data.stats);
+      } else {
+        setCarStats(null);
       }
     } catch (err) {
       console.error('Error al cargar stats:', err);
+      setCarStats(null);
     }
   };
 
-  const handleInstallPart = async (category: string, partId: number) => { // Instalar o reemplazar parte
+  // Instalar o reemplazar parte
+  const handleInstallPart = async (category: string, partId: number) => {
+    if (!selectedCarId) return;
+    
     const oldPartId = installedParts[category];
     const isReplacement = oldPartId !== null && oldPartId !== undefined;
 
     try {
       setLoading(true);
       setError(null);
+
       const endpoint = isReplacement ? '/api/sp/replace-part' : '/api/sp/install-part';
       const body = isReplacement
-        ? { carId: parseInt(selectedCar), oldPartId, newPartId: partId, teamId: parseInt(selectedTeam) }
-        : { carId: parseInt(selectedCar), partId, teamId: parseInt(selectedTeam) };
+        ? { 
+            carId: parseInt(selectedCarId), 
+            oldPartId, 
+            newPartId: partId, 
+            teamId: parseInt(selectedTeam) 
+          }
+        : { 
+            carId: parseInt(selectedCarId), 
+            partId, 
+            teamId: parseInt(selectedTeam) 
+          };
 
       console.log('Enviando al backend:', endpoint, body);
 
@@ -168,19 +266,13 @@ const CarAssembly = () => {
         body: JSON.stringify(body)
       });
 
-      console.log('Response status:', response.status);
-
       const data = await response.json();
-      console.log('Response data:', data);
 
       if (data.success) {
-        console.log('Éxito! Recargando datos...');
-        // Recargar todo
-        //Recargar configuración PRIMERO para actualizar installedPartsData antes del inventario
+        console.log('Exito: ' + data.message);
+        // Recargar todo en orden correcto
         await fetchAllData();
-        
         setHasChanges(true);
-        console.log('Yeah! Datos recargados correctamente');
       } else {
         const errorMsg = data.error || 'Error al instalar parte';
         setError(errorMsg);
@@ -197,27 +289,32 @@ const CarAssembly = () => {
     }
   };
 
-  //NUEVA FUNCIÓN: Desinstalar una parte y devolverla al inventario
+  // Nueva función: Desinstalar una parte y devolverla al inventario
   const handleUninstallPart = async (category: string, partId: number) => {
+    if (!selectedCarId) return;
+    
     const partName = installedPartsData[category]?.Part_Name || "esta parte";
     
     if (!confirm(`¿Desinstalar ${partName}?`)) return;
+
     try {
       setLoading(true);
       setError(null);
-      console.log('Desinstalando parte:', { carId: selectedCar, partId, teamId: selectedTeam });
+
+      console.log('Desinstalando parte:', { carId: selectedCarId, partId, teamId: selectedTeam });
 
       const response = await fetch(`${API_URL}/api/sp/uninstall-part`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          carId: parseInt(selectedCar),
+          carId: parseInt(selectedCarId),
           partId: partId,
           teamId: parseInt(selectedTeam)
         })
       });
 
       const data = await response.json();
+
       if (data.success) {
         alert('Parte desinstalada exitosamente');
         await fetchAllData();
@@ -236,11 +333,14 @@ const CarAssembly = () => {
 
   // Validar parte antes de instalar
   const validatePart = async (category: string, partId: number) => {
+    if (!selectedCarId) return false;
+    
     try {
-      console.log('Validando parte antes de instalar:', category, partId);
-      const response = await fetch(`${API_URL}/api/sp/validate-part/${selectedCar}/${partId}`);
+      console.log('Validando parte:', category, partId);
+      const response = await fetch(`${API_URL}/api/sp/validate-part/${selectedCarId}/${partId}`);
       const data = await response.json();
-      console.log('Resultado de la validación antes de instalar:', data);
+      
+      console.log('Resultado validación:', data);
       
       if (data.success) {
         if (data.validation.Status === 'INVALID') {
@@ -265,11 +365,13 @@ const CarAssembly = () => {
       console.error('Part ID inválido:', partId);
       return;
     }
+
     console.log('Instalando parte ID:', numericPartId);
     
     // Validar antes de instalar
     const isValid = await validatePart(category, numericPartId);
     console.log('Validación resultado:', isValid);
+    
     if (!isValid) {
       console.log('Validación falló, abortando');
       return;
@@ -284,6 +386,20 @@ const CarAssembly = () => {
   const handleSaveConfiguration = async () => {
     alert('Configuración guardada exitosamente !');
     setHasChanges(false);
+  };
+
+  // Cambiar al carro anterior
+  const handlePrevCar = () => {
+    if (selectedCarIndex > 0) {
+      setSelectedCarIndex(prev => prev - 1);
+    }
+  };
+
+  // Cambiar al siguiente carro
+  const handleNextCar = () => {
+    if (selectedCarIndex < teamCars.length - 1) {
+      setSelectedCarIndex(prev => prev + 1);
+    }
   };
 
   return (
@@ -351,18 +467,18 @@ const CarAssembly = () => {
                 const CategoryIcon = category.icon;
                 const selectedPartId = installedParts[category.id];
                 const partsInCategory = availableParts.filter(p => p.Category === category.id);
-                const selectedPart = partsInCategory.find(p => p.Part_id === selectedPartId);
-                const installedName = installedPartsNames[category.id];// Obtener nombre instalado
                 
                 // Obtener la parte instalada desde installedPartsData (siempre disponible)
-                // En lugar de buscarla solo en availableParts (que puede no tenerla si se consumió del inventario)
                 const installedPartInfo = installedPartsData[category.id];
+                
                 // Buscar también en inventario disponible por si acaso
                 const partInInventory = partsInCategory.find(p => p.Part_id === selectedPartId);
-                //Usar installedPartInfo o partInInventory para mostrar nombre y stats
+                
+                // Usar installedPartInfo o partInInventory para mostrar nombre y stats
                 const displayName = installedPartInfo?.Part_Name || "None installed";
                 const displayStats = partInInventory || installedPartInfo;
-                //SOLUCIÓN ERROR SELECT: Combinar partes del inventario + parte instalada (si no está en inventario)
+                
+                // Combinar partes del inventario + parte instalada (si no está en inventario)
                 const allPartsForSelect = [...partsInCategory];
                 if (installedPartInfo && !partsInCategory.some(p => p.Part_id === installedPartInfo.Part_id)) {
                   // Si la parte instalada NO está en el inventario, agregarla temporalmente para el Select
@@ -412,7 +528,7 @@ const CarAssembly = () => {
                               <p className="font-display font-bold text-green-400">{displayStats.m}</p>
                             </div>
                           </div>
-                          {/*BOTÓN DESINSTALAR - Ahora llama a handleUninstallPart */}
+                          {/* BOTÓN DESINSTALAR */}
                           <button
                             onClick={() => handleUninstallPart(category.id, installedPartInfo.Part_id)}
                             className="w-8 h-8 rounded-lg bg-red-500/10 hover:bg-red-500/20 flex items-center justify-center transition-colors text-red-400 hover:text-red-300"
@@ -430,8 +546,7 @@ const CarAssembly = () => {
                       disabled={loading}
                     >
                       <SelectTrigger className="bg-card/50 border-border">
-                        {/*SOLUCIÓN ERROR SELECT: Usar solo placeholder, no children personalizados */}
-                        <SelectValue placeholder={partsInCategory.length > 0 ? "Select part..." : "No parts available"} />
+                        <SelectValue placeholder={allPartsForSelect.length > 0 ? "Select part..." : "No parts available"} />
                       </SelectTrigger>
                       <SelectContent>
                         {allPartsForSelect.map((part) => (
@@ -462,16 +577,39 @@ const CarAssembly = () => {
               </h2>
               
               <div className="glass-card rounded-xl p-6 opacity-0 animate-fade-in" style={{ animationDelay: "200ms" }}>
-                <div className="flex items-center gap-4 mb-6">
-                  <div>
-                    <h3 className="font-display font-bold text-xl text-foreground">
-                      CAR #{selectedCar}
+                {/* Car Selector con flechas */}
+                <div className="flex items-center justify-between mb-6">
+                  <button
+                    onClick={handlePrevCar}
+                    disabled={selectedCarIndex === 0 || loading}
+                    className="w-10 h-10 rounded-lg bg-accent/50 hover:bg-accent flex items-center justify-center transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                    title="Previous car"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                    </svg>
+                  </button>
+                  
+                  <div className="text-center">
+                    <h3 className="font-display font-bold text-2xl text-foreground mb-1">
+                      CAR #{selectedCarIndex + 1}
                     </h3>
                     <p className="text-sm text-muted-foreground mb-2">{selectedTeamName}</p>
                     <Badge variant={hasChanges ? "destructive" : "default"} className={hasChanges ? "bg-yellow-500" : "bg-green-500"}>
                       {hasChanges ? "Unsaved Changes" : "Saved"}
                     </Badge>
                   </div>
+                  
+                  <button
+                    onClick={handleNextCar}
+                    disabled={selectedCarIndex === teamCars.length - 1 || loading}
+                    className="w-10 h-10 rounded-lg bg-accent/50 hover:bg-accent flex items-center justify-center transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                    title="Next car"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </button>
                 </div>
 
                 {/* Stats */}
