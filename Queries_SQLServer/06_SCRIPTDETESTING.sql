@@ -1,5 +1,5 @@
 -- ============================================================================
--- SCRIPT PARA CONSULTAR Y POBLAR DATOS DE PRUEBA - CORREGIDO
+-- SCRIPT PARA CONSULTAR Y POBLAR DATOS DE PRUEBA - CON INVENTARIOS VACÍOS
 -- F1 Garage Manager - Grupo 3/C
 -- ============================================================================
 
@@ -24,9 +24,14 @@ INSERT INTO SPONSOR (Name, Industry, Country) VALUES
 ('Pirelli', 'Tires', 'Italy'),
 ('DHL', 'Logistics', 'Germany'),
 ('Aramco', 'Oil & Gas', 'Saudi Arabia'),
-('Emirates', 'Airlines', 'UAE');
+('Emirates', 'Airlines', 'UAE'),
+('Honda', 'Automotive', 'Japan'),
+('Mercedes-Benz', 'Automotive', 'Germany'),
+('Ferrari', 'Automotive', 'Italy'),
+('McLaren', 'Automotive', 'UK'),
+('Crypto.com', 'Cryptocurrency', 'Singapore');
 GO
-PRINT 'Sponsors insertados: 8';
+PRINT 'Sponsors insertados: ' + CAST(@@ROWCOUNT AS VARCHAR);
 GO
 
 -- ============================================================================
@@ -35,13 +40,15 @@ GO
 PRINT 'Insertando Equipos...';
 
 INSERT INTO TEAM (Name, Total_Budget, Total_Spent) VALUES
-('Mercedes-AMG', 0, 0),
+('Mercedes-AMG Petronas', 0, 0),
 ('Red Bull Racing', 0, 0),
-('Ferrari', 0, 0),
-('McLaren', 0, 0),
-('Aston Martin', 0, 0);
+('Scuderia Ferrari', 0, 0),
+('McLaren F1 Team', 0, 0),
+('Aston Martin Aramco', 0, 0),
+('Alpine F1 Team', 0, 0),
+('Williams Racing', 0, 0);
 GO
-PRINT 'Equipos insertados: 5';
+PRINT 'Equipos insertados: ' + CAST(@@ROWCOUNT AS VARCHAR);
 GO
 
 -- ============================================================================
@@ -50,26 +57,31 @@ GO
 PRINT 'Insertando Aportes (Contributions)...';
 
 INSERT INTO CONTRIBUTION (Sponsor_id, Team_id, Amount, Date, Description) VALUES
+-- Mercedes-AMG Petronas
+(2, 1, 10000000.00, GETDATE(), 'Patrocinio principal temporada 2024'),
+(10, 1, 5000000.00, DATEADD(DAY, -30, GETDATE()), 'Patrocinio tecnológico'),
+(4, 1, 2000000.00, DATEADD(DAY, -20, GETDATE()), 'Patrocinio oficial de tiempo'),
 -- Red Bull Racing
-(1, 2, 5000000.00, GETDATE(), 'Aporte inicial temporada 2024'),
-(1, 2, 2000000.00, DATEADD(DAY, -30, GETDATE()), 'Bonus por rendimiento'),
-(3, 2, 1500000.00, DATEADD(DAY, -45, GETDATE()), 'Patrocinio Shell'),
--- Mercedes
-(2, 1, 6000000.00, GETDATE(), 'Patrocinio principal Petronas'),
-(4, 1, 1000000.00, DATEADD(DAY, -20, GETDATE()), 'Patrocinio Rolex'),
-(6, 1, 800000.00, DATEADD(DAY, -35, GETDATE()), 'Patrocinio DHL'),
--- Ferrari
-(3, 3, 4500000.00, GETDATE(), 'Patrocinio Shell'),
-(5, 3, 2000000.00, DATEADD(DAY, -15, GETDATE()), 'Patrocinio Pirelli'),
-(7, 3, 3000000.00, DATEADD(DAY, -40, GETDATE()), 'Patrocinio Aramco'),
--- McLaren
-(8, 4, 3500000.00, GETDATE(), 'Patrocinio Emirates'),
-(1, 4, 1000000.00, DATEADD(DAY, -25, GETDATE()), 'Patrocinio adicional Red Bull'),
--- Aston Martin
-(7, 5, 5000000.00, GETDATE(), 'Patrocinio principal Aramco'),
-(4, 5, 1200000.00, DATEADD(DAY, -30, GETDATE()), 'Patrocinio Rolex');
+(1, 2, 15000000.00, GETDATE(), 'Patrocinio principal'),
+(3, 2, 8000000.00, DATEADD(DAY, -45, GETDATE()), 'Patrocinio combustible'),
+(9, 2, 6000000.00, DATEADD(DAY, -60, GETDATE()), 'Motor y desarrollo'),
+-- Scuderia Ferrari
+(11, 3, 12000000.00, GETDATE(), 'Patrocinio principal'),
+(7, 3, 7000000.00, DATEADD(DAY, -15, GETDATE()), 'Patrocinio energético'),
+(5, 3, 3000000.00, DATEADD(DAY, -40, GETDATE()), 'Patrocinio neumáticos'),
+-- McLaren F1 Team
+(12, 4, 9000000.00, GETDATE(), 'Patrocinio principal'),
+(8, 4, 5000000.00, DATEADD(DAY, -25, GETDATE()), 'Patrocinio aerolínea'),
+(13, 4, 4000000.00, DATEADD(DAY, -35, GETDATE()), 'Patrocinio tecnología'),
+-- Aston Martin Aramco
+(7, 5, 11000000.00, GETDATE(), 'Patrocinio principal'),
+(4, 5, 2500000.00, DATEADD(DAY, -30, GETDATE()), 'Patrocinio tiempo'),
+-- Alpine F1 Team
+(8, 6, 6000000.00, GETDATE(), 'Patrocinio principal'),
+-- Williams Racing
+(6, 7, 4000000.00, GETDATE(), 'Patrocinio logística');
 GO
-PRINT 'Aportes insertados: 13';
+PRINT 'Aportes insertados: ' + CAST(@@ROWCOUNT AS VARCHAR);
 GO
 
 -- Actualizar presupuestos de equipos
@@ -79,37 +91,47 @@ SET Total_Budget = (SELECT ISNULL(SUM(Amount), 0) FROM CONTRIBUTION WHERE Team_i
 GO
 
 -- ============================================================================
--- 4. INSERTAR PARTES - CORREGIDO CON COLUMNA NAME
+-- 4. INSERTAR PARTES - CATÁLOGO COMPLETO
 -- ============================================================================
 PRINT 'Insertando Partes al catálogo...';
 
 INSERT INTO PART (Name, Category, Price, Stock, p, a, m) VALUES
--- Power Units
-('Mercedes M15 E Performance', 'Power_Unit', 1000000.00, 5, 9, 3, 2),
-('Honda RA272E', 'Power_Unit', 800000.00, 8, 7, 4, 3),
-('Ferrari 066/11', 'Power_Unit', 1200000.00, 3, 9, 2, 1),
+-- Power Units (9-10 unidades cada una)
+('Mercedes-AMG M15 E Performance', 'Power_Unit', 1200000.00, 10, 9, 3, 2),
+('Honda RA624H Hybrid', 'Power_Unit', 1100000.00, 12, 8, 4, 3),
+('Ferrari 066/12', 'Power_Unit', 1250000.00, 8, 9, 2, 1),
+('Renault E-Tech RE24', 'Power_Unit', 950000.00, 15, 7, 3, 4),
+('Audi V6 Hybrid', 'Power_Unit', 1050000.00, 6, 8, 3, 3),
 
--- Aerodynamics Packages
-('Low Drag Rear Wing', 'Aerodynamics_pkg', 500000.00, 10, 2, 9, 4),
-('High Downforce Front Wing', 'Aerodynamics_pkg', 300000.00, 15, 1, 7, 5),
-('DRS Optimized Package', 'Aerodynamics_pkg', 700000.00, 7, 3, 9, 3),
+-- Aerodynamics Packages (15-20 unidades cada una)
+('Low Drag Monza Spec', 'Aerodynamics_pkg', 550000.00, 20, 2, 9, 4),
+('High Downforce Monaco Spec', 'Aerodynamics_pkg', 650000.00, 18, 1, 8, 5),
+('DRS Plus System', 'Aerodynamics_pkg', 750000.00, 12, 3, 9, 3),
+('Spa High Efficiency Wing', 'Aerodynamics_pkg', 600000.00, 16, 2, 8, 4),
+('Silverstone Spec Package', 'Aerodynamics_pkg', 500000.00, 22, 1, 7, 6),
 
--- Wheels
-('Pirelli P Zero Soft', 'Wheels', 200000.00, 20, 3, 4, 8),
-('Pirelli P Zero Medium', 'Wheels', 150000.00, 25, 2, 3, 7),
-('Pirelli P Zero Hard', 'Wheels', 250000.00, 15, 4, 5, 9),
+-- Wheels (20-30 unidades cada una)
+('Pirelli P Zero Soft (C3)', 'Wheels', 220000.00, 30, 3, 4, 8),
+('Pirelli P Zero Medium (C2)', 'Wheels', 180000.00, 35, 2, 3, 7),
+('Pirelli P Zero Hard (C1)', 'Wheels', 280000.00, 25, 4, 5, 9),
+('Pirelli Intermediates', 'Wheels', 320000.00, 20, 2, 6, 6),
+('Pirelli Full Wets', 'Wheels', 350000.00, 15, 1, 7, 5),
 
--- Suspension
-('Active Suspension Pro', 'Suspension', 400000.00, 12, 2, 5, 9),
-('Adaptive Dampers', 'Suspension', 250000.00, 18, 1, 4, 8),
-('Multi-Link Rear Suspension', 'Suspension', 500000.00, 8, 3, 6, 9),
+-- Suspension (12-18 unidades cada una)
+('Active Suspension Pro 2024', 'Suspension', 450000.00, 15, 2, 5, 9),
+('Adaptive Dampers Pro', 'Suspension', 380000.00, 20, 1, 4, 8),
+('Multi-Link Rear System', 'Suspension', 550000.00, 12, 3, 6, 9),
+('Hydraulic Anti-Roll System', 'Suspension', 480000.00, 14, 2, 5, 8),
+('Carbon Fiber Suspension', 'Suspension', 620000.00, 10, 3, 6, 9),
 
--- Gearbox
-('8-Speed Sequential', 'Gearbox', 350000.00, 10, 4, 3, 6),
-('7-Speed Dual Clutch', 'Gearbox', 200000.00, 15, 3, 2, 7),
-('Hybrid Gearbox System', 'Gearbox', 450000.00, 6, 5, 4, 8);
+-- Gearbox (10-15 unidades cada una)
+('8-Speed Sequential Pro', 'Gearbox', 420000.00, 15, 4, 3, 6),
+('7-Speed Dual Clutch Plus', 'Gearbox', 350000.00, 18, 3, 2, 7),
+('Hybrid Gearbox System V2', 'Gearbox', 520000.00, 12, 5, 4, 8),
+('Quick Shift Gearbox', 'Gearbox', 480000.00, 14, 4, 3, 7),
+('Seamless Shift Gearbox', 'Gearbox', 580000.00, 10, 5, 4, 8);
 GO
-PRINT 'Partes insertadas: 15';
+PRINT 'Partes insertadas: ' + CAST(@@ROWCOUNT AS VARCHAR);
 GO
 
 -- ============================================================================
@@ -124,29 +146,34 @@ INSERT INTO CIRCUIT (Name, Total_distance, N_Curves) VALUES
 ('Circuit de Monaco', 3.337, 19),
 ('Spa-Francorchamps', 7.004, 19),
 ('Interlagos', 4.309, 15),
-('Circuit of the Americas', 5.513, 20);
+('Circuit of the Americas', 5.513, 20),
+('Bahrain International', 5.412, 15),
+('Yas Marina', 5.281, 16),
+('Hungaroring', 4.381, 14);
 GO
-PRINT 'Circuitos insertados: 7';
+PRINT 'Circuitos insertados: ' + CAST(@@ROWCOUNT AS VARCHAR);
 GO
 
 -- ============================================================================
--- 6. INSERTAR USUARIOS - CORREGIDO: Solo Username, Salt, PasswordHash
+-- 6. INSERTAR USUARIOS
 -- ============================================================================
 PRINT 'Insertando Usuarios...';
 
--- Admin
+-- Admin (1)
 INSERT INTO [USER] (Username, Salt, PasswordHash) VALUES
 ('admin', 'salt123', 'hash123');
 
--- Engineers para cada equipo
+-- Engineers (1 por equipo = 7)
 INSERT INTO [USER] (Username, Salt, PasswordHash) VALUES
 ('engineer_mercedes', 'salt123', 'hash123'),
 ('engineer_redbull', 'salt123', 'hash123'),
 ('engineer_ferrari', 'salt123', 'hash123'),
 ('engineer_mclaren', 'salt123', 'hash123'),
-('engineer_astonmartin', 'salt123', 'hash123');
+('engineer_astonmartin', 'salt123', 'hash123'),
+('engineer_alpine', 'salt123', 'hash123'),
+('engineer_williams', 'salt123', 'hash123');
 
--- Drivers (2 por equipo = 10 drivers)
+-- Drivers (2 por equipo = 14 drivers)
 INSERT INTO [USER] (Username, Salt, PasswordHash) VALUES
 ('hamilton', 'salt123', 'hash123'),
 ('russell', 'salt123', 'hash123'),
@@ -157,9 +184,13 @@ INSERT INTO [USER] (Username, Salt, PasswordHash) VALUES
 ('norris', 'salt123', 'hash123'),
 ('piastri', 'salt123', 'hash123'),
 ('alonso', 'salt123', 'hash123'),
-('stroll', 'salt123', 'hash123');
+('stroll', 'salt123', 'hash123'),
+('gasly', 'salt123', 'hash123'),
+('ocon', 'salt123', 'hash123'),
+('albon', 'salt123', 'hash123'),
+('sargeant', 'salt123', 'hash123');
 GO
-PRINT 'Usuarios insertados: 16';
+PRINT 'Usuarios insertados: ' + CAST(@@ROWCOUNT AS VARCHAR);
 GO
 
 -- ============================================================================
@@ -167,136 +198,172 @@ GO
 -- ============================================================================
 PRINT 'Insertando Admin...';
 
-DECLARE @AdminUserId INT = (SELECT User_id FROM [USER] WHERE Username = 'admin');
-
-INSERT INTO ADMIN (User_id) VALUES (@AdminUserId);
+INSERT INTO ADMIN (User_id) 
+SELECT User_id FROM [USER] WHERE Username = 'admin';
 GO
-PRINT 'Admin insertado: 1';
+PRINT 'Admin insertado: ' + CAST(@@ROWCOUNT AS VARCHAR);
 GO
 
 -- ============================================================================
--- 8. INSERTAR ENGINEERS Y ASIGNAR A EQUIPOS - CORREGIDO: Sin Specialty
+-- 8. INSERTAR ENGINEERS Y ASIGNAR A EQUIPOS
 -- ============================================================================
 PRINT 'Insertando Engineers...';
 
-DECLARE @MercedesEngineer INT = (SELECT User_id FROM [USER] WHERE Username = 'engineer_mercedes');
-DECLARE @RedBullEngineer INT = (SELECT User_id FROM [USER] WHERE Username = 'engineer_redbull');
-DECLARE @FerrariEngineer INT = (SELECT User_id FROM [USER] WHERE Username = 'engineer_ferrari');
-DECLARE @McLarenEngineer INT = (SELECT User_id FROM [USER] WHERE Username = 'engineer_mclaren');
-DECLARE @AstonEngineer INT = (SELECT User_id FROM [USER] WHERE Username = 'engineer_astonmartin');
-
-INSERT INTO ENGINEER (User_id, Team_id) VALUES
-(@MercedesEngineer, 1),
-(@RedBullEngineer, 2),
-(@FerrariEngineer, 3),
-(@McLarenEngineer, 4),
-(@AstonEngineer, 5);
+INSERT INTO ENGINEER (User_id, Team_id)
+SELECT u.User_id, t.Team_id
+FROM [USER] u
+CROSS JOIN TEAM t
+WHERE u.Username LIKE 'engineer_%' 
+              AND t.Name LIKE 
+              CASE 
+              WHEN u.Username = 'engineer_mercedes' THEN '%Mercedes%'
+              WHEN u.Username = 'engineer_redbull' THEN '%Red Bull%'
+              WHEN u.Username = 'engineer_ferrari' THEN '%Ferrari%'
+              WHEN u.Username = 'engineer_mclaren' THEN '%McLaren%'
+              WHEN u.Username = 'engineer_astonmartin' THEN '%Aston Martin%'
+              WHEN u.Username = 'engineer_alpine' THEN '%Alpine%'
+              WHEN u.Username = 'engineer_williams' THEN '%Williams%'
+       END;
 GO
-PRINT 'Engineers insertados: 5';
+PRINT 'Engineers insertados: ' + CAST(@@ROWCOUNT AS VARCHAR);
 GO
 
 -- ============================================================================
--- 9. INSERTAR DRIVERS - CORREGIDO: Solo User_id, Team_id, H
+-- 9. INSERTAR DRIVERS
 -- ============================================================================
 PRINT 'Insertando Drivers...';
 
 -- Mercedes Drivers
-DECLARE @Hamilton INT = (SELECT User_id FROM [USER] WHERE Username = 'hamilton');
-DECLARE @Russell INT = (SELECT User_id FROM [USER] WHERE Username = 'russell');
-INSERT INTO DRIVER (User_id, Team_id, H) VALUES (@Hamilton, 1, 95), (@Russell, 1, 88);
+INSERT INTO DRIVER (User_id, Team_id, H)
+SELECT u.User_id, t.Team_id, 95
+FROM [USER] u, TEAM t
+WHERE u.Username = 'hamilton' AND t.Name LIKE '%Mercedes%';
+
+INSERT INTO DRIVER (User_id, Team_id, H)
+SELECT u.User_id, t.Team_id, 88
+FROM [USER] u, TEAM t
+WHERE u.Username = 'russell' AND t.Name LIKE '%Mercedes%';
 
 -- Red Bull Drivers
-DECLARE @Verstappen INT = (SELECT User_id FROM [USER] WHERE Username = 'verstappen');
-DECLARE @Perez INT = (SELECT User_id FROM [USER] WHERE Username = 'perez');
-INSERT INTO DRIVER (User_id, Team_id, H) VALUES (@Verstappen, 2, 98), (@Perez, 2, 85);
+INSERT INTO DRIVER (User_id, Team_id, H)
+SELECT u.User_id, t.Team_id, 98
+FROM [USER] u, TEAM t
+WHERE u.Username = 'verstappen' AND t.Name LIKE '%Red Bull%';
+
+INSERT INTO DRIVER (User_id, Team_id, H)
+SELECT u.User_id, t.Team_id, 85
+FROM [USER] u, TEAM t
+WHERE u.Username = 'perez' AND t.Name LIKE '%Red Bull%';
 
 -- Ferrari Drivers
-DECLARE @Leclerc INT = (SELECT User_id FROM [USER] WHERE Username = 'leclerc');
-DECLARE @Sainz INT = (SELECT User_id FROM [USER] WHERE Username = 'sainz');
-INSERT INTO DRIVER (User_id, Team_id, H) VALUES (@Leclerc, 3, 92), (@Sainz, 3, 87);
+INSERT INTO DRIVER (User_id, Team_id, H)
+SELECT u.User_id, t.Team_id, 92
+FROM [USER] u, TEAM t
+WHERE u.Username = 'leclerc' AND t.Name LIKE '%Ferrari%';
+
+INSERT INTO DRIVER (User_id, Team_id, H)
+SELECT u.User_id, t.Team_id, 87
+FROM [USER] u, TEAM t
+WHERE u.Username = 'sainz' AND t.Name LIKE '%Ferrari%';
 
 -- McLaren Drivers
-DECLARE @Norris INT = (SELECT User_id FROM [USER] WHERE Username = 'norris');
-DECLARE @Piastri INT = (SELECT User_id FROM [USER] WHERE Username = 'piastri');
-INSERT INTO DRIVER (User_id, Team_id, H) VALUES (@Norris, 4, 90), (@Piastri, 4, 83);
+INSERT INTO DRIVER (User_id, Team_id, H)
+SELECT u.User_id, t.Team_id, 90
+FROM [USER] u, TEAM t
+WHERE u.Username = 'norris' AND t.Name LIKE '%McLaren%';
+
+INSERT INTO DRIVER (User_id, Team_id, H)
+SELECT u.User_id, t.Team_id, 83
+FROM [USER] u, TEAM t
+WHERE u.Username = 'piastri' AND t.Name LIKE '%McLaren%';
 
 -- Aston Martin Drivers
-DECLARE @Alonso INT = (SELECT User_id FROM [USER] WHERE Username = 'alonso');
-DECLARE @Stroll INT = (SELECT User_id FROM [USER] WHERE Username = 'stroll');
-INSERT INTO DRIVER (User_id, Team_id, H) VALUES (@Alonso, 5, 94), (@Stroll, 5, 80);
+INSERT INTO DRIVER (User_id, Team_id, H)
+SELECT u.User_id, t.Team_id, 94
+FROM [USER] u, TEAM t
+WHERE u.Username = 'alonso' AND t.Name LIKE '%Aston Martin%';
+
+INSERT INTO DRIVER (User_id, Team_id, H)
+SELECT u.User_id, t.Team_id, 80
+FROM [USER] u, TEAM t
+WHERE u.Username = 'stroll' AND t.Name LIKE '%Aston Martin%';
+
+-- Alpine Drivers
+INSERT INTO DRIVER (User_id, Team_id, H)
+SELECT u.User_id, t.Team_id, 86
+FROM [USER] u, TEAM t
+WHERE u.Username = 'gasly' AND t.Name LIKE '%Alpine%';
+
+INSERT INTO DRIVER (User_id, Team_id, H)
+SELECT u.User_id, t.Team_id, 84
+FROM [USER] u, TEAM t
+WHERE u.Username = 'ocon' AND t.Name LIKE '%Alpine%';
+
+-- Williams Drivers
+INSERT INTO DRIVER (User_id, Team_id, H)
+SELECT u.User_id, t.Team_id, 82
+FROM [USER] u, TEAM t
+WHERE u.Username = 'albon' AND t.Name LIKE '%Williams%';
+
+INSERT INTO DRIVER (User_id, Team_id, H)
+SELECT u.User_id, t.Team_id, 75
+FROM [USER] u, TEAM t
+WHERE u.Username = 'sargeant' AND t.Name LIKE '%Williams%';
 GO
-PRINT 'Drivers insertados: 10';
+PRINT 'Drivers insertados: ' + CAST(@@ROWCOUNT AS VARCHAR);
 GO
 
 -- ============================================================================
--- 10. INSERTAR CARROS PARA CADA EQUIPO
+-- 10. INSERTAR CARROS PARA CADA EQUIPO (2 por equipo)
 -- ============================================================================
 PRINT 'Insertando Carros...';
 
-INSERT INTO CAR (Team_id, isFinalized) VALUES
--- Mercedes (2 carros)
-(1, 0), (1, 0),
--- Red Bull (2 carros)
-(2, 0), (2, 0),
--- Ferrari (2 carros)
-(3, 0), (3, 0),
--- McLaren (2 carros)
-(4, 0), (4, 0),
--- Aston Martin (2 carros)
-(5, 0), (5, 0);
+INSERT INTO CAR (Team_id, isFinalized)
+SELECT Team_id, 0 FROM TEAM
+CROSS JOIN (SELECT 1 AS n UNION SELECT 2) AS numbers;
 GO
-PRINT 'Carros insertados: 10';
+PRINT 'Carros insertados: ' + CAST(@@ROWCOUNT AS VARCHAR);
 GO
 
 -- ============================================================================
--- 11. CREAR INVENTARIOS PARA CADA EQUIPO
+-- 11. CREAR INVENTARIOS PARA CADA EQUIPO (VACÍOS)
 -- ============================================================================
-PRINT 'Creando Inventarios para equipos...';
+PRINT 'Creando Inventarios vacíos para equipos...';
 
-INSERT INTO INVENTORY (Team_id) VALUES (1), (2), (3), (4), (5);
+INSERT INTO INVENTORY (Team_id) 
+SELECT Team_id FROM TEAM;
 GO
-PRINT 'Inventarios creados: 5';
+PRINT 'Inventarios creados: ' + CAST(@@ROWCOUNT AS VARCHAR);
 GO
 
+-- NOTA: Los inventarios están vacíos intencionalmente para demostrar 
+--       la funcionalidad de compra de partes desde la tienda.
+
 -- ============================================================================
--- 12. AGREGAR ALGUNAS PARTES AL INVENTARIO DE EQUIPOS (OPCIONAL)
+-- RESULTADO FINAL
 -- ============================================================================
--- PRINT 'Agregando partes a inventarios...';
--- 
--- -- Mercedes recibe algunas partes
--- DECLARE @MercedesInv INT = (SELECT Inventory_id FROM INVENTORY WHERE Team_id = 1);
--- INSERT INTO INVENTORY_PART (Inventory_id, Part_id, Quantity) VALUES
--- (@MercedesInv, 1, 2),  -- Power Unit
--- (@MercedesInv, 4, 3),  -- Aero
--- (@MercedesInv, 7, 4);  -- Wheels
--- 
--- -- Red Bull recibe algunas partes
--- DECLARE @RedBullInv INT = (SELECT Inventory_id FROM INVENTORY WHERE Team_id = 2);
--- INSERT INTO INVENTORY_PART (Inventory_id, Part_id, Quantity) VALUES
--- (@RedBullInv, 2, 2),
--- (@RedBullInv, 5, 2),
--- (@RedBullInv, 8, 3);
--- GO
--- PRINT 'Partes agregadas a inventarios';
--- GO
--- 
--- PRINT '';
--- PRINT '============================================================================';
--- PRINT 'DATOS DE PRUEBA INSERTADOS EXITOSAMENTE';
--- PRINT '============================================================================';
--- PRINT 'Resumen:';
--- PRINT '- Sponsors: 8';
--- PRINT '- Equipos: 5';
--- PRINT '- Aportes: 13 (con presupuestos asignados)';
--- PRINT '- Partes: 15 (3 de cada categoría)';
--- PRINT '- Circuitos: 7';
--- PRINT '- Usuarios: 16 (1 admin + 5 engineers + 10 drivers)';
--- PRINT '- Admin: 1';
--- PRINT '- Engineers: 5';
--- PRINT '- Drivers: 10';
--- PRINT '- Carros: 10 (2 por equipo)';
--- PRINT '- Inventarios: 5 (1 por equipo)';
--- GO
+PRINT '';
+PRINT '============================================================================';
+PRINT 'DATOS DE PRUEBA INSERTADOS EXITOSAMENTE';
+PRINT '============================================================================';
+PRINT 'RESUMEN:';
+PRINT '--------';
+PRINT '- Sponsors: 13';
+PRINT '- Equipos: 7';
+PRINT '- Aportes: 13 (presupuestos actualizados)';
+PRINT '- Partes en catálogo: 25 (5 de cada categoría)';
+PRINT '- Circuitos: 10';
+PRINT '- Usuarios: 22 (1 admin + 7 engineers + 14 drivers)';
+PRINT '- Admin: 1';
+PRINT '- Engineers: 7 (1 por equipo)';
+PRINT '- Drivers: 14 (2 por equipo)';
+PRINT '- Carros: 14 (2 por equipo)';
+PRINT '- Inventarios: 7 (1 por equipo, TODOS VACÍOS)';
+PRINT '';
+PRINT 'NOTA: Los inventarios están vacíos intencionalmente.';
+PRINT '      Para ensamblar autos, primero debes comprar partes desde la tienda.';
+PRINT '============================================================================';
+GO
 
 -- ============================================================================
 -- CONSULTAS DE VERIFICACIÓN
@@ -324,31 +391,102 @@ GO
 
 -- 3. Equipos con presupuesto
 PRINT '3. EQUIPOS CON PRESUPUESTO';
-SELECT Team_id, Name, Total_Budget, Total_Spent, 
-       (Total_Budget - Total_Spent) AS Available_Budget
+SELECT Team_id, Name, 
+       FORMAT(Total_Budget, 'C') AS Presupuesto_Total,
+       FORMAT(Total_Spent, 'C') AS Gastado,
+       FORMAT((Total_Budget - Total_Spent), 'C') AS Presupuesto_Disponible
 FROM TEAM
-ORDER BY Name;
+ORDER BY Total_Budget DESC;
 GO
 
 -- 4. Catálogo de partes
-PRINT '4. CATÁLOGO DE PARTES DISPONIBLES';
-SELECT Part_id, Name, Category, Price, Stock, p, a, m
+PRINT '4. CATÁLOGO DE PARTES DISPONIBLES (TIENDA)';
+SELECT Part_id, Name, Category, 
+       FORMAT(Price, 'C') AS Precio,
+       Stock AS Stock_Disponible,
+       CONCAT('P:', p, ' A:', a, ' M:', m) AS Stats
 FROM PART
 ORDER BY Category, Part_id;
 GO
 
--- 5. Inventarios
-PRINT '5. INVENTARIOS POR EQUIPO';
-SELECT t.Name AS Team, p.Name AS Part, p.Category, ip.Quantity
+-- 5. Inventarios por equipo (deben estar vacíos)
+PRINT '5. INVENTARIOS POR EQUIPO (DEBEN ESTAR VACÍOS)';
+SELECT t.Name AS Equipo, 
+       COUNT(ip.Part_id) AS Partes_En_Inventario,
+       ISNULL(SUM(ip.Quantity), 0) AS Total_Unidades
 FROM INVENTORY i
 JOIN TEAM t ON i.Team_id = t.Team_id
-JOIN INVENTORY_PART ip ON i.Inventory_id = ip.Inventory_id
-JOIN PART p ON ip.Part_id = p.Part_id
-ORDER BY t.Name, p.Category;
+LEFT JOIN INVENTORY_PART ip ON i.Inventory_id = ip.Inventory_id
+GROUP BY t.Name
+ORDER BY t.Name;
+GO
+
+-- 6. Carros y su estado (deben estar incompletos)
+PRINT '6. CARROS Y ESTADO DE ENSAMBLAJE (DEBEN ESTAR INCOMPLETOS)';
+SELECT c.Car_id, t.Name AS Equipo,
+       CASE c.isFinalized 
+              WHEN 1 THEN 'Completo' 
+              ELSE 'Incompleto' 
+       END AS Estado,
+       ISNULL(cc.Parts_Count, 0) AS Partes_Instaladas,
+       CASE 
+              WHEN ISNULL(cc.Parts_Count, 0) = 5 THEN 'READY TO RACE'
+              ELSE CONCAT('Faltan ', 5 - ISNULL(cc.Parts_Count, 0), ' partes')
+       END AS Estado_Ensamblaje
+FROM CAR c
+JOIN TEAM t ON c.Team_id = t.Team_id
+LEFT JOIN (
+       SELECT Car_id, COUNT(*) AS Parts_Count
+       FROM CAR_CONFIGURATION
+       GROUP BY Car_id
+) cc ON c.Car_id = cc.Car_id
+ORDER BY t.Name, c.Car_id;
+GO
+
+-- 7. Verificar que no hay partes instaladas en ningún carro
+PRINT '7. VERIFICACIÓN: PARTES INSTALADAS EN CARROS';
+SELECT COUNT(*) AS Total_Partes_Instaladas FROM CAR_CONFIGURATION;
+IF (SELECT COUNT(*) FROM CAR_CONFIGURATION) = 0
+       PRINT '✓ Correcto: Ninguna parte instalada en carros';
+ELSE
+       PRINT '✗ Error: Hay partes instaladas en carros';
+GO
+
+-- 8. Verificar que no hay partes en inventarios
+PRINT '8. VERIFICACIÓN: PARTES EN INVENTARIOS';
+SELECT COUNT(*) AS Total_Partes_En_Inventarios FROM INVENTORY_PART;
+IF (SELECT COUNT(*) FROM INVENTORY_PART) = 0
+       PRINT '✓ Correcto: Ninguna parte en inventarios (listo para compras)';
+ELSE
+       PRINT '✗ Error: Hay partes en inventarios';
 GO
 
 PRINT '';
 PRINT '============================================================================';
 PRINT 'SCRIPT DE TESTING COMPLETADO';
 PRINT '============================================================================';
+GO
+
+-- ============================================================================
+-- CONSULTAS ADICIONALES PARA DEBUG
+-- ============================================================================
+PRINT '';
+PRINT '============================================================================';
+PRINT 'CONSULTAS ADICIONALES PARA DEBUG';
+PRINT '============================================================================';
+
+-- Verificar relación entre carros y equipos
+PRINT 'Relación Carros - Equipos:';
+SELECT c.Car_id, t.Team_id, t.Name AS Team_Name, c.isFinalized
+FROM CAR c
+INNER JOIN TEAM t ON c.Team_id = t.Team_id
+ORDER BY t.Team_id, c.Car_id;
+
+-- Verificar inventarios (deben existir pero vacíos)
+PRINT 'Inventarios existentes (deben estar vacíos):';
+SELECT i.Inventory_id, t.Team_id, t.Name AS Team_Name,
+       (SELECT COUNT(*) FROM INVENTORY_PART ip WHERE ip.Inventory_id = i.Inventory_id) AS Partes_En_Inventario
+FROM INVENTORY i
+INNER JOIN TEAM t ON i.Team_id = t.Team_id
+ORDER BY t.Team_id;
 GO

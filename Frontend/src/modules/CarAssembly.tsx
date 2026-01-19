@@ -382,10 +382,30 @@ const CarAssembly = () => {
     await handleInstallPart(category, numericPartId);
   };
 
-  // Guardar configuración final
+  // Guardar configuración final con validación de carro completo
+  // NUEVA FUNCIONALIDAD: Validar si el carro tiene las 5 categorías instaladas antes de guardar
   const handleSaveConfiguration = async () => {
-    alert('Configuración guardada exitosamente !');
-    setHasChanges(false);
+    // Calcular cuántas categorías están instaladas
+    const installedCategoriesCount = Object.keys(installedPartsData).length;
+    const isCarComplete = installedCategoriesCount === 5;
+    
+    if (isCarComplete) {
+      // Si el carro tiene las 5 categorías instaladas - READY TO RACE!
+      alert('Configuración guardada exitosamente! ¡READY TO RACE!');
+      setHasChanges(false);
+      
+      // Aquí podrías agregar una llamada a un endpoint adicional
+      // para marcar el carro como "listo para correr" en la base de datos
+      // Ejemplo: await markCarAsReady(selectedCarId);
+    } else {
+      // Si el carro NO tiene las 5 categorías instaladas
+      const missingCount = 5 - installedCategoriesCount;
+      alert(`Configuración guardada parcialmente. El carro NO es apto para correr porque le falta(n) ${missingCount} categoría(s) instalada(s).\n\nRequiere instalar todas las 5 categorías para poder competir.`);
+      
+      // Aún así marcamos como guardado (sin cambios pendientes)
+      // pero el usuario sabe que no está completo
+      setHasChanges(false);
+    }
   };
 
   // Cambiar al carro anterior
@@ -401,6 +421,9 @@ const CarAssembly = () => {
       setSelectedCarIndex(prev => prev + 1);
     }
   };
+
+  // Calcular si el carro está listo para correr (tiene las 5 categorías instaladas)
+  const isCarReady = Object.keys(installedPartsData).length === 5;
 
   return (
     <MainLayout>
@@ -576,6 +599,29 @@ const CarAssembly = () => {
                 Car Performance
               </h2>
               
+              {/* Indicador visual de estado del carro (completo/incompleto) */}
+              <div className={`glass-card rounded-xl p-4 mb-4 ${isCarReady ? 'bg-green-500/10 border-green-500/20' : 'bg-yellow-500/10 border-yellow-500/20'} opacity-0 animate-fade-in`} style={{ animationDelay: "150ms" }}>
+                <div className="flex items-center gap-3">
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center ${isCarReady ? 'bg-green-500/20' : 'bg-yellow-500/20'}`}>
+                    {isCarReady ? (
+                      <Check className="w-4 h-4 text-green-400" />
+                    ) : (
+                      <AlertCircle className="w-4 h-4 text-yellow-400" />
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <p className={`font-medium ${isCarReady ? 'text-green-400' : 'text-yellow-400'}`}>
+                      {isCarReady ? 'READY TO RACE' : 'INCOMPLETE CONFIGURATION'}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {isCarReady 
+                        ? 'Carro completo, listo para competir' 
+                        : `Faltan ${5 - Object.keys(installedPartsData).length} categorías para completar`}
+                    </p>
+                  </div>
+                </div>
+              </div>
+              
               <div className="glass-card rounded-xl p-6 opacity-0 animate-fade-in" style={{ animationDelay: "200ms" }}>
                 {/* Car Selector con flechas */}
                 <div className="flex items-center justify-between mb-6">
@@ -595,8 +641,21 @@ const CarAssembly = () => {
                       CAR #{selectedCarIndex + 1}
                     </h3>
                     <p className="text-sm text-muted-foreground mb-2">{selectedTeamName}</p>
-                    <Badge variant={hasChanges ? "destructive" : "default"} className={hasChanges ? "bg-yellow-500" : "bg-green-500"}>
-                      {hasChanges ? "Unsaved Changes" : "Saved"}
+                    <Badge 
+                      variant={hasChanges ? "destructive" : "default"} 
+                      className={
+                        hasChanges 
+                          ? "bg-yellow-500" 
+                          : isCarReady 
+                            ? "bg-green-500" 
+                            : "bg-blue-500"
+                      }
+                    >
+                      {hasChanges 
+                        ? "Unsaved Changes" 
+                        : isCarReady 
+                          ? "Ready to Race" 
+                          : "Saved (Incomplete)"}
                     </Badge>
                   </div>
                   
@@ -664,7 +723,7 @@ const CarAssembly = () => {
                   </div>
                 )}
 
-                {/* Save Button */}
+                {/* Save Button - Cambia el texto según el estado del carro */}
                 <Button 
                   variant="racing" 
                   className="w-full"
@@ -672,7 +731,7 @@ const CarAssembly = () => {
                   disabled={!hasChanges || loading}
                 >
                   <Check className="w-4 h-4" />
-                  SAVE CONFIGURATION
+                  {isCarReady ? 'SAVE & FINALIZE CONFIGURATION' : 'SAVE PARTIAL CONFIGURATION'}
                 </Button>
               </div>
             </div>

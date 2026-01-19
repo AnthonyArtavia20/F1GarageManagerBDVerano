@@ -31,10 +31,10 @@ try {
     const pool = await require('../../config/database').mssqlConnect();
 
     const result = await pool.request()
-      .input('Car_id', require('../../config/database').sql.Int, carId)
-      .input('Part_id', require('../../config/database').sql.Int, partId)
-      .input('Team_id', require('../../config/database').sql.Int, teamId)
-      .execute('sp_InstallPart');
+        .input('Car_id', require('../../config/database').sql.Int, carId)
+        .input('Part_id', require('../../config/database').sql.Int, partId)
+        .input('Team_id', require('../../config/database').sql.Int, teamId)
+        .execute('sp_InstallPart');
 
     res.json({ success: true, message: 'Parte instalada exitosamente' });
     } catch (error) {
@@ -196,7 +196,7 @@ router.post('/uninstall-part', async (req, res) => {
 });
 
 /**
- * ⭐ NUEVO ENDPOINT: GET /api/sp/team-inventory/:teamId
+ * GET /api/sp/team-inventory/:teamId
  * Obtiene el inventario de un equipo CON NOMBRES de las partes
  */
 router.get('/team-inventory/:teamId', async (req, res) => {
@@ -238,7 +238,7 @@ router.get('/team-inventory/:teamId', async (req, res) => {
 });
 
 /**
- * ⭐ NUEVO ENDPOINT: GET /api/sp/car-configuration/:carId
+ * NUEVO ENDPOINT para obtener la config del carro: GET /api/sp/car-configuration/:carId
  * Obtiene la configuración actual del carro CON NOMBRES Y STATS (p, a, m)
  */
 router.get('/car-configuration/:carId', async (req, res) => {
