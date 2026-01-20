@@ -17,16 +17,16 @@ GO
 
 -- 2. COPIAR LOS IDs Y EJECUTAR ESTOS COMANDOS:
 --    (Reemplaza X, Y, Z con los IDs reales)
-/*
+
 -- Asignar como ADMIN
-INSERT INTO ADMIN (User_id) VALUES (X);
+INSERT INTO ADMIN (User_id) VALUES (32);
 
 -- Asignar como ENGINEER (Mercedes - Team_id 1)
-INSERT INTO ENGINEER (User_id, Team_id) VALUES (Y, 1);
+INSERT INTO ENGINEER (User_id, Team_id) VALUES (33, 1);
 
 -- Asignar como DRIVER (Mercedes - Team_id 1)
-INSERT INTO DRIVER (User_id, Team_id, H) VALUES (Z, 1, 85);
-*/
+INSERT INTO DRIVER (User_id, Team_id, H) VALUES (34, 1, 85);
+
 GO
 
 -- 3. VERIFICAR
