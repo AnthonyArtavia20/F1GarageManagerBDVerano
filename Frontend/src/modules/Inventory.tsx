@@ -10,17 +10,16 @@ import {
   Calendar,
   Users,
   Loader2,
+  AlertCircle,
 } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { TeamSelector } from "@/components/TeamSelector";
 import { cn } from "@/lib/utils";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:9090";
 
-// =====================
-// Types
-// =====================
 interface InventoryPart {
   id: number;
   name: string;
@@ -41,9 +40,6 @@ interface SessionUser {
   teamName?: string | null;
 }
 
-// =====================
-// Helpers
-// =====================
 const getCategoryIcon = (category: string) => {
   const icons: Record<string, typeof Zap> = {
     power_unit: Zap,
@@ -78,26 +74,18 @@ const getCategoryName = (category: string) => {
 
 const Inventory = () => {
   const [search, setSearch] = useState("");
-
-  // Team fixed by session
   const [selectedTeamId, setSelectedTeamId] = useState<string>("");
   const [selectedTeamName, setSelectedTeamName] = useState<string>("");
-
-  // Session
   const [sessionUser, setSessionUser] = useState<SessionUser | null>(null);
   const [loadingSession, setLoadingSession] = useState(true);
-
-  // Inventory
   const [inventory, setInventory] = useState<InventoryPart[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // =====================
-  // 1) Load session once
-  // =====================
+  const isAdmin = sessionUser?.role === 'admin';
+
   useEffect(() => {
     fetchSession();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchSession = async () => {
@@ -111,7 +99,6 @@ const Inventory = () => {
       });
 
       if (!res.ok) {
-        // 401 = no sesión
         setSessionUser(null);
         setSelectedTeamId("");
         setSelectedTeamName("");
@@ -131,18 +118,20 @@ const Inventory = () => {
       const u: SessionUser = data.user;
       setSessionUser(u);
 
-      // Si viene teamId/teamName, fijamos equipo
-      const tid = u.teamId ?? null;
-      const tname = u.teamName ?? "";
+      // ✅ Si NO es admin, fijar equipo automáticamente
+      if (u.role !== 'admin') {
+        const tid = u.teamId ?? null;
+        const tname = u.teamName ?? "";
 
-      if (tid) {
-        setSelectedTeamId(String(tid));
-        setSelectedTeamName(tname || `Team ${tid}`);
-      } else {
-        // Admin (o roles sin team) -> no equipo asignado
-        setSelectedTeamId("");
-        setSelectedTeamName("");
+        if (tid) {
+          setSelectedTeamId(String(tid));
+          setSelectedTeamName(tname || `Team ${tid}`);
+        } else {
+          setSelectedTeamId("");
+          setSelectedTeamName("");
+        }
       }
+      // ✅ Si ES admin, no fija ningún equipo - debe seleccionarlo manualmente
     } catch (err: any) {
       console.error("Error loading session:", err);
       setError("Error loading session: " + err.message);
@@ -155,17 +144,12 @@ const Inventory = () => {
     }
   };
 
-  // =====================
-  // 2) Load inventory when teamId exists
-  // =====================
   useEffect(() => {
     if (selectedTeamId && selectedTeamId.trim() !== "") {
       fetchTeamInventory(selectedTeamId);
     } else {
       setInventory([]);
-      // no forzamos error acá
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedTeamId]);
 
   const fetchTeamInventory = async (teamId: string) => {
@@ -200,9 +184,6 @@ const Inventory = () => {
     }
   };
 
-  // =====================
-  // Filtering & stats
-  // =====================
   const filteredInventory = inventory.filter(
     (item) =>
       item.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -213,37 +194,36 @@ const Inventory = () => {
   const installedParts = filteredInventory.reduce((sum, item) => sum + item.installed, 0);
   const availableParts = totalParts - installedParts;
 
-  // =====================
-  // Render
-  // =====================
   const noTeamAssigned =
     !loadingSession &&
     sessionUser &&
     (!sessionUser.teamId || sessionUser.teamId === null) &&
-    sessionUser.role !== "driver" &&
-    sessionUser.role !== "engineer";
+    sessionUser.role !== 'admin';
 
   return (
     <MainLayout>
       <div className="p-8">
-        {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8 opacity-0 animate-fade-in">
           <div>
             <h1 className="text-3xl font-display font-bold text-foreground mb-2">
               Team&apos;s Inventory
             </h1>
-            <p className="text-muted-foreground">Parts available for team use</p>
+            <p className="text-muted-foreground">
+              {isAdmin ? "View inventory for any team" : "Parts available for team use"}
+            </p>
           </div>
         </div>
 
-        {/* Session / Team panel (fixed team) */}
+        {/* ✅ ARREGLADO: Panel con TeamSelector para admin */}
         <div
-          className="glass-card rounded-xl p-6 mb-8 opacity-0 animate-fade-in"
+          className="glass-card rounded-xl p-6 mb-8 opacity-0 animate-fade-in relative z-10"
           style={{ animationDelay: "50ms" }}
         >
           <div className="flex items-center gap-2 mb-4">
             <Users className="w-6 h-6 text-primary" />
-            <h3 className="font-display font-semibold text-foreground">Team</h3>
+            <h3 className="font-display font-semibold text-foreground">
+              {isAdmin ? "View Mode" : "Team"}
+            </h3>
           </div>
 
           {loadingSession ? (
@@ -254,10 +234,36 @@ const Inventory = () => {
           ) : !sessionUser ? (
             <div className="p-4 bg-warning/5 rounded-lg border border-warning/20">
               <div className="flex items-center gap-2">
-                <Package className="w-4 h-4 text-warning" />
+                <AlertCircle className="w-4 h-4 text-warning" />
                 <p className="text-sm text-warning">
                   Not authenticated. Please login again.
                 </p>
+              </div>
+            </div>
+          ) : isAdmin ? (
+            <div className="p-4 bg-blue-500/5 rounded-lg border border-blue-500/20">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center">
+                  <Users className="w-5 h-5 text-blue-400" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-xs text-muted-foreground">Administrator Mode</p>
+                  <p className="font-display font-bold text-blue-400">Full Access - All Teams</p>
+                  <p className="text-xs text-muted-foreground">
+                    User: {sessionUser.username}
+                  </p>
+                </div>
+              </div>
+              {/* ✅ TeamSelector para admin */}
+              <div className="relative z-20">
+                <TeamSelector
+                  value={selectedTeamId}
+                  onChange={(teamId, teamName) => {
+                    setSelectedTeamId(teamId);
+                    setSelectedTeamName(teamName);
+                  }}
+                  placeholder="Select a team to view inventory..."
+                />
               </div>
             </div>
           ) : selectedTeamId ? (
@@ -278,21 +284,20 @@ const Inventory = () => {
           ) : (
             <div className="p-4 bg-warning/5 rounded-lg border border-warning/20">
               <div className="flex items-center gap-2">
-                <Package className="w-4 h-4 text-warning" />
+                <AlertCircle className="w-4 h-4 text-warning" />
                 <p className="text-sm text-warning">
                   No team assigned for this user in the database.
                 </p>
               </div>
               {noTeamAssigned && (
                 <p className="text-xs text-muted-foreground mt-2">
-                  If this is an admin account, assign a team only if your rules require it.
+                  Contact an administrator to assign you to a team.
                 </p>
               )}
             </div>
           )}
         </div>
 
-        {/* Summary */}
         {selectedTeamId && inventory.length > 0 && (
           <div
             className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8 opacity-0 animate-fade-in"
@@ -336,7 +341,6 @@ const Inventory = () => {
           </div>
         )}
 
-        {/* Search */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
           <div className="relative max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
@@ -356,17 +360,13 @@ const Inventory = () => {
           )}
         </div>
 
-        {/* Loading */}
         {loading && (
           <div className="glass-card rounded-xl p-8 text-center mb-8">
-            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary mx-auto">
-              <Loader2 className="w-8 h-8 text-primary mx-auto" />
-            </div>
+            <Loader2 className="w-8 h-8 text-primary mx-auto animate-spin" />
             <p className="text-muted-foreground mt-4">Loading inventory...</p>
           </div>
         )}
 
-        {/* Error */}
         {error && (
           <div className="glass-card rounded-xl p-6 mb-8 bg-red-500/10 border-red-500/20">
             <p className="text-red-400">{error}</p>
@@ -379,7 +379,6 @@ const Inventory = () => {
           </div>
         )}
 
-        {/* Inventory table */}
         <div
           className="glass-card rounded-xl overflow-hidden opacity-0 animate-fade-in"
           style={{ animationDelay: "150ms" }}
@@ -388,9 +387,13 @@ const Inventory = () => {
             {!selectedTeamId ? (
               <div className="p-8 text-center">
                 <Package className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-                <h4 className="font-display font-semibold text-foreground mb-2">No Team Assigned</h4>
+                <h4 className="font-display font-semibold text-foreground mb-2">
+                  {isAdmin ? "Select a Team" : "No Team Assigned"}
+                </h4>
                 <p className="text-muted-foreground">
-                  This user does not have a team assigned in the database.
+                  {isAdmin 
+                    ? "Select a team to view their inventory"
+                    : "This user does not have a team assigned in the database."}
                 </p>
               </div>
             ) : !loading && inventory.length === 0 ? (

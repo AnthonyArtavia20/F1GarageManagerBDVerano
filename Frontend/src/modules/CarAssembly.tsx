@@ -1,10 +1,9 @@
-//FrontendCarAssambly - Encargado: ANTHONY. Editado el 16/01/26 - Comienzo integración con backend, conexiones con los endpoints.
-
 import { useState, useEffect } from "react";
-import { Car, Zap, Wind, CircleDot, Cog, Settings2, Check, AlertCircle, Loader2, X } from "lucide-react";
+import { Car, Zap, Wind, CircleDot, Cog, Settings2, Check, AlertCircle, Loader2, X, Users } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { TeamSelector } from "@/components/TeamSelector";
 import {
   Select,
   SelectContent,
@@ -16,10 +15,9 @@ import { cn } from "@/lib/utils";
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:9090';
 
-// Interfaces para obtener datos con las consultas a la BD
 interface Part {
   Part_id: number;
-  Name: string; // Agregado luego de crear los dos endpoints que hacen los inner joins para obtener el nombre de la parte.
+  Name: string;
   Category: string;
   Price: number;
   Stock: number;
@@ -37,7 +35,6 @@ interface CarStats {
   Parts_Installed: number;
 }
 
-// Nueva interfaz: Para los carros del equipo
 interface TeamCar {
   Car_id: number;
   Team_id: number;
@@ -47,11 +44,18 @@ interface TeamCar {
 interface InstalledPart {
   Part_Category: string;
   Part_id: number;
-  Part_Name: string; // Ahora permite el nombre de la parte instalada
-  // Ya NO son opcionales porque el backend los retorna siempre
+  Part_Name: string;
   p: number;
   a: number;
   m: number;
+}
+
+interface SessionUser {
+  id: number;
+  username: string;
+  role: string;
+  teamId?: number | null;
+  teamName?: string | null;
 }
 
 const categories = [
@@ -65,10 +69,9 @@ const categories = [
 const CarAssembly = () => {
   const [selectedTeam, setSelectedTeam] = useState("");
   const [selectedTeamName, setSelectedTeamName] = useState("");
+  const [sessionUser, setSessionUser] = useState<SessionUser | null>(null);
+  const [loadingSession, setLoadingSession] = useState(true);
 
-  // Cambio importante: En lugar de selectedCar string, usamos:
-  // - teamCars: array de carros del equipo
-  // - selectedCarIndex: índice del carro seleccionado (0 o 1)
   const [teamCars, setTeamCars] = useState<TeamCar[]>([]);
   const [selectedCarIndex, setSelectedCarIndex] = useState(0);
 
@@ -78,21 +81,74 @@ const CarAssembly = () => {
   const [availableParts, setAvailableParts] = useState<Part[]>([]);
   const [installedParts, setInstalledParts] = useState<Record<string, number | null>>({});
   const [installedPartsNames, setInstalledPartsNames] = useState<Record<string, string>>({});
-  // SOLUCIÓN ERROR: Nuevo estado para guardar TODA la información de las partes instaladas, no solo el nombre
-  // Esto permite que el Select muestre la parte correctamente incluso si ya no está en el inventario disponible
   const [installedPartsData, setInstalledPartsData] = useState<Record<string, InstalledPart>>({});
   const [carStats, setCarStats] = useState<CarStats | null>(null);
   const [hasChanges, setHasChanges] = useState(false);
 
-  // OBTENER EL CAR_ID REAL DEL CARRO SELECCIONADO
   const selectedCarId = teamCars[selectedCarIndex]?.Car_id?.toString();
+  const isAdmin = sessionUser?.role === 'admin';
 
-  // Cargar datos cuando cambia el equipo seleccionado
+  useEffect(() => {
+    fetchSession();
+  }, []);
+
+  const fetchSession = async () => {
+    try {
+      setLoadingSession(true);
+      setError(null);
+
+      const res = await fetch(`${API_URL}/api/auth/me`, {
+        method: "GET",
+        credentials: "include",
+      });
+
+      if (!res.ok) {
+        setSessionUser(null);
+        setSelectedTeam("");
+        setSelectedTeamName("");
+        return;
+      }
+
+      const data = await res.json();
+      if (!data?.success || !data?.user) {
+        setSessionUser(null);
+        setSelectedTeam("");
+        setSelectedTeamName("");
+        return;
+      }
+
+      const u: SessionUser = data.user;
+      setSessionUser(u);
+
+      // ✅ Si NO es admin, fijar equipo automáticamente
+      if (u.role !== 'admin') {
+        const tid = u.teamId ?? null;
+        const tname = u.teamName ?? "";
+
+        if (tid) {
+          setSelectedTeam(String(tid));
+          setSelectedTeamName(tname || `Team ${tid}`);
+        } else {
+          setSelectedTeam("");
+          setSelectedTeamName("");
+        }
+      }
+      // ✅ Si ES admin, no fija ningún equipo - debe seleccionarlo manualmente
+    } catch (err: any) {
+      console.error("Error loading session:", err);
+      setError("Error loading session: " + err.message);
+      setSessionUser(null);
+      setSelectedTeam("");
+      setSelectedTeamName("");
+    } finally {
+      setLoadingSession(false);
+    }
+  };
+
   useEffect(() => {
     if (selectedTeam) {
       fetchTeamCars();
     } else {
-      // Resetear estados cuando no hay equipo seleccionado
       setTeamCars([]);
       setSelectedCarIndex(0);
       setAvailableParts([]);
@@ -104,31 +160,23 @@ const CarAssembly = () => {
     }
   }, [selectedTeam]);
 
-  // Cargar datos cuando cambia el carro seleccionado
   useEffect(() => {
     if (selectedTeam && selectedCarId) {
       fetchAllData();
     }
   }, [selectedTeam, selectedCarId]);
 
-  // Nueva función: Recargar todos los datos en orden correcto
   const fetchAllData = async () => {
-    console.log('Recargando todos los datos...');
     await fetchCarConfiguration();
     await fetchAvailableParts();
     await fetchCarStats();
-    console.log('Recarga completa');
   };
 
-  // Obtener los carros del equipo
   const fetchTeamCars = async () => {
     try {
       setLoading(true);
       setError(null);
 
-      // Asumimos que cada equipo tiene exactamente 2 carros
-      // En una implementación real, esto vendría de un endpoint del backend
-      // Por ahora, simulamos que los carros tienen IDs baseados en el teamId
       const teamIdNum = parseInt(selectedTeam);
       const mockTeamCars: TeamCar[] = [
         { Car_id: (teamIdNum * 2) - 1, Team_id: teamIdNum, isFinalized: false },
@@ -137,8 +185,6 @@ const CarAssembly = () => {
 
       setTeamCars(mockTeamCars);
       setSelectedCarIndex(0);
-
-      console.log('Carros del equipo cargados:', mockTeamCars);
     } catch (err: any) {
       console.error('Error al cargar carros del equipo:', err);
       setError('Error al cargar los carros del equipo');
@@ -147,7 +193,6 @@ const CarAssembly = () => {
     }
   };
 
-  // Obtener partes disponibles del inventario
   const fetchAvailableParts = async () => {
     try {
       setLoading(true);
@@ -156,7 +201,6 @@ const CarAssembly = () => {
       const data = await response.json();
 
       if (data.success) {
-        console.log('Partes cargadas:', data.data);
         setAvailableParts(data.data);
       } else {
         setError('No se pudieron cargar las partes');
@@ -171,7 +215,6 @@ const CarAssembly = () => {
     }
   };
 
-  // FETCH CONFIGURATION (Obtener config actual del carro) - Ahora incluye nombres
   const fetchCarConfiguration = async () => {
     if (!selectedCarId) return;
 
@@ -180,26 +223,20 @@ const CarAssembly = () => {
       const data = await response.json();
 
       if (data.success) {
-        console.log('Configuración cargada:', data.parts);
-
         const config: Record<string, number | null> = {};
         const names: Record<string, string> = {};
-        // SOLUCIÓN ERROR: Nuevo objeto para guardar toda la info de partes instaladas
         const partsData: Record<string, InstalledPart> = {};
 
         data.parts.forEach((part: InstalledPart) => {
           config[part.Part_Category] = part.Part_id;
-          names[part.Part_Category] = part.Part_Name; // Aquí se guarda el nombre ahora.
-          // SOLUCIÓN ERROR: Guardamos TODO el objeto de la parte instalada, no solo el nombre
+          names[part.Part_Category] = part.Part_Name;
           partsData[part.Part_Category] = part;
         });
 
         setInstalledParts(config);
         setInstalledPartsNames(names);
-        // SOLUCIÓN ERROR: Actualizar el nuevo estado con toda la data de las partes instaladas
         setInstalledPartsData(partsData);
       } else {
-        // Si no hay partes instaladas, resetear los estados
         setInstalledParts({});
         setInstalledPartsNames({});
         setInstalledPartsData({});
@@ -212,7 +249,6 @@ const CarAssembly = () => {
     }
   };
 
-  // Obtener estadísticas del carro
   const fetchCarStats = async () => {
     if (!selectedCarId) return;
 
@@ -221,7 +257,6 @@ const CarAssembly = () => {
       const data = await response.json();
 
       if (data.success) {
-        console.log('Stats cargadas:', data.stats);
         setCarStats(data.stats);
       } else {
         setCarStats(null);
@@ -232,7 +267,6 @@ const CarAssembly = () => {
     }
   };
 
-  // Instalar o reemplazar parte
   const handleInstallPart = async (category: string, partId: number) => {
     if (!selectedCarId) return;
 
@@ -257,8 +291,6 @@ const CarAssembly = () => {
             teamId: parseInt(selectedTeam)
           };
 
-      console.log('Enviando al backend:', endpoint, body);
-
       const response = await fetch(`${API_URL}${endpoint}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -268,27 +300,22 @@ const CarAssembly = () => {
       const data = await response.json();
 
       if (data.success) {
-        console.log('Exito: ' + data.message);
-        // Recargar todo en orden correcto
         await fetchAllData();
         setHasChanges(true);
       } else {
         const errorMsg = data.error || 'Error al instalar parte';
         setError(errorMsg);
         alert('Error: ' + errorMsg);
-        console.error('Error del backend:', errorMsg);
       }
     } catch (err: any) {
       const errorMsg = err.message || 'Error desconocido';
       setError(errorMsg);
       alert('Error de red: ' + errorMsg);
-      console.error('Error en handleInstallPart:', err);
     } finally {
       setLoading(false);
     }
   };
 
-  // Nueva función: Desinstalar una parte y devolverla al inventario
   const handleUninstallPart = async (category: string, partId: number) => {
     if (!selectedCarId) return;
 
@@ -299,8 +326,6 @@ const CarAssembly = () => {
     try {
       setLoading(true);
       setError(null);
-
-      console.log('Desinstalando parte:', { carId: selectedCarId, partId, teamId: selectedTeam });
 
       const response = await fetch(`${API_URL}/api/sp/uninstall-part`, {
         method: 'POST',
@@ -330,70 +355,51 @@ const CarAssembly = () => {
     }
   };
 
-  // Validar parte antes de instalar
   const validatePart = async (category: string, partId: number) => {
     if (!selectedCarId) return false;
 
     try {
-      console.log('Validando parte:', category, partId);
       const response = await fetch(`${API_URL}/api/sp/validate-part/${selectedCarId}/${partId}`);
       const data = await response.json();
 
-      console.log('Resultado validación:', data);
-
       if (data.success) {
         if (data.validation.Status === 'INVALID') {
-          alert('Alerta, lo siguiente salió mal: ' + data.validation.Message);
+          alert('Alerta: ' + data.validation.Message);
           return false;
         }
         return true;
       }
-      return true; // Si no hay validación, continuar
+      return true;
     } catch (err) {
       console.error('Error validando parte:', err);
-      return true; // Continuar aunque falle la validación
+      return true;
     }
   };
 
-  // Manejar cambio de parte
   const handlePartChange = async (category: string, partId: string) => {
-    console.log('handlePartChange llamado:', category, partId);
     const numericPartId = parseInt(partId);
 
     if (!numericPartId || isNaN(numericPartId)) {
-      console.error('Part ID inválido:', partId);
       return;
     }
 
-    console.log('Instalando parte ID:', numericPartId);
-
-    // Validar antes de instalar
     const isValid = await validatePart(category, numericPartId);
-    console.log('Validación resultado:', isValid);
 
     if (!isValid) {
-      console.log('Validación falló, abortando');
       return;
     }
 
-    // Instalar o reemplazar
-    console.log('Llamando a handleInstallPart...');
     await handleInstallPart(category, numericPartId);
   };
 
-  // Guardar configuración final con validación de carro completo
-  // NUEVA FUNCIONALIDAD: Validar si el carro tiene las 5 categorías instaladas antes de guardar
   const handleSaveConfiguration = async () => {
-    // Calcular cuántas categorías están instaladas
     const installedCategoriesCount = Object.keys(installedPartsData).length;
     const isCarComplete = installedCategoriesCount === 5;
 
     if (isCarComplete) {
-      // Si el carro tiene las 5 categorías instaladas - READY TO RACE!
       alert('Configuración guardada exitosamente! ¡READY TO RACE!');
       setHasChanges(false);
     } else {
-      // Si el carro NO tiene las 5 categorías instaladas
       const missingCount = 5 - installedCategoriesCount;
       alert(
         `Configuración guardada parcialmente. El carro NO es apto para correr porque le falta(n) ${missingCount} categoría(s) instalada(s).\n\nRequiere instalar todas las 5 categorías para poder competir.`
@@ -402,44 +408,124 @@ const CarAssembly = () => {
     }
   };
 
-  // Cambiar al carro anterior
   const handlePrevCar = () => {
     if (selectedCarIndex > 0) {
       setSelectedCarIndex(prev => prev - 1);
     }
   };
 
-  // Cambiar al siguiente carro
   const handleNextCar = () => {
     if (selectedCarIndex < teamCars.length - 1) {
       setSelectedCarIndex(prev => prev + 1);
     }
   };
 
-  // Calcular si el carro está listo para correr (tiene las 5 categorías instaladas)
   const isCarReady = Object.keys(installedPartsData).length === 5;
+
+  const noTeamAssigned =
+    !loadingSession &&
+    sessionUser &&
+    (!sessionUser.teamId || sessionUser.teamId === null) &&
+    sessionUser.role !== 'admin';
 
   return (
     <MainLayout>
       <div className="p-8">
-        {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8 opacity-0 animate-fade-in relative z-20">
           <div>
             <h1 className="text-3xl font-display font-bold text-foreground mb-2">
               Car Assembly
             </h1>
             <p className="text-muted-foreground">
-              Configure your racing car with performance parts
+              {isAdmin ? "Configure cars for any team" : "Configure your racing car with performance parts"}
             </p>
-          </div>
-
-          {/* ✅ SOLO ESPACIO (sin TeamSelector) */}
-          <div className="flex gap-3 relative z-20">
-            <div className="h-10 w-[280px] rounded-md border border-border bg-card/50" />
           </div>
         </div>
 
-        {/* Error Alert */}
+        {/* ✅ ARREGLADO: Panel con TeamSelector para admin */}
+        <div
+          className="glass-card rounded-xl p-6 mb-8 opacity-0 animate-fade-in relative z-10"
+          style={{ animationDelay: "50ms" }}
+        >
+          <div className="flex items-center gap-2 mb-4">
+            <Users className="w-6 h-6 text-primary" />
+            <h3 className="font-display font-semibold text-foreground">
+              {isAdmin ? "View Mode" : "Team"}
+            </h3>
+          </div>
+
+          {loadingSession ? (
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              Loading session...
+            </div>
+          ) : !sessionUser ? (
+            <div className="p-4 bg-warning/5 rounded-lg border border-warning/20">
+              <div className="flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 text-warning" />
+                <p className="text-sm text-warning">
+                  Not authenticated. Please login again.
+                </p>
+              </div>
+            </div>
+          ) : isAdmin ? (
+            <div className="p-4 bg-blue-500/5 rounded-lg border border-blue-500/20">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center">
+                  <Users className="w-5 h-5 text-blue-400" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-xs text-muted-foreground">Administrator Mode</p>
+                  <p className="font-display font-bold text-blue-400">Full Access - All Teams</p>
+                  <p className="text-xs text-muted-foreground">
+                    User: {sessionUser.username}
+                  </p>
+                </div>
+              </div>
+              {/* ✅ TeamSelector para admin */}
+              <div className="relative z-20">
+                <TeamSelector
+                  value={selectedTeam}
+                  onChange={(teamId, teamName) => {
+                    setSelectedTeam(teamId);
+                    setSelectedTeamName(teamName);
+                  }}
+                  placeholder="Select a team to configure cars..."
+                />
+              </div>
+            </div>
+          ) : selectedTeam ? (
+            <div className="p-4 bg-primary/5 rounded-lg border border-primary/20">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                  <Users className="w-5 h-5 text-primary" />
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Configuring Cars for</p>
+                  <p className="font-display font-bold text-primary">{selectedTeamName}</p>
+                  <p className="text-xs text-muted-foreground">
+                    User: {sessionUser.username} · Role: {sessionUser.role}
+                  </p>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="p-4 bg-warning/5 rounded-lg border border-warning/20">
+              <div className="flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 text-warning" />
+                <p className="text-sm text-warning">
+                  No team assigned for this user in the database.
+                </p>
+              </div>
+              {noTeamAssigned && (
+                <p className="text-xs text-muted-foreground mt-2">
+                  Contact an administrator to assign you to a team.
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+
         {error && (
           <div className="glass-card rounded-xl p-4 mb-6 bg-red-500/10 border-red-500/20">
             <div className="flex items-center gap-2">
@@ -453,15 +539,18 @@ const CarAssembly = () => {
           <div className="glass-card rounded-xl p-12 text-center relative z-10">
             <Car className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
             <h3 className="text-xl font-display font-semibold text-foreground mb-2">
-              Select a Team
+              {loadingSession ? "Loading..." : isAdmin ? "Select a Team" : "No Team Assigned"}
             </h3>
             <p className="text-muted-foreground">
-              Choose a team to start configuring their car
+              {loadingSession 
+                ? "Please wait while we load your information..." 
+                : isAdmin
+                  ? "Select a team to configure their cars"
+                  : "You need a team assigned to configure cars"}
             </p>
           </div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Parts Selection */}
             <div className="lg:col-span-2 space-y-4">
               <h2
                 className="font-display text-lg font-semibold text-foreground opacity-0 animate-fade-in"
@@ -482,20 +571,14 @@ const CarAssembly = () => {
                 const selectedPartId = installedParts[category.id];
                 const partsInCategory = availableParts.filter(p => p.Category === category.id);
 
-                // Obtener la parte instalada desde installedPartsData (siempre disponible)
                 const installedPartInfo = installedPartsData[category.id];
-
-                // Buscar también en inventario disponible por si acaso
                 const partInInventory = partsInCategory.find(p => p.Part_id === selectedPartId);
 
-                // Usar installedPartInfo o partInInventory para mostrar nombre y stats
                 const displayName = installedPartInfo?.Part_Name || "None installed";
                 const displayStats = partInInventory || installedPartInfo;
 
-                // Combinar partes del inventario + parte instalada (si no está en inventario)
                 const allPartsForSelect = [...partsInCategory];
                 if (installedPartInfo && !partsInCategory.some(p => p.Part_id === installedPartInfo.Part_id)) {
-                  // Si la parte instalada NO está en el inventario, agregarla temporalmente para el Select
                   allPartsForSelect.push({
                     Part_id: installedPartInfo.Part_id,
                     Name: installedPartInfo.Part_Name,
@@ -542,7 +625,6 @@ const CarAssembly = () => {
                               <p className="font-display font-bold text-green-400">{displayStats.m}</p>
                             </div>
                           </div>
-                          {/* BOTÓN DESINSTALAR */}
                           <button
                             onClick={() => handleUninstallPart(category.id, installedPartInfo.Part_id)}
                             className="w-8 h-8 rounded-lg bg-red-500/10 hover:bg-red-500/20 flex items-center justify-center transition-colors text-red-400 hover:text-red-300"
@@ -584,7 +666,6 @@ const CarAssembly = () => {
               })}
             </div>
 
-            {/* Summary Panel */}
             <div className="space-y-4">
               <h2
                 className="font-display text-lg font-semibold text-foreground opacity-0 animate-fade-in"
@@ -593,7 +674,6 @@ const CarAssembly = () => {
                 Car Performance
               </h2>
 
-              {/* Indicador visual de estado del carro (completo/incompleto) */}
               <div
                 className={`glass-card rounded-xl p-4 mb-4 ${isCarReady ? 'bg-green-500/10 border-green-500/20' : 'bg-yellow-500/10 border-yellow-500/20'} opacity-0 animate-fade-in`}
                 style={{ animationDelay: "150ms" }}
@@ -620,7 +700,6 @@ const CarAssembly = () => {
               </div>
 
               <div className="glass-card rounded-xl p-6 opacity-0 animate-fade-in" style={{ animationDelay: "200ms" }}>
-                {/* Car Selector con flechas */}
                 <div className="flex items-center justify-between mb-6">
                   <button
                     onClick={handlePrevCar}
@@ -668,7 +747,6 @@ const CarAssembly = () => {
                   </button>
                 </div>
 
-                {/* Stats */}
                 {carStats && (
                   <div className="space-y-4 mb-6">
                     <div>
@@ -720,7 +798,6 @@ const CarAssembly = () => {
                   </div>
                 )}
 
-                {/* Save Button - Cambia el texto según el estado del carro */}
                 <Button
                   variant="racing"
                   className="w-full"

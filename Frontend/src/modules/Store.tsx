@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import {
   TextSearch, Search, ShoppingCart, Zap, Wind, CircleDot,
   Cog, Settings2, Plus, DollarSign, BarChart3, Wallet, TrendingUp,
-  CreditCard, Package, Users, Filter
+  CreditCard, Package, Users, Filter, AlertCircle, Loader2
 } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
@@ -31,7 +31,6 @@ import { apiFetch } from "@/lib/api";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:9090";
 
-// ===== Tipos =====
 interface Part {
   id: number;
   name: string;
@@ -81,11 +80,9 @@ const Store = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Sesión
   const [me, setMe] = useState<MeResponse["user"] | null>(null);
   const [loadingMe, setLoadingMe] = useState(true);
 
-  // Modal nueva parte
   const [showAddPart, setShowAddPart] = useState(false);
   const [newPart, setNewPart] = useState({
     name: "",
@@ -98,13 +95,14 @@ const Store = () => {
   });
   const [addingPart, setAddingPart] = useState(false);
 
-  // Equipo seleccionado (admin puede cambiar; engineer/driver fijo)
   const [selectedTeamId, setSelectedTeamId] = useState<string>("");
   const [selectedTeamName, setSelectedTeamName] = useState<string>("");
   const [teamBudget, setTeamBudget] = useState<TeamBudget | null>(null);
   const [loadingBudget, setLoadingBudget] = useState(false);
 
-  // ===== 1) Cargar sesión =====
+  const isAdmin = me?.role === "admin";
+  const isEngineer = me?.role === "engineer";
+
   useEffect(() => {
     (async () => {
       setLoadingMe(true);
@@ -112,13 +110,11 @@ const Store = () => {
       if (!res.ok || !data.success || !data.user) {
         setMe(null);
         setLoadingMe(false);
-        // si quieres, aquí puedes navegar a "/" si no hay sesión
         return;
       }
 
       setMe(data.user);
 
-      // ✅ Si NO es admin → equipo fijo desde la BD
       if (data.user.role !== "admin") {
         const tid = data.user.teamId ? String(data.user.teamId) : "";
         const tname = data.user.teamName ?? "";
@@ -130,12 +126,10 @@ const Store = () => {
     })();
   }, []);
 
-  // ===== 2) Cargar partes =====
   useEffect(() => {
     fetchParts();
   }, []);
 
-  // ===== 3) Cargar presupuesto al tener teamId =====
   useEffect(() => {
     if (selectedTeamId && selectedTeamId.trim() !== "") fetchTeamBudget(selectedTeamId);
     else setTeamBudget(null);
@@ -160,7 +154,6 @@ const Store = () => {
       console.error("Error al cargar partes:", err);
       setError("Error al cargar partes: " + err.message);
 
-      // fallback dev
       setParts([
         { id: 1, name: "Turbo V6 Power Unit", category: "Power_Unit", price: 1000000, stock: 5, p: 9, a: 3, m: 4 },
         { id: 2, name: "Advanced Aero Package", category: "Aerodynamics_pkg", price: 500000, stock: 8, p: 2, a: 9, m: 4 },
@@ -285,7 +278,7 @@ const Store = () => {
         body: JSON.stringify({
           teamId: parseInt(selectedTeamId),
           partId: part.id,
-          userId: me?.id ?? 1, // ✅ usa el usuario real si existe
+          userId: me?.id ?? 1,
         }),
       });
 
@@ -337,21 +330,18 @@ const Store = () => {
     return cat?.icon || Settings2;
   };
 
-  // ✅ si todavía no cargó /me, evita parpadeos raros
   if (loadingMe) {
     return (
       <MainLayout>
         <div className="p-8">
           <div className="glass-card rounded-xl p-6">
-            <p className="text-muted-foreground">Loading session...</p>
+            <Loader2 className="w-8 h-8 text-primary mx-auto animate-spin" />
+            <p className="text-muted-foreground text-center mt-2">Loading session...</p>
           </div>
         </div>
       </MainLayout>
     );
   }
-
-  const isAdmin = me?.role === "admin";
-  const isEngineer = me?.role === "engineer";
 
   return (
     <MainLayout>
@@ -359,7 +349,9 @@ const Store = () => {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8 opacity-0 animate-fade-in">
           <div>
             <h1 className="text-3xl font-display font-bold text-foreground mb-2">Parts Store</h1>
-            <p className="text-muted-foreground">Browse, purchase and manage car parts for your team</p>
+            <p className="text-muted-foreground">
+              {isAdmin ? "Manage parts for all teams" : "Browse and purchase car parts for your team"}
+            </p>
           </div>
         </div>
 
@@ -369,8 +361,9 @@ const Store = () => {
           </div>
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-          <div className="lg:col-span-2 glass-card rounded-xl p-6 opacity-0 animate-fade-in" style={{ animationDelay: "50ms" }}>
+        {/* ✅ ARREGLADO: z-index correcto para que nada tape el selector */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8 relative z-10">
+          <div className="lg:col-span-2 glass-card rounded-xl p-6 opacity-0 animate-fade-in relative z-0" style={{ animationDelay: "50ms" }}>
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-3">
@@ -394,7 +387,6 @@ const Store = () => {
                   <h3 className="font-display font-semibold text-foreground">Add New Part</h3>
                 </div>
 
-                {/* Si quieres: solo admin puede crear partes */}
                 <Dialog open={showAddPart} onOpenChange={setShowAddPart}>
                   <DialogTrigger asChild>
                     <Button variant="racing" size="lg" disabled={!isAdmin}>
@@ -566,26 +558,44 @@ const Store = () => {
             </div>
           </div>
 
-          {/* Panel Equipo */}
-          <div className="glass-card rounded-xl p-6 opacity-0 animate-fade-in" style={{ animationDelay: "100ms" }}>
+          {/* ✅ Team Panel con z-index correcto */}
+          <div className="glass-card rounded-xl p-6 opacity-0 animate-fade-in relative z-10" style={{ animationDelay: "100ms" }}>
             <div className="flex items-center gap-2 mb-4">
               <Users className="w-6 h-6 text-primary" />
               <h3 className="font-display font-semibold text-foreground">
-                {isAdmin ? "Select Purchasing Team" : "Team Assigned"}
+                {isAdmin ? "View Mode" : "Team Assigned"}
               </h3>
             </div>
 
             <div className="space-y-4">
-              {/* ✅ Admin puede seleccionar, engineer/driver NO */}
               {isAdmin ? (
-                <TeamSelector
-                  value={selectedTeamId}
-                  onChange={(teamId, teamName) => {
-                    setSelectedTeamId(teamId);
-                    setSelectedTeamName(teamName);
-                  }}
-                  placeholder="Search and select team..."
-                />
+                <>
+                  <div className="p-4 bg-blue-500/5 rounded-lg border border-blue-500/20 mb-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center">
+                        <Users className="w-5 h-5 text-blue-400" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-xs text-muted-foreground">Administrator Mode</p>
+                        <p className="font-display font-bold text-blue-400">Full Access - All Teams</p>
+                        <p className="text-xs text-muted-foreground">
+                          User: {me?.username}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  {/* ✅ TeamSelector sin label que tape */}
+                  <div className="relative z-20">
+                    <TeamSelector
+                      value={selectedTeamId}
+                      onChange={(teamId, teamName) => {
+                        setSelectedTeamId(teamId);
+                        setSelectedTeamName(teamName);
+                      }}
+                      placeholder="Select a team for purchases..."
+                    />
+                  </div>
+                </>
               ) : (
                 <div className="p-4 bg-primary/5 rounded-lg border border-primary/20">
                   <div className="flex items-center gap-3">
@@ -605,7 +615,7 @@ const Store = () => {
               {!selectedTeamId && (
                 <div className="p-4 bg-warning/5 rounded-lg border border-warning/20">
                   <div className="flex items-center gap-2">
-                    <Wallet className="w-4 h-4 text-warning" />
+                    <AlertCircle className="w-4 h-4 text-warning" />
                     <p className="text-sm text-warning">
                       {isAdmin
                         ? "Select a team to view budget and make purchases"
@@ -618,9 +628,9 @@ const Store = () => {
           </div>
         </div>
 
-        {/* Presupuesto */}
+        {/* Budget - z-0 para no interferir */}
         {selectedTeamId && (
-          <div className="glass-card rounded-xl p-6 mb-8 opacity-0 animate-fade-in" style={{ animationDelay: "150ms" }}>
+          <div className="glass-card rounded-xl p-6 mb-8 opacity-0 animate-fade-in relative z-0" style={{ animationDelay: "150ms" }}>
             <div className="flex items-center gap-3 mb-6">
               <TrendingUp className="w-7 h-7 text-primary" />
               <div>
@@ -631,7 +641,7 @@ const Store = () => {
 
             {loadingBudget ? (
               <div className="text-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+                <Loader2 className="w-8 h-8 text-primary mx-auto animate-spin" />
                 <p className="text-muted-foreground mt-2">Loading budget information...</p>
               </div>
             ) : teamBudget ? (
@@ -672,7 +682,7 @@ const Store = () => {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   <div className="p-4 rounded-xl bg-gradient-to-br from-success/10 to-success/5 border border-success/20">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-lg bg-success/20 flex items-center justify-center">
@@ -722,8 +732,8 @@ const Store = () => {
           </div>
         )}
 
-        {/* Grid de partes */}
-        <div className="opacity-0 animate-fade-in" style={{ animationDelay: "200ms" }}>
+        {/* Parts Grid - z-0 */}
+        <div className="opacity-0 animate-fade-in relative z-0" style={{ animationDelay: "200ms" }}>
           <div className="flex items-center justify-between mb-6">
             <div>
               <h3 className="font-display text-lg font-semibold text-foreground">Available Parts</h3>
@@ -739,7 +749,7 @@ const Store = () => {
 
           {loading ? (
             <div className="glass-card rounded-xl p-8 text-center">
-              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary mx-auto"></div>
+              <Loader2 className="w-8 h-8 text-primary mx-auto animate-spin" />
               <p className="text-muted-foreground mt-4">Loading parts catalog...</p>
             </div>
           ) : filteredParts.length === 0 ? (
@@ -821,8 +831,6 @@ const Store = () => {
                           {canPurchase ? "PURCHASE" : "NO ACCESS"}
                         </Button>
                       </div>
-
-                      {/* Nota: engineer puede comprar SOLO para su team (ya está forzado por selectedTeamId fijo) */}
                     </div>
                   </div>
                 );
@@ -830,13 +838,6 @@ const Store = () => {
             </div>
           )}
         </div>
-
-        {/* Si quieres mostrar algo del rol */}
-        {isEngineer && (
-          <div className="mt-8 text-sm text-muted-foreground">
-            Engineer mode: team locked to DB assignment.
-          </div>
-        )}
       </div>
     </MainLayout>
   );
