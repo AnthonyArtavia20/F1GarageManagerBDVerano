@@ -1,17 +1,26 @@
 import { useState, useEffect } from "react";
-import { 
-  Search, Package, Zap, Wind, CircleDot, Cog, Settings2, Calendar, Users,
-  Loader2 
+import {
+  Search,
+  Package,
+  Zap,
+  Wind,
+  CircleDot,
+  Cog,
+  Settings2,
+  Calendar,
+  Users,
+  Loader2,
 } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { TeamSelector } from "@/components/TeamSelector";
 import { cn } from "@/lib/utils";
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:9090';
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:9090";
 
-// Definir tipos para las partes del inventario
+// =====================
+// Types
+// =====================
 interface InventoryPart {
   id: number;
   name: string;
@@ -24,6 +33,17 @@ interface InventoryPart {
   installed: number;
 }
 
+interface SessionUser {
+  id: number;
+  username: string;
+  role: string;
+  teamId?: number | null;
+  teamName?: string | null;
+}
+
+// =====================
+// Helpers
+// =====================
 const getCategoryIcon = (category: string) => {
   const icons: Record<string, typeof Zap> = {
     power_unit: Zap,
@@ -58,130 +78,226 @@ const getCategoryName = (category: string) => {
 
 const Inventory = () => {
   const [search, setSearch] = useState("");
+
+  // Team fixed by session
   const [selectedTeamId, setSelectedTeamId] = useState<string>("");
   const [selectedTeamName, setSelectedTeamName] = useState<string>("");
+
+  // Session
+  const [sessionUser, setSessionUser] = useState<SessionUser | null>(null);
+  const [loadingSession, setLoadingSession] = useState(true);
+
+  // Inventory
   const [inventory, setInventory] = useState<InventoryPart[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Cargar inventario cuando se selecciona un equipo
+  // =====================
+  // 1) Load session once
+  // =====================
   useEffect(() => {
-    if (selectedTeamId && selectedTeamId.trim() !== '') {
+    fetchSession();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const fetchSession = async () => {
+    try {
+      setLoadingSession(true);
+      setError(null);
+
+      const res = await fetch(`${API_URL}/api/auth/me`, {
+        method: "GET",
+        credentials: "include",
+      });
+
+      if (!res.ok) {
+        // 401 = no sesión
+        setSessionUser(null);
+        setSelectedTeamId("");
+        setSelectedTeamName("");
+        setInventory([]);
+        return;
+      }
+
+      const data = await res.json();
+      if (!data?.success || !data?.user) {
+        setSessionUser(null);
+        setSelectedTeamId("");
+        setSelectedTeamName("");
+        setInventory([]);
+        return;
+      }
+
+      const u: SessionUser = data.user;
+      setSessionUser(u);
+
+      // Si viene teamId/teamName, fijamos equipo
+      const tid = u.teamId ?? null;
+      const tname = u.teamName ?? "";
+
+      if (tid) {
+        setSelectedTeamId(String(tid));
+        setSelectedTeamName(tname || `Team ${tid}`);
+      } else {
+        // Admin (o roles sin team) -> no equipo asignado
+        setSelectedTeamId("");
+        setSelectedTeamName("");
+      }
+    } catch (err: any) {
+      console.error("Error loading session:", err);
+      setError("Error loading session: " + err.message);
+      setSessionUser(null);
+      setSelectedTeamId("");
+      setSelectedTeamName("");
+      setInventory([]);
+    } finally {
+      setLoadingSession(false);
+    }
+  };
+
+  // =====================
+  // 2) Load inventory when teamId exists
+  // =====================
+  useEffect(() => {
+    if (selectedTeamId && selectedTeamId.trim() !== "") {
       fetchTeamInventory(selectedTeamId);
     } else {
-      // Limpiar inventario cuando no hay equipo seleccionado
       setInventory([]);
-      setError(null);
+      // no forzamos error acá
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedTeamId]);
 
-  // Función para obtener el inventario del equipo desde la API
   const fetchTeamInventory = async (teamId: string) => {
     try {
       setLoading(true);
       setError(null);
-      
-      const response = await fetch(`${API_URL}/api/inventory/${teamId}`);
-      
-      // Verificar si la respuesta es JSON
-      const contentType = response.headers.get('content-type');
-      if (!contentType || !contentType.includes('application/json')) {
-        throw new Error('El servidor no devolvió JSON');
+
+      const response = await fetch(`${API_URL}/api/inventory/${teamId}`, {
+        method: "GET",
+        credentials: "include",
+      });
+
+      const contentType = response.headers.get("content-type");
+      if (!contentType || !contentType.includes("application/json")) {
+        throw new Error("El servidor no devolvió JSON");
       }
-      
+
       const data = await response.json();
-      
+
       if (data.success) {
         setInventory(data.data);
       } else {
-        setError(data.message || 'Error al cargar el inventario');
+        setError(data.message || "Error al cargar el inventario");
         setInventory([]);
       }
     } catch (err: any) {
-      console.error('Error al cargar inventario:', err);
-      setError('Error al cargar el inventario: ' + err.message);
+      console.error("Error al cargar inventario:", err);
+      setError("Error al cargar el inventario: " + err.message);
       setInventory([]);
     } finally {
       setLoading(false);
     }
   };
 
-  // Filtrar inventario por búsqueda
-  const filteredInventory = inventory.filter((item) =>
-    item.name.toLowerCase().includes(search.toLowerCase()) ||
-    getCategoryName(item.category).toLowerCase().includes(search.toLowerCase())
+  // =====================
+  // Filtering & stats
+  // =====================
+  const filteredInventory = inventory.filter(
+    (item) =>
+      item.name.toLowerCase().includes(search.toLowerCase()) ||
+      getCategoryName(item.category).toLowerCase().includes(search.toLowerCase())
   );
 
-  // Estadísticas del inventario
   const totalParts = filteredInventory.reduce((sum, item) => sum + item.quantity, 0);
   const installedParts = filteredInventory.reduce((sum, item) => sum + item.installed, 0);
   const availableParts = totalParts - installedParts;
 
+  // =====================
+  // Render
+  // =====================
+  const noTeamAssigned =
+    !loadingSession &&
+    sessionUser &&
+    (!sessionUser.teamId || sessionUser.teamId === null) &&
+    sessionUser.role !== "driver" &&
+    sessionUser.role !== "engineer";
+
   return (
     <MainLayout>
       <div className="p-8">
-
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8 opacity-0 animate-fade-in">
           <div>
             <h1 className="text-3xl font-display font-bold text-foreground mb-2">
-              Team's Inventory
+              Team&apos;s Inventory
             </h1>
-            <p className="text-muted-foreground">
-              Parts available for team use 
-            </p>
+            <p className="text-muted-foreground">Parts available for team use</p>
           </div>
         </div>
 
-        {/* Team Selector */}
-        <div className="glass-card rounded-xl p-6 mb-8 opacity-0 animate-fade-in" style={{ animationDelay: "50ms" }}>
+        {/* Session / Team panel (fixed team) */}
+        <div
+          className="glass-card rounded-xl p-6 mb-8 opacity-0 animate-fade-in"
+          style={{ animationDelay: "50ms" }}
+        >
           <div className="flex items-center gap-2 mb-4">
             <Users className="w-6 h-6 text-primary" />
-            <h3 className="font-display font-semibold text-foreground">
-              Select Team Inventory
-            </h3>
+            <h3 className="font-display font-semibold text-foreground">Team</h3>
           </div>
-          
-          <div className="space-y-4">
-            <TeamSelector
-              value={selectedTeamId}
-              onChange={(teamId, teamName) => {
-                setSelectedTeamId(teamId);
-                setSelectedTeamName(teamName);
-              }}
-              placeholder="Search and select team to view inventory..."
-            />
-            
-            {selectedTeamName && (
-              <div className="p-4 bg-primary/5 rounded-lg border border-primary/20">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                    <Users className="w-5 h-5 text-primary" />
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Viewing Inventory for</p>
-                    <p className="font-display font-bold text-primary">{selectedTeamName}</p>
-                  </div>
-                </div>
+
+          {loadingSession ? (
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              Loading session...
+            </div>
+          ) : !sessionUser ? (
+            <div className="p-4 bg-warning/5 rounded-lg border border-warning/20">
+              <div className="flex items-center gap-2">
+                <Package className="w-4 h-4 text-warning" />
+                <p className="text-sm text-warning">
+                  Not authenticated. Please login again.
+                </p>
               </div>
-            )}
-            
-            {!selectedTeamId && (
-              <div className="p-4 bg-warning/5 rounded-lg border border-warning/20">
-                <div className="flex items-center gap-2">
-                  <Package className="w-4 h-4 text-warning" />
-                  <p className="text-sm text-warning">
-                    Select a team to view their inventory
+            </div>
+          ) : selectedTeamId ? (
+            <div className="p-4 bg-primary/5 rounded-lg border border-primary/20">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                  <Users className="w-5 h-5 text-primary" />
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Viewing Inventory for</p>
+                  <p className="font-display font-bold text-primary">{selectedTeamName}</p>
+                  <p className="text-xs text-muted-foreground">
+                    User: {sessionUser.username} · Role: {sessionUser.role}
                   </p>
                 </div>
               </div>
-            )}
-          </div>
+            </div>
+          ) : (
+            <div className="p-4 bg-warning/5 rounded-lg border border-warning/20">
+              <div className="flex items-center gap-2">
+                <Package className="w-4 h-4 text-warning" />
+                <p className="text-sm text-warning">
+                  No team assigned for this user in the database.
+                </p>
+              </div>
+              {noTeamAssigned && (
+                <p className="text-xs text-muted-foreground mt-2">
+                  If this is an admin account, assign a team only if your rules require it.
+                </p>
+              )}
+            </div>
+          )}
         </div>
 
-        {/* Resumen del inventario */}
+        {/* Summary */}
         {selectedTeamId && inventory.length > 0 && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8 opacity-0 animate-fade-in" style={{ animationDelay: "100ms" }}>
+          <div
+            className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8 opacity-0 animate-fade-in"
+            style={{ animationDelay: "100ms" }}
+          >
             <div className="glass-card rounded-xl p-4">
               <div className="flex items-center justify-between">
                 <div>
@@ -193,7 +309,7 @@ const Inventory = () => {
                 </div>
               </div>
             </div>
-            
+
             <div className="glass-card rounded-xl p-4">
               <div className="flex items-center justify-between">
                 <div>
@@ -205,7 +321,7 @@ const Inventory = () => {
                 </div>
               </div>
             </div>
-            
+
             <div className="glass-card rounded-xl p-4">
               <div className="flex items-center justify-between">
                 <div>
@@ -220,7 +336,7 @@ const Inventory = () => {
           </div>
         )}
 
-        {/* Búsqueda y filtrado */}
+        {/* Search */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
           <div className="relative max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
@@ -232,7 +348,7 @@ const Inventory = () => {
               disabled={!selectedTeamId || loading}
             />
           </div>
-          
+
           {selectedTeamId && (
             <div className="text-sm text-muted-foreground">
               Showing {filteredInventory.length} of {inventory.length} parts
@@ -240,7 +356,7 @@ const Inventory = () => {
           )}
         </div>
 
-        {/* Estado de carga */}
+        {/* Loading */}
         {loading && (
           <div className="glass-card rounded-xl p-8 text-center mb-8">
             <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary mx-auto">
@@ -250,11 +366,11 @@ const Inventory = () => {
           </div>
         )}
 
-        {/* Mensaje de error */}
+        {/* Error */}
         {error && (
           <div className="glass-card rounded-xl p-6 mb-8 bg-red-500/10 border-red-500/20">
             <p className="text-red-400">{error}</p>
-            <button 
+            <button
               onClick={() => selectedTeamId && fetchTeamInventory(selectedTeamId)}
               className="mt-2 text-sm text-red-400 hover:text-red-300 underline"
             >
@@ -263,15 +379,18 @@ const Inventory = () => {
           </div>
         )}
 
-        {/* Tabla de inventario */}
-        <div className="glass-card rounded-xl overflow-hidden opacity-0 animate-fade-in" style={{ animationDelay: "150ms" }}>
+        {/* Inventory table */}
+        <div
+          className="glass-card rounded-xl overflow-hidden opacity-0 animate-fade-in"
+          style={{ animationDelay: "150ms" }}
+        >
           <div className="overflow-x-auto">
             {!selectedTeamId ? (
               <div className="p-8 text-center">
                 <Package className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-                <h4 className="font-display font-semibold text-foreground mb-2">No Team Selected</h4>
+                <h4 className="font-display font-semibold text-foreground mb-2">No Team Assigned</h4>
                 <p className="text-muted-foreground">
-                  Please select a team to view their inventory
+                  This user does not have a team assigned in the database.
                 </p>
               </div>
             ) : !loading && inventory.length === 0 ? (
@@ -279,7 +398,7 @@ const Inventory = () => {
                 <Package className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
                 <h4 className="font-display font-semibold text-foreground mb-2">Empty Inventory</h4>
                 <p className="text-muted-foreground">
-                  {selectedTeamName} doesn't have any parts in their inventory yet
+                  {selectedTeamName} doesn&apos;t have any parts in their inventory yet
                 </p>
               </div>
             ) : !loading && filteredInventory.length === 0 ? (
@@ -287,12 +406,9 @@ const Inventory = () => {
                 <Search className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
                 <h4 className="font-display font-semibold text-foreground mb-2">No Parts Found</h4>
                 <p className="text-muted-foreground">
-                  No parts match "{search}" in {selectedTeamName}'s inventory
+                  No parts match &quot;{search}&quot; in {selectedTeamName}&apos;s inventory
                 </p>
-                <button 
-                  onClick={() => setSearch("")}
-                  className="mt-4 text-sm text-primary hover:underline"
-                >
+                <button onClick={() => setSearch("")} className="mt-4 text-sm text-primary hover:underline">
                   Clear search
                 </button>
               </div>
@@ -309,7 +425,7 @@ const Inventory = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredInventory.map((item, index) => {
+                  {filteredInventory.map((item) => {
                     const CategoryIcon = getCategoryIcon(item.category);
                     return (
                       <tr
@@ -327,11 +443,13 @@ const Inventory = () => {
                             </div>
                           </div>
                         </td>
+
                         <td className="p-4">
                           <Badge variant="secondary" className="capitalize">
                             {getCategoryName(item.category)}
                           </Badge>
                         </td>
+
                         <td className="p-4">
                           <div className="flex items-center justify-center gap-2">
                             <span className="text-red-400 font-display font-bold">{item.p}</span>
@@ -341,18 +459,22 @@ const Inventory = () => {
                             <span className="text-green-400 font-display font-bold">{item.m}</span>
                           </div>
                         </td>
+
                         <td className="p-4 text-center">
                           <span className="font-display font-bold text-foreground">{item.quantity}</span>
                           {item.quantity === 0 && (
                             <span className="block text-xs text-destructive mt-1">Out of stock</span>
                           )}
                         </td>
+
                         <td className="p-4 text-center">
                           <div className="flex flex-col items-center">
-                            <span className={cn(
-                              "font-display font-bold text-lg",
-                              item.installed > 0 ? "text-success" : "text-muted-foreground"
-                            )}>
+                            <span
+                              className={cn(
+                                "font-display font-bold text-lg",
+                                item.installed > 0 ? "text-success" : "text-muted-foreground"
+                              )}
+                            >
                               {item.installed}
                             </span>
                             {item.installed > 0 && item.quantity > 0 && (
@@ -362,6 +484,7 @@ const Inventory = () => {
                             )}
                           </div>
                         </td>
+
                         <td className="p-4">
                           <div className="flex items-center gap-2 text-muted-foreground text-sm">
                             <Calendar className="w-4 h-4" />

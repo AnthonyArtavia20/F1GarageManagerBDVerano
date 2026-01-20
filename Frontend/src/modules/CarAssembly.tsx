@@ -5,7 +5,6 @@ import { Car, Zap, Wind, CircleDot, Cog, Settings2, Check, AlertCircle, Loader2,
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { TeamSelector } from "@/components/TeamSelector";
 import {
   Select,
   SelectContent,
@@ -66,16 +65,16 @@ const categories = [
 const CarAssembly = () => {
   const [selectedTeam, setSelectedTeam] = useState("");
   const [selectedTeamName, setSelectedTeamName] = useState("");
-  
+
   // Cambio importante: En lugar de selectedCar string, usamos:
   // - teamCars: array de carros del equipo
   // - selectedCarIndex: índice del carro seleccionado (0 o 1)
   const [teamCars, setTeamCars] = useState<TeamCar[]>([]);
   const [selectedCarIndex, setSelectedCarIndex] = useState(0);
-  
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  
+
   const [availableParts, setAvailableParts] = useState<Part[]>([]);
   const [installedParts, setInstalledParts] = useState<Record<string, number | null>>({});
   const [installedPartsNames, setInstalledPartsNames] = useState<Record<string, string>>({});
@@ -84,7 +83,7 @@ const CarAssembly = () => {
   const [installedPartsData, setInstalledPartsData] = useState<Record<string, InstalledPart>>({});
   const [carStats, setCarStats] = useState<CarStats | null>(null);
   const [hasChanges, setHasChanges] = useState(false);
-  
+
   // OBTENER EL CAR_ID REAL DEL CARRO SELECCIONADO
   const selectedCarId = teamCars[selectedCarIndex]?.Car_id?.toString();
 
@@ -126,7 +125,7 @@ const CarAssembly = () => {
     try {
       setLoading(true);
       setError(null);
-      
+
       // Asumimos que cada equipo tiene exactamente 2 carros
       // En una implementación real, esto vendría de un endpoint del backend
       // Por ahora, simulamos que los carros tienen IDs baseados en el teamId
@@ -135,10 +134,10 @@ const CarAssembly = () => {
         { Car_id: (teamIdNum * 2) - 1, Team_id: teamIdNum, isFinalized: false },
         { Car_id: teamIdNum * 2, Team_id: teamIdNum, isFinalized: false }
       ];
-      
+
       setTeamCars(mockTeamCars);
       setSelectedCarIndex(0);
-      
+
       console.log('Carros del equipo cargados:', mockTeamCars);
     } catch (err: any) {
       console.error('Error al cargar carros del equipo:', err);
@@ -152,10 +151,10 @@ const CarAssembly = () => {
   const fetchAvailableParts = async () => {
     try {
       setLoading(true);
-      
+
       const response = await fetch(`${API_URL}/api/sp/team-inventory/${selectedTeam}`);
       const data = await response.json();
-      
+
       if (data.success) {
         console.log('Partes cargadas:', data.data);
         setAvailableParts(data.data);
@@ -175,26 +174,26 @@ const CarAssembly = () => {
   // FETCH CONFIGURATION (Obtener config actual del carro) - Ahora incluye nombres
   const fetchCarConfiguration = async () => {
     if (!selectedCarId) return;
-    
+
     try {
       const response = await fetch(`${API_URL}/api/sp/car-configuration/${selectedCarId}`);
       const data = await response.json();
-      
+
       if (data.success) {
         console.log('Configuración cargada:', data.parts);
-        
+
         const config: Record<string, number | null> = {};
         const names: Record<string, string> = {};
         // SOLUCIÓN ERROR: Nuevo objeto para guardar toda la info de partes instaladas
         const partsData: Record<string, InstalledPart> = {};
-        
+
         data.parts.forEach((part: InstalledPart) => {
           config[part.Part_Category] = part.Part_id;
           names[part.Part_Category] = part.Part_Name; // Aquí se guarda el nombre ahora.
           // SOLUCIÓN ERROR: Guardamos TODO el objeto de la parte instalada, no solo el nombre
           partsData[part.Part_Category] = part;
         });
-        
+
         setInstalledParts(config);
         setInstalledPartsNames(names);
         // SOLUCIÓN ERROR: Actualizar el nuevo estado con toda la data de las partes instaladas
@@ -216,11 +215,11 @@ const CarAssembly = () => {
   // Obtener estadísticas del carro
   const fetchCarStats = async () => {
     if (!selectedCarId) return;
-    
+
     try {
       const response = await fetch(`${API_URL}/api/sp/car-stats/${selectedCarId}`);
       const data = await response.json();
-      
+
       if (data.success) {
         console.log('Stats cargadas:', data.stats);
         setCarStats(data.stats);
@@ -236,7 +235,7 @@ const CarAssembly = () => {
   // Instalar o reemplazar parte
   const handleInstallPart = async (category: string, partId: number) => {
     if (!selectedCarId) return;
-    
+
     const oldPartId = installedParts[category];
     const isReplacement = oldPartId !== null && oldPartId !== undefined;
 
@@ -246,16 +245,16 @@ const CarAssembly = () => {
 
       const endpoint = isReplacement ? '/api/sp/replace-part' : '/api/sp/install-part';
       const body = isReplacement
-        ? { 
-            carId: parseInt(selectedCarId), 
-            oldPartId, 
-            newPartId: partId, 
-            teamId: parseInt(selectedTeam) 
+        ? {
+            carId: parseInt(selectedCarId),
+            oldPartId,
+            newPartId: partId,
+            teamId: parseInt(selectedTeam)
           }
-        : { 
-            carId: parseInt(selectedCarId), 
-            partId, 
-            teamId: parseInt(selectedTeam) 
+        : {
+            carId: parseInt(selectedCarId),
+            partId,
+            teamId: parseInt(selectedTeam)
           };
 
       console.log('Enviando al backend:', endpoint, body);
@@ -292,9 +291,9 @@ const CarAssembly = () => {
   // Nueva función: Desinstalar una parte y devolverla al inventario
   const handleUninstallPart = async (category: string, partId: number) => {
     if (!selectedCarId) return;
-    
+
     const partName = installedPartsData[category]?.Part_Name || "esta parte";
-    
+
     if (!confirm(`¿Desinstalar ${partName}?`)) return;
 
     try {
@@ -334,14 +333,14 @@ const CarAssembly = () => {
   // Validar parte antes de instalar
   const validatePart = async (category: string, partId: number) => {
     if (!selectedCarId) return false;
-    
+
     try {
       console.log('Validando parte:', category, partId);
       const response = await fetch(`${API_URL}/api/sp/validate-part/${selectedCarId}/${partId}`);
       const data = await response.json();
-      
+
       console.log('Resultado validación:', data);
-      
+
       if (data.success) {
         if (data.validation.Status === 'INVALID') {
           alert('Alerta, lo siguiente salió mal: ' + data.validation.Message);
@@ -360,18 +359,18 @@ const CarAssembly = () => {
   const handlePartChange = async (category: string, partId: string) => {
     console.log('handlePartChange llamado:', category, partId);
     const numericPartId = parseInt(partId);
-    
+
     if (!numericPartId || isNaN(numericPartId)) {
       console.error('Part ID inválido:', partId);
       return;
     }
 
     console.log('Instalando parte ID:', numericPartId);
-    
+
     // Validar antes de instalar
     const isValid = await validatePart(category, numericPartId);
     console.log('Validación resultado:', isValid);
-    
+
     if (!isValid) {
       console.log('Validación falló, abortando');
       return;
@@ -388,22 +387,17 @@ const CarAssembly = () => {
     // Calcular cuántas categorías están instaladas
     const installedCategoriesCount = Object.keys(installedPartsData).length;
     const isCarComplete = installedCategoriesCount === 5;
-    
+
     if (isCarComplete) {
       // Si el carro tiene las 5 categorías instaladas - READY TO RACE!
       alert('Configuración guardada exitosamente! ¡READY TO RACE!');
       setHasChanges(false);
-      
-      // Aquí podrías agregar una llamada a un endpoint adicional
-      // para marcar el carro como "listo para correr" en la base de datos
-      // Ejemplo: await markCarAsReady(selectedCarId);
     } else {
       // Si el carro NO tiene las 5 categorías instaladas
       const missingCount = 5 - installedCategoriesCount;
-      alert(`Configuración guardada parcialmente. El carro NO es apto para correr porque le falta(n) ${missingCount} categoría(s) instalada(s).\n\nRequiere instalar todas las 5 categorías para poder competir.`);
-      
-      // Aún así marcamos como guardado (sin cambios pendientes)
-      // pero el usuario sabe que no está completo
+      alert(
+        `Configuración guardada parcialmente. El carro NO es apto para correr porque le falta(n) ${missingCount} categoría(s) instalada(s).\n\nRequiere instalar todas las 5 categorías para poder competir.`
+      );
       setHasChanges(false);
     }
   };
@@ -438,16 +432,10 @@ const CarAssembly = () => {
               Configure your racing car with performance parts
             </p>
           </div>
+
+          {/* ✅ SOLO ESPACIO (sin TeamSelector) */}
           <div className="flex gap-3 relative z-20">
-            <TeamSelector
-              value={selectedTeam}
-              onChange={(teamId, teamName) => {
-                setSelectedTeam(teamId);
-                setSelectedTeamName(teamName);
-              }}
-              placeholder="Select team..."
-              required
-            />
+            <div className="h-10 w-[280px] rounded-md border border-border bg-card/50" />
           </div>
         </div>
 
@@ -475,7 +463,10 @@ const CarAssembly = () => {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Parts Selection */}
             <div className="lg:col-span-2 space-y-4">
-              <h2 className="font-display text-lg font-semibold text-foreground opacity-0 animate-fade-in" style={{ animationDelay: "100ms" }}>
+              <h2
+                className="font-display text-lg font-semibold text-foreground opacity-0 animate-fade-in"
+                style={{ animationDelay: "100ms" }}
+              >
                 Available Parts
               </h2>
 
@@ -490,17 +481,17 @@ const CarAssembly = () => {
                 const CategoryIcon = category.icon;
                 const selectedPartId = installedParts[category.id];
                 const partsInCategory = availableParts.filter(p => p.Category === category.id);
-                
+
                 // Obtener la parte instalada desde installedPartsData (siempre disponible)
                 const installedPartInfo = installedPartsData[category.id];
-                
+
                 // Buscar también en inventario disponible por si acaso
                 const partInInventory = partsInCategory.find(p => p.Part_id === selectedPartId);
-                
+
                 // Usar installedPartInfo o partInInventory para mostrar nombre y stats
                 const displayName = installedPartInfo?.Part_Name || "None installed";
                 const displayStats = partInInventory || installedPartInfo;
-                
+
                 // Combinar partes del inventario + parte instalada (si no está en inventario)
                 const allPartsForSelect = [...partsInCategory];
                 if (installedPartInfo && !partsInCategory.some(p => p.Part_id === installedPartInfo.Part_id)) {
@@ -516,7 +507,7 @@ const CarAssembly = () => {
                     m: installedPartInfo.m
                   });
                 }
-                
+
                 return (
                   <div
                     key={category.id}
@@ -573,8 +564,8 @@ const CarAssembly = () => {
                       </SelectTrigger>
                       <SelectContent>
                         {allPartsForSelect.map((part) => (
-                          <SelectItem 
-                            key={part.Part_id} 
+                          <SelectItem
+                            key={part.Part_id}
                             value={part.Part_id.toString()}
                             textValue={part.Name}
                           >
@@ -595,12 +586,18 @@ const CarAssembly = () => {
 
             {/* Summary Panel */}
             <div className="space-y-4">
-              <h2 className="font-display text-lg font-semibold text-foreground opacity-0 animate-fade-in" style={{ animationDelay: "100ms" }}>
+              <h2
+                className="font-display text-lg font-semibold text-foreground opacity-0 animate-fade-in"
+                style={{ animationDelay: "100ms" }}
+              >
                 Car Performance
               </h2>
-              
+
               {/* Indicador visual de estado del carro (completo/incompleto) */}
-              <div className={`glass-card rounded-xl p-4 mb-4 ${isCarReady ? 'bg-green-500/10 border-green-500/20' : 'bg-yellow-500/10 border-yellow-500/20'} opacity-0 animate-fade-in`} style={{ animationDelay: "150ms" }}>
+              <div
+                className={`glass-card rounded-xl p-4 mb-4 ${isCarReady ? 'bg-green-500/10 border-green-500/20' : 'bg-yellow-500/10 border-yellow-500/20'} opacity-0 animate-fade-in`}
+                style={{ animationDelay: "150ms" }}
+              >
                 <div className="flex items-center gap-3">
                   <div className={`w-8 h-8 rounded-full flex items-center justify-center ${isCarReady ? 'bg-green-500/20' : 'bg-yellow-500/20'}`}>
                     {isCarReady ? (
@@ -614,14 +611,14 @@ const CarAssembly = () => {
                       {isCarReady ? 'READY TO RACE' : 'INCOMPLETE CONFIGURATION'}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      {isCarReady 
-                        ? 'Carro completo, listo para competir' 
+                      {isCarReady
+                        ? 'Carro completo, listo para competir'
                         : `Faltan ${5 - Object.keys(installedPartsData).length} categorías para completar`}
                     </p>
                   </div>
                 </div>
               </div>
-              
+
               <div className="glass-card rounded-xl p-6 opacity-0 animate-fade-in" style={{ animationDelay: "200ms" }}>
                 {/* Car Selector con flechas */}
                 <div className="flex items-center justify-between mb-6">
@@ -635,30 +632,30 @@ const CarAssembly = () => {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                     </svg>
                   </button>
-                  
+
                   <div className="text-center">
                     <h3 className="font-display font-bold text-2xl text-foreground mb-1">
                       CAR #{selectedCarIndex + 1}
                     </h3>
                     <p className="text-sm text-muted-foreground mb-2">{selectedTeamName}</p>
-                    <Badge 
-                      variant={hasChanges ? "destructive" : "default"} 
+                    <Badge
+                      variant={hasChanges ? "destructive" : "default"}
                       className={
-                        hasChanges 
-                          ? "bg-yellow-500" 
-                          : isCarReady 
-                            ? "bg-green-500" 
+                        hasChanges
+                          ? "bg-yellow-500"
+                          : isCarReady
+                            ? "bg-green-500"
                             : "bg-blue-500"
                       }
                     >
-                      {hasChanges 
-                        ? "Unsaved Changes" 
-                        : isCarReady 
-                          ? "Ready to Race" 
+                      {hasChanges
+                        ? "Unsaved Changes"
+                        : isCarReady
+                          ? "Ready to Race"
                           : "Saved (Incomplete)"}
                     </Badge>
                   </div>
-                  
+
                   <button
                     onClick={handleNextCar}
                     disabled={selectedCarIndex === teamCars.length - 1 || loading}
@@ -724,8 +721,8 @@ const CarAssembly = () => {
                 )}
 
                 {/* Save Button - Cambia el texto según el estado del carro */}
-                <Button 
-                  variant="racing" 
+                <Button
+                  variant="racing"
                   className="w-full"
                   onClick={handleSaveConfiguration}
                   disabled={!hasChanges || loading}
