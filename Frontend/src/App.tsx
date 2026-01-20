@@ -1,10 +1,15 @@
+// src/App.tsx
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 
-// Import Modules
+// Auth
+import { AuthProvider } from "@/auth/authContext";
+import { ProtectedRoute } from "@/auth/ProtectedRoute";
+
+// Modules
 import NotFound from "@/modules/NotFound";
 import Login from "@/modules/Login";
 import DriverProfile from "@/modules/DriverProfile";
@@ -16,7 +21,6 @@ import Store from "@/modules/Store";
 import Inventory from "@/modules/Inventory";
 import CarAssembly from "@/modules/CarAssembly";
 import UserManagement from "@/modules/UserManagement";
-
 import Test from "@/modules/Test";
 
 const queryClient = new QueryClient();
@@ -26,22 +30,111 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Login />} />
-          <Route path="/Analytics" element={<Analytics />} />
-          <Route path="/Teams" element={<Teams />} />
-          <Route path="/Drivers" element={<Drivers />} />
-          <Route path="/Sponsors" element={<Sponsors />} />
-          <Route path="/Store" element={<Store />} />
-          <Route path="/Inventory" element={<Inventory />} />
-          <Route path="/CarAssembly" element={<CarAssembly />} />
-          <Route path="/UserManagement" element={<UserManagement />} />
-          <Route path="/DriverProfile" element={<DriverProfile />} />
-          <Route path="/Test" element={<Test />} />
-          <Route path="/*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
+
+      <AuthProvider>
+        <BrowserRouter>
+          <Routes>
+            {/* PUBLIC */}
+            <Route path="/" element={<Login />} />
+
+            {/* DRIVER ONLY */}
+            <Route
+              path="/DriverProfile"
+              element={
+                <ProtectedRoute allowedRoles={["driver"]}>
+                  <DriverProfile />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* ADMIN + ENGINEER */}
+            <Route
+              path="/Analytics"
+              element={
+                <ProtectedRoute allowedRoles={["admin", "engineer"]}>
+                  <Analytics />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/Teams"
+              element={
+                <ProtectedRoute allowedRoles={["admin", "engineer"]}>
+                  <Teams />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/Drivers"
+              element={
+                <ProtectedRoute allowedRoles={["admin", "engineer"]}>
+                  <Drivers />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/Sponsors"
+              element={
+                <ProtectedRoute allowedRoles={["admin", "engineer"]}>
+                  <Sponsors />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/Store"
+              element={
+                <ProtectedRoute allowedRoles={["admin", "engineer"]}>
+                  <Store />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/Inventory"
+              element={
+                <ProtectedRoute allowedRoles={["admin", "engineer"]}>
+                  <Inventory />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/CarAssembly"
+              element={
+                <ProtectedRoute allowedRoles={["admin", "engineer"]}>
+                  <CarAssembly />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* ADMIN ONLY */}
+            <Route
+              path="/UserManagement"
+              element={
+                <ProtectedRoute allowedRoles={["admin"]}>
+                  <UserManagement />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* TEST */}
+            <Route
+              path="/Test"
+              element={
+                <ProtectedRoute allowedRoles={["admin", "engineer"]}>
+                  <Test />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route path="/*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
+      </AuthProvider>
     </TooltipProvider>
   </QueryClientProvider>
 );

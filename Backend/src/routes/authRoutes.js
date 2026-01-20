@@ -1,15 +1,25 @@
-// src/routes/authRoutes.js
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const authController = require('../controllers/authController');
 
-// Register
-router.post('/register', authController.register);
+// OJO: esta ruta debe apuntar al archivo real
+const authController = require("../controllers/authController");
 
-// Login
-router.post('/login', authController.login);
+// Middleware para verificar sesión
+function requireAuth(req, res, next) {
+  if (!req.session || !req.session.user) {
+    return res.status(401).json({ success: false, message: "Unauthorized" });
+  }
+  next();
+}
 
-// Logout
-router.post('/logout', authController.logout);
+
+router.post("/register", authController.register);
+router.post("/login", authController.login);
+router.post("/logout", authController.logout);
+
+// Endpoint para probar sesión
+router.get("/me", requireAuth, (req, res) => {
+  res.json({ success: true, user: req.session.user });
+});
 
 module.exports = router;
