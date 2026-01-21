@@ -35,7 +35,7 @@ router.get("/debug", (req, res) => {
     timestamp: new Date().toISOString()
   };
   
-  console.log('🔍 Debug de sesión:', sessionInfo);
+  console.log('Debug de sesión:', sessionInfo);
   
   res.json({
     success: true,

@@ -17,19 +17,21 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { TeamSelector } from "@/components/TeamSelector";
 import { cn } from "@/lib/utils";
+import { apiFetch } from "@/lib/api";
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:9090';
-
+// ✅ INTERFAZ ACTUALIZADA para coincidir con el stored procedure
 interface InventoryPart {
-  id: number;
-  name: string;
-  category: string;
-  quantity: number;
-  acquiredDate: string;
+  Part_id: number;      //Cambiado de 'id' a 'Part_id'
+  Name: string;         //Cambiado de 'name' a 'Name'
+  Category: string;     //Cambiado de 'category' a 'Category'
+  Price?: number;       //Opcional
+  Stock?: number;       //Stock en lugar de quantity
+  Quantity?: number;    //Mantener compatibilidad
   p: number;
   a: number;
   m: number;
-  installed: number;
+  acquiredDate?: string; //Opcional
+  installed?: number;    //Opcional
 }
 
 interface SessionUser {
@@ -81,6 +83,7 @@ const Inventory = () => {
   const [inventory, setInventory] = useState<InventoryPart[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [debugInfo, setDebugInfo] = useState<any>(null); //PAra debug
 
   const isAdmin = sessionUser?.role === 'admin';
 
@@ -93,21 +96,9 @@ const Inventory = () => {
       setLoadingSession(true);
       setError(null);
 
-      const res = await fetch(`${API_URL}/api/auth/me`, {
-        method: "GET",
-        credentials: "include",
-      });
+      const { res, data } = await apiFetch("/api/auth/me");
 
-      if (!res.ok) {
-        setSessionUser(null);
-        setSelectedTeamId("");
-        setSelectedTeamName("");
-        setInventory([]);
-        return;
-      }
-
-      const data = await res.json();
-      if (!data?.success || !data?.user) {
+      if (!res.ok || !data?.success || !data?.user) {
         setSessionUser(null);
         setSelectedTeamId("");
         setSelectedTeamName("");
@@ -118,7 +109,6 @@ const Inventory = () => {
       const u: SessionUser = data.user;
       setSessionUser(u);
 
-      // ✅ Si NO es admin, fijar equipo automáticamente
       if (u.role !== 'admin') {
         const tid = u.teamId ?? null;
         const tname = u.teamName ?? "";
@@ -131,7 +121,6 @@ const Inventory = () => {
           setSelectedTeamName("");
         }
       }
-      // ✅ Si ES admin, no fija ningún equipo - debe seleccionarlo manualmente
     } catch (err: any) {
       console.error("Error loading session:", err);
       setError("Error loading session: " + err.message);
@@ -156,24 +145,82 @@ const Inventory = () => {
     try {
       setLoading(true);
       setError(null);
+      setDebugInfo(null);
 
-      const response = await fetch(`${API_URL}/api/inventory/${teamId}`, {
-        method: "GET",
-        credentials: "include",
+      console.log(`📦 Fetching inventory for team ${teamId}...`);
+      
+      // PRIMERO: Intentar con el nuevo endpoint de stored procedures
+      const { res, data } = await apiFetch(`/api/sp/team-inventory/${teamId}`);
+      
+      console.log("📊 API Response:", { 
+        status: res.status, 
+        success: data?.success,
+        dataLength: data?.data?.length,
+        dataSample: data?.data?.[0]
       });
 
-      const contentType = response.headers.get("content-type");
-      if (!contentType || !contentType.includes("application/json")) {
-        throw new Error("El servidor no devolvió JSON");
-      }
-
-      const data = await response.json();
-
-      if (data.success) {
-        setInventory(data.data);
+      if (res.ok && data.success) {
+        //Guardar para debug
+        setDebugInfo({
+          endpoint: "sp/team-inventory",
+          count: data.data?.length || 0,
+          firstItem: data.data?.[0]
+        });
+        
+        // Normalizar datos para la interfaz
+        const normalizedData = (data.data || []).map((item: any) => ({
+          Part_id: item.Part_id || item.id || 0,
+          Name: item.Name || item.name || "",
+          Category: item.Category || item.category || "",
+          Price: item.Price || 0,
+          Stock: item.Stock || item.Quantity || item.quantity || 0,
+          Quantity: item.Quantity || item.quantity || item.Stock || 0,
+          p: item.p || 0,
+          a: item.a || 0,
+          m: item.m || 0,
+          acquiredDate: item.acquiredDate || item.AcquiredDate || new Date().toISOString().split('T')[0],
+          installed: item.installed || item.Installed || 0
+        }));
+        
+        setInventory(normalizedData);
       } else {
-        setError(data.message || "Error al cargar el inventario");
-        setInventory([]);
+        console.log("⚠️ SP endpoint failed, trying legacy endpoint...");
+        
+        // SEGUNDO: Intentar con el endpoint legacy si falla el SP
+        try {
+          const legacyResult = await apiFetch(`/api/inventory/${teamId}`);
+          
+          if (legacyResult.res.ok && legacyResult.data.success) {
+            console.log("Legacy endpoint successful");
+            setDebugInfo({
+              endpoint: "inventory/teamId",
+              count: legacyResult.data.data?.length || 0,
+              firstItem: legacyResult.data.data?.[0]
+            });
+            
+            // Normalizar datos legacy
+            const normalizedLegacyData = (legacyResult.data.data || []).map((item: any) => ({
+              Part_id: item.id || item.Part_id || 0,
+              Name: item.name || item.Name || "",
+              Category: item.category || item.Category || "",
+              Stock: item.quantity || item.Quantity || item.Stock || 0,
+              Quantity: item.quantity || item.Quantity || item.Stock || 0,
+              p: item.p || 0,
+              a: item.a || 0,
+              m: item.m || 0,
+              acquiredDate: item.acquiredDate || item.AcquiredDate || "N/A",
+              installed: item.installed || item.Installed || 0
+            }));
+            
+            setInventory(normalizedLegacyData);
+          } else {
+            throw new Error("Legacy endpoint also failed");
+          }
+        } catch (legacyError) {
+          console.error("❌ Both endpoints failed:", legacyError);
+          setError("No se pudo cargar el inventario. Intente nuevamente.");
+          setInventory([]);
+        }
       }
     } catch (err: any) {
       console.error("Error al cargar inventario:", err);
@@ -184,14 +231,35 @@ const Inventory = () => {
     }
   };
 
-  const filteredInventory = inventory.filter(
-    (item) =>
-      item.name.toLowerCase().includes(search.toLowerCase()) ||
-      getCategoryName(item.category).toLowerCase().includes(search.toLowerCase())
-  );
+  // Función helper para obtener valores seguros
+  const getSafeValue = (item: InventoryPart, key: keyof InventoryPart) => {
+    const value = item[key];
+    return value !== undefined && value !== null ? value : "";
+  };
 
-  const totalParts = filteredInventory.reduce((sum, item) => sum + item.quantity, 0);
-  const installedParts = filteredInventory.reduce((sum, item) => sum + item.installed, 0);
+  // Filter con valores seguros
+  const filteredInventory = inventory.filter((item) => {
+    const name = getSafeValue(item, 'Name');
+    const category = getSafeValue(item, 'Category');
+    const searchLower = search.toLowerCase();
+    
+    return (
+      (typeof name === 'string' && name.toLowerCase().includes(searchLower)) ||
+      (typeof category === 'string' && getCategoryName(category).toLowerCase().includes(searchLower))
+    );
+  });
+
+  // Calcular totales con valores seguros
+  const totalParts = filteredInventory.reduce((sum, item) => {
+    const quantity = item.Quantity || item.Stock || 0;
+    return sum + quantity;
+  }, 0);
+  
+  const installedParts = filteredInventory.reduce((sum, item) => {
+    const installed = item.installed || 0;
+    return sum + installed;
+  }, 0);
+  
   const availableParts = totalParts - installedParts;
 
   const noTeamAssigned =
@@ -212,9 +280,16 @@ const Inventory = () => {
               {isAdmin ? "View inventory for any team" : "Parts available for team use"}
             </p>
           </div>
+          
+          {/*Debug info (solo desarrollo) */}
+          {debugInfo && process.env.NODE_ENV === 'development' && (
+            <div className="text-xs text-muted-foreground">
+              Loaded {debugInfo.count} items from {debugInfo.endpoint}
+            </div>
+          )}
         </div>
 
-        {/* ✅ ARREGLADO: Panel con TeamSelector para admin */}
+        {/* Panel con TeamSelector */}
         <div
           className="glass-card rounded-xl p-6 mb-8 opacity-0 animate-fade-in relative z-10"
           style={{ animationDelay: "50ms" }}
@@ -254,7 +329,6 @@ const Inventory = () => {
                   </p>
                 </div>
               </div>
-              {/* ✅ TeamSelector para admin */}
               <div className="relative z-20">
                 <TeamSelector
                   value={selectedTeamId}
@@ -429,10 +503,13 @@ const Inventory = () => {
                 </thead>
                 <tbody>
                   {filteredInventory.map((item) => {
-                    const CategoryIcon = getCategoryIcon(item.category);
+                    const CategoryIcon = getCategoryIcon(item.Category);
+                    const quantity = item.Quantity || item.Stock || 0;
+                    const installed = item.installed || 0;
+                    
                     return (
                       <tr
-                        key={item.id}
+                        key={item.Part_id}
                         className="border-t border-border hover:bg-accent/30 transition-colors"
                       >
                         <td className="p-4">
@@ -441,15 +518,15 @@ const Inventory = () => {
                               <CategoryIcon className="w-5 h-5 text-primary" />
                             </div>
                             <div>
-                              <span className="font-medium text-foreground block">{item.name}</span>
-                              <span className="text-xs text-muted-foreground">ID: {item.id}</span>
+                              <span className="font-medium text-foreground block">{item.Name}</span>
+                              <span className="text-xs text-muted-foreground">ID: {item.Part_id}</span>
                             </div>
                           </div>
                         </td>
 
                         <td className="p-4">
                           <Badge variant="secondary" className="capitalize">
-                            {getCategoryName(item.category)}
+                            {getCategoryName(item.Category)}
                           </Badge>
                         </td>
 
@@ -464,8 +541,8 @@ const Inventory = () => {
                         </td>
 
                         <td className="p-4 text-center">
-                          <span className="font-display font-bold text-foreground">{item.quantity}</span>
-                          {item.quantity === 0 && (
+                          <span className="font-display font-bold text-foreground">{quantity}</span>
+                          {quantity === 0 && (
                             <span className="block text-xs text-destructive mt-1">Out of stock</span>
                           )}
                         </td>
@@ -475,14 +552,14 @@ const Inventory = () => {
                             <span
                               className={cn(
                                 "font-display font-bold text-lg",
-                                item.installed > 0 ? "text-success" : "text-muted-foreground"
+                                installed > 0 ? "text-success" : "text-muted-foreground"
                               )}
                             >
-                              {item.installed}
+                              {installed}
                             </span>
-                            {item.installed > 0 && item.quantity > 0 && (
+                            {installed > 0 && quantity > 0 && (
                               <span className="text-xs text-muted-foreground mt-1">
-                                {((item.installed / item.quantity) * 100).toFixed(0)}% used
+                                {((installed / quantity) * 100).toFixed(0)}% used
                               </span>
                             )}
                           </div>

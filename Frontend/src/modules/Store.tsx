@@ -29,8 +29,6 @@ import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { apiFetch } from "@/lib/api";
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:9090';
-
 interface Part {
   id: number;
   name: string;
@@ -138,22 +136,32 @@ const Store = () => {
   const fetchParts = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${API_URL}/api/parts`);
-      const contentType = response.headers.get("content-type");
-      if (!contentType || !contentType.includes("application/json")) {
-        throw new Error("El servidor no devolvió JSON");
-      }
-      const data = await response.json();
-      if (data.success) {
-        setParts(data.data);
-        setError(null);
+      setError(null);
+      
+      //Usar apiFetch en lugar de fetch directo para IP Red
+      const { res, data } = await apiFetch("/api/parts");
+      
+      console.log('Parts response:', { status: res.status, data });
+      
+      if (res.ok && data.success) {
+        setParts(data.data || []);
       } else {
-        setError(data.message);
+        setError(data.message || "Error loading parts");
+        
+        // Datos de ejemplo para desarrollo
+        setParts([
+          { id: 1, name: "Turbo V6 Power Unit", category: "Power_Unit", price: 1000000, stock: 5, p: 9, a: 3, m: 4 },
+          { id: 2, name: "Advanced Aero Package", category: "Aerodynamics_pkg", price: 500000, stock: 8, p: 2, a: 9, m: 4 },
+          { id: 3, name: "Performance Wheels Set", category: "Wheels", price: 200000, stock: 15, p: 3, a: 4, m: 8 },
+          { id: 4, name: "Race Suspension System", category: "Suspension", price: 300000, stock: 10, p: 2, a: 5, m: 9 },
+          { id: 5, name: "8-Speed Gearbox", category: "Gearbox", price: 400000, stock: 7, p: 4, a: 3, m: 7 },
+        ]);
       }
     } catch (err: any) {
       console.error("Error al cargar partes:", err);
       setError("Error al cargar partes: " + err.message);
-
+      
+      // Datos de ejemplo en caso de error
       setParts([
         { id: 1, name: "Turbo V6 Power Unit", category: "Power_Unit", price: 1000000, stock: 5, p: 9, a: 3, m: 4 },
         { id: 2, name: "Advanced Aero Package", category: "Aerodynamics_pkg", price: 500000, stock: 8, p: 2, a: 9, m: 4 },
@@ -169,15 +177,31 @@ const Store = () => {
   const fetchTeamBudget = async (teamId: string) => {
     try {
       setLoadingBudget(true);
-      const response = await fetch(`${API_URL}/api/sponsors/budget/${teamId}`);
-      const contentType = response.headers.get("content-type");
-      if (!contentType || !contentType.includes("application/json")) {
-        throw new Error("El servidor no devolvió JSON");
+      
+      //Usar apiFetch con los diferentes endpoints para IP RED
+      const endpoints = [
+        `/api/sponsors/budget/${teamId}`,
+        `/api/sponsors/team/${teamId}/budget`
+      ];
+      
+      let budgetData = null;
+      
+      for (const endpoint of endpoints) {
+        try {
+          const { res, data } = await apiFetch(endpoint);
+          if (res.ok && data.success) {
+            budgetData = data.data;
+            break;
+          }
+        } catch (err) {
+          console.log(`Endpoint ${endpoint} failed, trying next...`);
+        }
       }
-      const data = await response.json();
-      if (data.success) {
-        setTeamBudget(data.data);
+      
+      if (budgetData) {
+        setTeamBudget(budgetData);
       } else {
+        // Datos de ejemplo si no hay presupuesto
         setTeamBudget({
           teamId: parseInt(teamId),
           teamName: selectedTeamName || `Team ${teamId}`,
@@ -188,6 +212,7 @@ const Store = () => {
           totalPurchases: 8,
         });
       }
+      
     } catch (err: any) {
       console.error("Error al cargar presupuesto:", err);
       setTeamBudget({
@@ -219,15 +244,13 @@ const Store = () => {
         m: parseInt(newPart.m),
       };
 
-      const response = await fetch(`${API_URL}/api/parts`, {
+      //Usar apiFetch en lugar de fetch directo para IP RED
+      const { res, data } = await apiFetch("/api/parts", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(partData),
       });
 
-      const data = await response.json();
-
-      if (data.success) {
+      if (res.ok && data.success) {
         alert("Parte creada exitosamente");
         setNewPart({ name: "", category: "Power_Unit", price: "", stock: "", p: "5", a: "5", m: "5" });
         setShowAddPart(false);
@@ -272,9 +295,9 @@ const Store = () => {
     if (!confirmPurchase) return;
 
     try {
-      const response = await fetch(`${API_URL}/api/parts/purchase`, {
+      //Usar apiFetch en lugar de fetch directo para IP RED
+      const { res, data } = await apiFetch("/api/parts/purchase", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           teamId: parseInt(selectedTeamId),
           partId: part.id,
@@ -282,9 +305,7 @@ const Store = () => {
         }),
       });
 
-      const data = await response.json();
-
-      if (data.success) {
+      if (res.ok && data.success) {
         alert(
           `Compra realizada exitosamente!\n\n` +
             `${data.message}\n\n` +
@@ -308,7 +329,7 @@ const Store = () => {
         await fetchTeamBudget(selectedTeamId);
         await fetchParts();
       } else {
-        alert(`❌ Error en la compra:\n${data.message}`);
+        alert(`Error en la compra:\n${data.message}`);
         if (data.data?.newAvailableBudget && teamBudget) {
           setTeamBudget({ ...teamBudget, availableBudget: data.data.newAvailableBudget });
         }
@@ -361,7 +382,6 @@ const Store = () => {
           </div>
         )}
 
-        {/* ✅ ARREGLADO: z-index correcto para que nada tape el selector */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8 relative z-10">
           <div className="lg:col-span-2 glass-card rounded-xl p-6 opacity-0 animate-fade-in relative z-0" style={{ animationDelay: "50ms" }}>
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
@@ -558,7 +578,6 @@ const Store = () => {
             </div>
           </div>
 
-          {/* ✅ Team Panel con z-index correcto */}
           <div className="glass-card rounded-xl p-6 opacity-0 animate-fade-in relative z-10" style={{ animationDelay: "100ms" }}>
             <div className="flex items-center gap-2 mb-4">
               <Users className="w-6 h-6 text-primary" />
@@ -584,7 +603,6 @@ const Store = () => {
                       </div>
                     </div>
                   </div>
-                  {/* ✅ TeamSelector sin label que tape */}
                   <div className="relative z-20">
                     <TeamSelector
                       value={selectedTeamId}
@@ -628,7 +646,6 @@ const Store = () => {
           </div>
         </div>
 
-        {/* Budget - z-0 para no interferir */}
         {selectedTeamId && (
           <div className="glass-card rounded-xl p-6 mb-8 opacity-0 animate-fade-in relative z-0" style={{ animationDelay: "150ms" }}>
             <div className="flex items-center gap-3 mb-6">
@@ -732,7 +749,6 @@ const Store = () => {
           </div>
         )}
 
-        {/* Parts Grid - z-0 */}
         <div className="opacity-0 animate-fade-in relative z-0" style={{ animationDelay: "200ms" }}>
           <div className="flex items-center justify-between mb-6">
             <div>

@@ -2,8 +2,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Search, ChevronDown } from 'lucide-react';
 import { Input } from '@/components/ui/input';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:9090';
+import { apiFetch } from '@/lib/api'; //IMPORTAR apiFetch para IP RED
 
 interface Team {
   Team_id: number;
@@ -28,6 +27,7 @@ export const TeamSelector = ({
   const [search, setSearch] = useState('');
   const [isOpen, setIsOpen] = useState(false);
   const [selectedTeamName, setSelectedTeamName] = useState('');
+  const [loading, setLoading] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Cargar equipos inicialmente
@@ -56,31 +56,49 @@ export const TeamSelector = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Obtener todos los equipos
+  // Obtener todos los equipos - uso de api Fetch para IP RED
   const fetchTeams = async () => {
     try {
-      const response = await fetch(`${API_URL}/api/sp/teams`); // CORREGIDO: /api/sp/teams
-      const data = await response.json();
+      setLoading(true);
+      const { res, data } = await apiFetch('/api/sp/teams'); //uso de api Fetch para IP RED
       
-      if (data.success) {
-        setTeams(data.data);
-        setFilteredTeams(data.data);
+      if (res.ok && data.success) {
+        setTeams(data.data || []);
+        setFilteredTeams(data.data || []);
       }
     } catch (err) {
       console.error('Error al cargar equipos:', err);
+      // Datos de ejemplo para desarrollo
+      setTeams([
+        { Team_id: 1, Name: 'Mercedes' },
+        { Team_id: 2, Name: 'Red Bull Racing' },
+        { Team_id: 3, Name: 'Ferrari' },
+        { Team_id: 4, Name: 'McLaren' },
+        { Team_id: 5, Name: 'Alpine' },
+        { Team_id: 6, Name: 'Aston Martin' },
+      ]);
+      setFilteredTeams([
+        { Team_id: 1, Name: 'Mercedes' },
+        { Team_id: 2, Name: 'Red Bull Racing' },
+        { Team_id: 3, Name: 'Ferrari' },
+        { Team_id: 4, Name: 'McLaren' },
+        { Team_id: 5, Name: 'Alpine' },
+        { Team_id: 6, Name: 'Aston Martin' },
+      ]);
+    } finally {
+      setLoading(false);
     }
   };
 
-  // Buscar equipos con filtro
+  // Buscar equipos con filtro - uso de api Fetch para IP RED
   const searchTeams = async (searchTerm: string) => {
     try {
-      const response = await fetch( // CORREGIDO: /api/sp/teams/search
-        `${API_URL}/api/sp/teams/search?search=${encodeURIComponent(searchTerm)}`
+      const { res, data } = await apiFetch(
+        `/api/sp/teams/search?search=${encodeURIComponent(searchTerm)}`
       );
-      const data = await response.json();
       
-      if (data.success) {
-        setFilteredTeams(data.data);
+      if (res.ok && data.success) {
+        setFilteredTeams(data.data || []);
       }
     } catch (err) {
       console.error('Error al buscar equipos:', err);
@@ -139,13 +157,18 @@ export const TeamSelector = ({
                 onChange={(e) => setSearch(e.target.value)}
                 className="pl-9 bg-background"
                 autoFocus
+                disabled={loading}
               />
             </div>
           </div>
 
           {/* Lista de equipos */}
           <div className="overflow-y-auto max-h-48">
-            {filteredTeams.length === 0 ? (
+            {loading ? (
+              <div className="p-4 text-center text-muted-foreground text-sm">
+                Loading teams...
+              </div>
+            ) : filteredTeams.length === 0 ? (
               <div className="p-4 text-center text-muted-foreground text-sm">
                 {search ? `No teams found for "${search}"` : 'No teams available'}
               </div>

@@ -96,7 +96,7 @@ const CarAssembly = () => {
       setLoadingSession(true);
       setError(null);
 
-      console.log('🔍 [CarAssembly] Fetching session...');
+      console.log('[CarAssembly] Fetching session...');
       
       const { res, data } = await apiFetch("/api/auth/me", {
         method: "GET",
@@ -115,7 +115,7 @@ const CarAssembly = () => {
       const u = data.user;
       setSessionUser(u);
 
-      // ✅ Si NO es admin, fijar equipo automáticamente
+      //Si NO es admin, fijar equipo automáticamente
       if (u.role !== 'admin') {
         const tid = u.teamId ?? null;
         const tname = u.teamName ?? "";
@@ -128,7 +128,7 @@ const CarAssembly = () => {
           setSelectedTeamName("");
         }
       }
-      // ✅ Si ES admin, no fija ningún equipo - debe seleccionarlo manualmente
+      //Si ES admin, no fija ningún equipo - debe seleccionarlo manualmente
 
     } catch (err: any) {
       console.error("🔍 [CarAssembly] Error loading session:", err);
@@ -183,10 +183,10 @@ const CarAssembly = () => {
       setTeamCars(mockTeamCars);
       setSelectedCarIndex(0);
       
-      console.log('✅ Team cars loaded:', mockTeamCars);
+      console.log('Team cars loaded:', mockTeamCars);
       
     } catch (err: any) {
-      console.error('❌ Error al cargar carros del equipo:', err);
+      console.error('Error al cargar carros del equipo:', err);
       setError('Error al cargar los carros del equipo');
       
       // Datos de ejemplo para desarrollo
@@ -208,17 +208,17 @@ const CarAssembly = () => {
       setLoading(true);
       setError(null);
 
-      console.log(`🔄 Fetching inventory for team ${selectedTeam}...`);
+      console.log(`Fetching inventory for team ${selectedTeam}...`);
       
       const { res, data } = await apiFetch(`/api/sp/team-inventory/${selectedTeam}`);
       
-      console.log('📊 Inventory response:', { status: res.status, data });
+      console.log('Inventory response:', { status: res.status, data });
 
       if (res.ok && data.success) {
-        console.log(`✅ Loaded ${data.data?.length || 0} parts`);
+        console.log(`Loaded ${data.data?.length || 0} parts`);
         setAvailableParts(data.data || []);
       } else {
-        console.warn('⚠️ No parts loaded, using mock data');
+        console.warn('No parts loaded, using mock data');
         // Datos de ejemplo para desarrollo
         const mockParts: Part[] = [
           { Part_id: 1, Name: 'V6 Turbo Hybrid', Category: 'Power_Unit', Price: 150000, Stock: 2, p: 15, a: 5, m: 8 },
@@ -269,7 +269,7 @@ const CarAssembly = () => {
         setInstalledPartsData(partsData);
         console.log('✅ Car configuration loaded:', partsData);
       } else {
-        console.log('ℹ️ No configuration found, starting fresh');
+        console.log('No configuration found, starting fresh');
         setInstalledParts({});
         setInstalledPartsNames({});
         setInstalledPartsData({});
@@ -296,12 +296,12 @@ const CarAssembly = () => {
         setCarStats(data.stats);
         console.log('✅ Car stats loaded:', data.stats);
       } else {
-        console.log('ℹ️ No stats found, calculating manually');
+        console.log(' No stats found, calculating manually');
         // Calcular stats manualmente basado en partes instaladas
         calculateManualStats();
       }
     } catch (err) {
-      console.error('❌ Error al cargar stats:', err);
+      console.error('Error al cargar stats:', err);
       calculateManualStats();
     }
   };
@@ -517,7 +517,7 @@ const CarAssembly = () => {
           </div>
         </div>
 
-        {/* ✅ Panel con TeamSelector para admin */}
+        {/* Panel con TeamSelector para admin */}
         <div
           className="glass-card rounded-xl p-6 mb-8 opacity-0 animate-fade-in relative z-10"
           style={{ animationDelay: "50ms" }}
@@ -557,7 +557,7 @@ const CarAssembly = () => {
                   </p>
                 </div>
               </div>
-              {/* ✅ TeamSelector para admin */}
+              {/*TeamSelector para admin */}
               <div className="relative z-20">
                 <TeamSelector
                   value={selectedTeam}
