@@ -19,8 +19,6 @@ const PORT = process.env.PORT || 9090;
 
 //  Middleware primero
 app.use(corsMiddleware);
-
-
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
