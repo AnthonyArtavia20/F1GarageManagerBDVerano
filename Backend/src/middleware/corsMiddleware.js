@@ -1,40 +1,39 @@
 const cors = require('cors');
 
-// Lista de orígenes permitidos
-const allowedOrigins = [
-  'http://localhost:5173',
-  'http://localhost:8080', 
-  'http://localhost:9090',
-  'http://192.168.100.65:5173',
-  'http://192.168.100.65:8080',
-  'http://192.168.100.65:9090',
-  // Agrega tu variable de entorno también
-  process.env.FRONTEND_URL
-].filter(Boolean); // Filtra valores undefined
-
+// CONFIGURACIÓN PERMISIVA PARA DESARROLLO
 const corsOptions = {
   origin: function (origin, callback) {
-    // Permitir requests sin origen
-    if (!origin) {
+    // EN DESARROLLO: PERMITE ABSOLUTAMENTE TODO (incluyendo null/undefined)
+    if (process.env.NODE_ENV !== 'production') {
+      // Log para debug
+      console.log(`🌐 [CORS] Desarrollo - Origen recibido: ${origin || '(no-origin/null)'}`);
+      
+      // Permite TODO en desarrollo
       return callback(null, true);
     }
     
-    // Verificar si el origen está en la lista permitida
-    if (allowedOrigins.includes(origin)) {
-      return callback(null, true);
+    // EN PRODUCCIÓN: Solo orígenes específicos
+    if (process.env.NODE_ENV === 'production') {
+      const allowedOrigins = [
+        process.env.FRONTEND_URL,
+        'https://tudominio.com'
+      ].filter(Boolean);
+      
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      console.log(`🚫 [CORS] Producción - Bloqueando origen: ${origin}`);
+      return callback(new Error('Not allowed by CORS'));
     }
     
-    console.log('❌ CORS bloqueado para origen:', origin);
-    console.log('✅ Orígenes permitidos:', allowedOrigins);
-    return callback(new Error('Not allowed by CORS'), false);
+    // Por defecto, permitir
+    callback(null, true);
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-  exposedHeaders: ['set-cookie'],
-  maxAge: 86400
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Cookie', 'Set-Cookie'],
+  exposedHeaders: ['set-cookie', 'Set-Cookie'],
+  optionsSuccessStatus: 200
 };
 
-const corsMiddleware = cors(corsOptions);
-
-module.exports = corsMiddleware;
+module.exports = cors(corsOptions);

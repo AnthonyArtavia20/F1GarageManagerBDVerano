@@ -29,7 +29,7 @@ import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { apiFetch } from "@/lib/api";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:9090";
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:9090';
 
 interface Part {
   id: number;

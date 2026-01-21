@@ -17,32 +17,51 @@ const inventoryRoutes = require('./routes/inventoryRoutes');
 const app = express();
 const PORT = process.env.PORT || 9090;
 
-//  Middleware primero
+// ===== MIDDLEWARE EN ORDEN CORRECTO =====
+
+// 1. CORS primero
 app.use(corsMiddleware);
+
+// 2. Body parsers
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Session después 
+// 3. Session (CONFIGURACIÓN SIMPLIFICADA PARA DEV)
 app.use(session({
-  secret: process.env.SESSION_SECRET || "dev_secret",
-  resave: false,
-  saveUninitialized: false,
+  secret: process.env.SESSION_SECRET || "dev_secret_f1_garage_2024",
+  resave: true,                     // IMPORTANTE: true para evitar pérdida de sesión
+  saveUninitialized: true,          // true para desarrollo
   cookie: {
     httpOnly: true,
-    secure: false,
-    sameSite: "lax",
-    maxAge: 1000 * 60 * 60
-  }
+    secure: false,                  // false porque usas HTTP (no HTTPS)
+    sameSite: 'lax',                // 'lax' funciona mejor que 'none' para desarrollo
+    maxAge: 24 * 60 * 60 * 1000,    // 24 horas
+    // NO uses domain con IPs locales, causa problemas
+  },
+  name: 'f1garage.sid',
 }));
 
+// 4. Middleware de debug (opcional pero útil)
+app.use((req, res, next) => {
+  // Solo muestra logs para rutas de API
+  if (req.path.startsWith('/api/')) {
+    console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
+    console.log(`  Origin: ${req.headers.origin || 'none'}`);
+    console.log(`  Session ID: ${req.sessionID}`);
+    console.log(`  Has User: ${!!req.session.user}`);
+  }
+  next();
+});
 
-// ─────── PUBLIC ROUTES ───────
+// ===== RUTAS PÚBLICAS =====
+
 app.get('/', (req, res) => {
   res.json({
-    mssg: 'F1 Garage Manager API',
-    status: 'Sync with MSSQL-Server',
-    data_base: process.env.DB_NAME,
-    server: process.env.DB_SERVER
+    message: 'F1 Garage Manager API',
+    status: 'Online',
+    database: process.env.DB_NAME,
+    server: process.env.DB_SERVER,
+    sessionEnabled: true
   });
 });
 
@@ -53,19 +72,24 @@ app.get('/status', async (req, res) => {
 
     res.json({
       status: 'online',
-      data_base: process.env.DB_NAME,
-      version_sql: result.recordset[0].version.split('\n')[0],
-      timestamp: new Date().toISOString()
+      database: process.env.DB_NAME,
+      sqlVersion: result.recordset[0].version.split('\n')[0],
+      timestamp: new Date().toISOString(),
+      sessionTest: {
+        sessionID: req.sessionID,
+        hasSession: !!req.session.id
+      }
     });
   } catch (error) {
     res.status(500).json({
-      estado: 'error',
-      mensaje: error.message
+      status: 'error',
+      message: error.message
     });
   }
 });
 
-// ─────── API ROUTES (una sola vez) ───────
+// ===== RUTAS DE API =====
+
 app.use('/api/auth', authRoutes);
 app.use('/api/test', testRoutes);
 app.use('/api/sp', spRoutes);
@@ -74,19 +98,50 @@ app.use('/api/sponsors', sponsorsRoutes);
 app.use('/api/teams', teamsRoutes);
 app.use('/api/inventory', inventoryRoutes);
 
-// ─────── INIT SERVER ───────
+// ===== MANEJO DE ERRORES =====
+
+// 404 - Ruta no encontrada
+app.use((req, res) => {
+  res.status(404).json({
+    success: false,
+    message: `Ruta no encontrada: ${req.method} ${req.path}`
+  });
+});
+
+// Error handler
+app.use((err, req, res, next) => {
+  console.error('❌ Error del servidor:', err);
+  res.status(500).json({
+    success: false,
+    message: 'Error interno del servidor',
+    error: process.env.NODE_ENV === 'development' ? err.message : undefined
+  });
+});
+
+// ===== INICIALIZACIÓN DEL SERVIDOR =====
+
 async function initServer() {
   try {
     await mssqlConnect();
+    console.log('✅ Conexión a SQL Server establecida');
 
     app.listen(PORT, '0.0.0.0', () => {
-    console.log(`[SUCCESS] Servidor escuchando en:`);
-    console.log(`  - Local: http://localhost:${PORT}`);
-    console.log(`  - Red:   http://${getLocalIP()}:${PORT}`);
-  });
+      console.log('\n🚀 ===== SERVIDOR INICIADO =====');
+      console.log(`✅ Backend API: http://localhost:${PORT}`);
+      console.log(`🌐 Acceso desde red: http://${getLocalIP()}:${PORT}`);
+      console.log(`📡 Modo: ${process.env.NODE_ENV || 'development'}`);
+      console.log('================================\n');
+    });
 
-  // Agrega esta función para obtener la IP local
-  function getLocalIP() {
+  } catch (error) {
+    console.error('❌ Error al iniciar servidor:', error.message);
+    process.exit(1);
+  }
+}
+
+// Función para obtener IP local
+function getLocalIP() {
+  try {
     const interfaces = require('os').networkInterfaces();
     for (const interfaceName in interfaces) {
       for (const iface of interfaces[interfaceName]) {
@@ -95,13 +150,11 @@ async function initServer() {
         }
       }
     }
-    return 'localhost';
+  } catch (err) {
+    console.warn('⚠ No se pudo obtener IP local:', err.message);
   }
-
-  } catch (error) {
-    console.error('!ERROR: Web server could not be initialized:', error.message);
-    process.exit(1);
-  }
+  return 'localhost';
 }
 
+// Iniciar servidor
 initServer();

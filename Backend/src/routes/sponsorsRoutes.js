@@ -29,4 +29,22 @@ router.get('/budget/:teamId', sponsorsController.getTeamBudget);
 // POST /api/sponsors/budget/recalculate - Recalcular todos los presupuestos (admin)
 router.post('/budget/recalculate', sponsorsController.recalculateAllBudgets);
 
+router.get('/team/:teamId', async (req, res) => {
+  try {
+    const { teamId } = req.params;
+    
+    // Usar getTeamContributions que ya existe
+    req.params.teamId = teamId;
+    await sponsorsController.getTeamContributions(req, res);
+    
+  } catch (error) {
+    console.error('Error en /sponsors/team/:teamId:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error al obtener patrocinadores del equipo',
+      error: error.message
+    });
+  }
+});
+
 module.exports = router;

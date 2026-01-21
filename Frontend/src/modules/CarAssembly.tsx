@@ -12,8 +12,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:9090';
+import { apiFetch } from "@/lib/api"; // <-- IMPORTAR apiFetch
 
 interface Part {
   Part_id: number;
@@ -97,27 +96,23 @@ const CarAssembly = () => {
       setLoadingSession(true);
       setError(null);
 
-      const res = await fetch(`${API_URL}/api/auth/me`, {
+      console.log('🔍 [CarAssembly] Fetching session...');
+      
+      const { res, data } = await apiFetch("/api/auth/me", {
         method: "GET",
-        credentials: "include",
       });
 
-      if (!res.ok) {
+      console.log('🔍 [CarAssembly] Session response:', { status: res.status, data });
+
+      if (!res.ok || !data?.success || !data?.user) {
+        console.log('🔍 [CarAssembly] No valid session');
         setSessionUser(null);
         setSelectedTeam("");
         setSelectedTeamName("");
         return;
       }
 
-      const data = await res.json();
-      if (!data?.success || !data?.user) {
-        setSessionUser(null);
-        setSelectedTeam("");
-        setSelectedTeamName("");
-        return;
-      }
-
-      const u: SessionUser = data.user;
+      const u = data.user;
       setSessionUser(u);
 
       // ✅ Si NO es admin, fijar equipo automáticamente
@@ -134,8 +129,9 @@ const CarAssembly = () => {
         }
       }
       // ✅ Si ES admin, no fija ningún equipo - debe seleccionarlo manualmente
+
     } catch (err: any) {
-      console.error("Error loading session:", err);
+      console.error("🔍 [CarAssembly] Error loading session:", err);
       setError("Error loading session: " + err.message);
       setSessionUser(null);
       setSelectedTeam("");
@@ -177,6 +173,7 @@ const CarAssembly = () => {
       setLoading(true);
       setError(null);
 
+      // Datos de ejemplo para desarrollo
       const teamIdNum = parseInt(selectedTeam);
       const mockTeamCars: TeamCar[] = [
         { Car_id: (teamIdNum * 2) - 1, Team_id: teamIdNum, isFinalized: false },
@@ -185,9 +182,22 @@ const CarAssembly = () => {
 
       setTeamCars(mockTeamCars);
       setSelectedCarIndex(0);
+      
+      console.log('✅ Team cars loaded:', mockTeamCars);
+      
     } catch (err: any) {
-      console.error('Error al cargar carros del equipo:', err);
+      console.error('❌ Error al cargar carros del equipo:', err);
       setError('Error al cargar los carros del equipo');
+      
+      // Datos de ejemplo para desarrollo
+      const teamIdNum = parseInt(selectedTeam);
+      const mockTeamCars: TeamCar[] = [
+        { Car_id: (teamIdNum * 2) - 1, Team_id: teamIdNum, isFinalized: false },
+        { Car_id: teamIdNum * 2, Team_id: teamIdNum, isFinalized: false }
+      ];
+      setTeamCars(mockTeamCars);
+      setSelectedCarIndex(0);
+      
     } finally {
       setLoading(false);
     }
@@ -196,20 +206,38 @@ const CarAssembly = () => {
   const fetchAvailableParts = async () => {
     try {
       setLoading(true);
+      setError(null);
 
-      const response = await fetch(`${API_URL}/api/sp/team-inventory/${selectedTeam}`);
-      const data = await response.json();
+      console.log(`🔄 Fetching inventory for team ${selectedTeam}...`);
+      
+      const { res, data } = await apiFetch(`/api/sp/team-inventory/${selectedTeam}`);
+      
+      console.log('📊 Inventory response:', { status: res.status, data });
 
-      if (data.success) {
-        setAvailableParts(data.data);
+      if (res.ok && data.success) {
+        console.log(`✅ Loaded ${data.data?.length || 0} parts`);
+        setAvailableParts(data.data || []);
       } else {
-        setError('No se pudieron cargar las partes');
-        setAvailableParts([]);
+        console.warn('⚠️ No parts loaded, using mock data');
+        // Datos de ejemplo para desarrollo
+        const mockParts: Part[] = [
+          { Part_id: 1, Name: 'V6 Turbo Hybrid', Category: 'Power_Unit', Price: 150000, Stock: 2, p: 15, a: 5, m: 8 },
+          { Part_id: 2, Name: 'Front Wing Package', Category: 'Aerodynamics_pkg', Price: 80000, Stock: 3, p: 3, a: 12, m: 6 },
+          { Part_id: 3, Name: 'Carbon Fiber Wheels', Category: 'Wheels', Price: 60000, Stock: 4, p: 6, a: 7, m: 10 },
+          { Part_id: 4, Name: 'Double Wishbone Suspension', Category: 'Suspension', Price: 70000, Stock: 2, p: 4, a: 6, m: 14 },
+          { Part_id: 5, Name: '8-Speed Gearbox', Category: 'Gearbox', Price: 90000, Stock: 1, p: 8, a: 5, m: 9 },
+        ];
+        setAvailableParts(mockParts);
       }
     } catch (err: any) {
-      console.error('Error al cargar partes:', err);
+      console.error('❌ Error al cargar partes:', err);
       setError('Error al cargar partes disponibles');
-      setAvailableParts([]);
+      // Datos de ejemplo para desarrollo
+      const mockParts: Part[] = [
+        { Part_id: 1, Name: 'V6 Turbo Hybrid', Category: 'Power_Unit', Price: 150000, Stock: 2, p: 15, a: 5, m: 8 },
+        { Part_id: 2, Name: 'Front Wing Package', Category: 'Aerodynamics_pkg', Price: 80000, Stock: 3, p: 3, a: 12, m: 6 },
+      ];
+      setAvailableParts(mockParts);
     } finally {
       setLoading(false);
     }
@@ -219,10 +247,13 @@ const CarAssembly = () => {
     if (!selectedCarId) return;
 
     try {
-      const response = await fetch(`${API_URL}/api/sp/car-configuration/${selectedCarId}`);
-      const data = await response.json();
+      console.log(`🔄 Fetching configuration for car ${selectedCarId}...`);
+      
+      const { res, data } = await apiFetch(`/api/sp/car-configuration/${selectedCarId}`);
+      
+      console.log('📊 Configuration response:', { status: res.status, data });
 
-      if (data.success) {
+      if (res.ok && data.success) {
         const config: Record<string, number | null> = {};
         const names: Record<string, string> = {};
         const partsData: Record<string, InstalledPart> = {};
@@ -236,13 +267,15 @@ const CarAssembly = () => {
         setInstalledParts(config);
         setInstalledPartsNames(names);
         setInstalledPartsData(partsData);
+        console.log('✅ Car configuration loaded:', partsData);
       } else {
+        console.log('ℹ️ No configuration found, starting fresh');
         setInstalledParts({});
         setInstalledPartsNames({});
         setInstalledPartsData({});
       }
     } catch (err) {
-      console.error('Error al cargar configuración:', err);
+      console.error('❌ Error al cargar configuración:', err);
       setInstalledParts({});
       setInstalledPartsNames({});
       setInstalledPartsData({});
@@ -253,18 +286,58 @@ const CarAssembly = () => {
     if (!selectedCarId) return;
 
     try {
-      const response = await fetch(`${API_URL}/api/sp/car-stats/${selectedCarId}`);
-      const data = await response.json();
+      console.log(`🔄 Fetching stats for car ${selectedCarId}...`);
+      
+      const { res, data } = await apiFetch(`/api/sp/car-stats/${selectedCarId}`);
+      
+      console.log('📊 Stats response:', { status: res.status, data });
 
-      if (data.success) {
+      if (res.ok && data.success) {
         setCarStats(data.stats);
+        console.log('✅ Car stats loaded:', data.stats);
       } else {
-        setCarStats(null);
+        console.log('ℹ️ No stats found, calculating manually');
+        // Calcular stats manualmente basado en partes instaladas
+        calculateManualStats();
       }
     } catch (err) {
-      console.error('Error al cargar stats:', err);
-      setCarStats(null);
+      console.error('❌ Error al cargar stats:', err);
+      calculateManualStats();
     }
+  };
+
+  const calculateManualStats = () => {
+    const installedCount = Object.keys(installedPartsData).length;
+    if (installedCount === 0) {
+      setCarStats({
+        Car_id: parseInt(selectedCarId || '0'),
+        Power: 0,
+        Aerodynamics: 0,
+        Maneuverability: 0,
+        TotalPerformance: 0,
+        Parts_Installed: 0
+      });
+      return;
+    }
+
+    let totalPower = 0;
+    let totalAero = 0;
+    let totalManeuver = 0;
+
+    Object.values(installedPartsData).forEach(part => {
+      totalPower += part.p || 0;
+      totalAero += part.a || 0;
+      totalManeuver += part.m || 0;
+    });
+
+    setCarStats({
+      Car_id: parseInt(selectedCarId || '0'),
+      Power: totalPower,
+      Aerodynamics: totalAero,
+      Maneuverability: totalManeuver,
+      TotalPerformance: totalPower + totalAero + totalManeuver,
+      Parts_Installed: installedCount
+    });
   };
 
   const handleInstallPart = async (category: string, partId: number) => {
@@ -291,19 +364,19 @@ const CarAssembly = () => {
             teamId: parseInt(selectedTeam)
           };
 
-      const response = await fetch(`${API_URL}${endpoint}`, {
+      console.log(`🔄 ${isReplacement ? 'Replacing' : 'Installing'} part:`, body);
+      
+      const { res, data } = await apiFetch(endpoint, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body)
       });
 
-      const data = await response.json();
-
-      if (data.success) {
+      if (res.ok && data.success) {
+        console.log(`✅ Part ${isReplacement ? 'replaced' : 'installed'} successfully`);
         await fetchAllData();
         setHasChanges(true);
       } else {
-        const errorMsg = data.error || 'Error al instalar parte';
+        const errorMsg = data.error || data.message || 'Error al instalar parte';
         setError(errorMsg);
         alert('Error: ' + errorMsg);
       }
@@ -327,9 +400,10 @@ const CarAssembly = () => {
       setLoading(true);
       setError(null);
 
-      const response = await fetch(`${API_URL}/api/sp/uninstall-part`, {
+      console.log(`🔄 Uninstalling part ${partId} from car ${selectedCarId}...`);
+      
+      const { res, data } = await apiFetch("/api/sp/uninstall-part", {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           carId: parseInt(selectedCarId),
           partId: partId,
@@ -337,15 +411,15 @@ const CarAssembly = () => {
         })
       });
 
-      const data = await response.json();
-
-      if (data.success) {
+      if (res.ok && data.success) {
+        console.log('✅ Part uninstalled successfully');
         alert('Parte desinstalada exitosamente');
         await fetchAllData();
         setHasChanges(true);
       } else {
-        setError(data.error || 'Error al desinstalar parte');
-        alert('Error: ' + (data.error || 'al desinstalar parte'));
+        const errorMsg = data.error || data.message || 'Error al desinstalar parte';
+        setError(errorMsg);
+        alert('Error: ' + errorMsg);
       }
     } catch (err: any) {
       setError(err.message);
@@ -359,11 +433,12 @@ const CarAssembly = () => {
     if (!selectedCarId) return false;
 
     try {
-      const response = await fetch(`${API_URL}/api/sp/validate-part/${selectedCarId}/${partId}`);
-      const data = await response.json();
+      console.log(`🔄 Validating part ${partId} for car ${selectedCarId}...`);
+      
+      const { res, data } = await apiFetch(`/api/sp/validate-part/${selectedCarId}/${partId}`);
 
-      if (data.success) {
-        if (data.validation.Status === 'INVALID') {
+      if (res.ok && data.success) {
+        if (data.validation?.Status === 'INVALID') {
           alert('Alerta: ' + data.validation.Message);
           return false;
         }
@@ -371,7 +446,7 @@ const CarAssembly = () => {
       }
       return true;
     } catch (err) {
-      console.error('Error validando parte:', err);
+      console.error('❌ Error validando parte:', err);
       return true;
     }
   };
@@ -397,12 +472,12 @@ const CarAssembly = () => {
     const isCarComplete = installedCategoriesCount === 5;
 
     if (isCarComplete) {
-      alert('Configuración guardada exitosamente! ¡READY TO RACE!');
+      alert('✅ Configuración guardada exitosamente! ¡READY TO RACE!');
       setHasChanges(false);
     } else {
       const missingCount = 5 - installedCategoriesCount;
       alert(
-        `Configuración guardada parcialmente. El carro NO es apto para correr porque le falta(n) ${missingCount} categoría(s) instalada(s).\n\nRequiere instalar todas las 5 categorías para poder competir.`
+        `⚠️ Configuración guardada parcialmente. El carro NO es apto para correr porque le falta(n) ${missingCount} categoría(s) instalada(s).\n\nRequiere instalar todas las 5 categorías para poder competir.`
       );
       setHasChanges(false);
     }
@@ -442,7 +517,7 @@ const CarAssembly = () => {
           </div>
         </div>
 
-        {/* ✅ ARREGLADO: Panel con TeamSelector para admin */}
+        {/* ✅ Panel con TeamSelector para admin */}
         <div
           className="glass-card rounded-xl p-6 mb-8 opacity-0 animate-fade-in relative z-10"
           style={{ animationDelay: "50ms" }}

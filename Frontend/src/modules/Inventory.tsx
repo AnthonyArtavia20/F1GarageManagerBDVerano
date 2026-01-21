@@ -18,7 +18,7 @@ import { Badge } from "@/components/ui/badge";
 import { TeamSelector } from "@/components/TeamSelector";
 import { cn } from "@/lib/utils";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:9090";
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:9090';
 
 interface InventoryPart {
   id: number;

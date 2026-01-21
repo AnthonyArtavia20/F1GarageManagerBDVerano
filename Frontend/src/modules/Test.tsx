@@ -9,7 +9,7 @@ const Test = () => {
   const [results, setResults] = useState({ db: null, api: null, all: null });
   const [testData, setTestData] = useState("F1 Garage Connection Test");
 
-  const API_URL = "http://localhost:9090/api/test";
+  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:9090';
 
   const handleGoHome = () => {
     navigate("/");

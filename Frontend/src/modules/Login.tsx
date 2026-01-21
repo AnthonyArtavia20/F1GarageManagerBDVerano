@@ -1,16 +1,8 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Car, User, Lock, LogIn } from "lucide-react";
+import { User, Lock, LogIn } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 
 import logo from "@/assets/Logo.png";
 import { apiFetch } from "@/lib/api";
@@ -19,6 +11,7 @@ const Login = () => {
   const navigate = useNavigate();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,24 +21,48 @@ const Login = () => {
       return;
     }
 
-    const { res, data } = await apiFetch("/api/auth/login", {
-      method: "POST",
-      body: JSON.stringify({ username, password }),
-    });
+    setLoading(true);
+    
+    try {
+      console.log('🔍 [LOGIN] Starting login for:', username);
+      
+      const { res, data } = await apiFetch("/api/auth/login", {
+        method: "POST",
+        body: JSON.stringify({ username, password }),
+      });
 
-    if (!res.ok || !data.success) {
-      alert(data.message || "Login failed");
-      return;
+      console.log('🔍 [LOGIN] Response:', { status: res.status, data });
+
+      if (!res.ok || !data.success) {
+        alert(data.message || "Login failed");
+        return;
+      }
+
+      // CORREGIDO: Usar data.user en lugar de data.session
+      if (!data.user || !data.user.role) {
+        alert("Invalid user data received");
+        return;
+      }
+
+      const role = data.user.role;
+      console.log('🔍 [LOGIN] Role detected:', role);
+
+      // Redirigir según rol
+      if (role === "driver") {
+        navigate("/DriverProfile");
+      } else if (role === "admin" || role === "engineer") {
+        navigate("/Analytics");
+      } else {
+        alert(`User has unknown role: ${role}`);
+      }
+
+    } catch (error: any) {
+      console.error('🔍 [LOGIN] Error:', error);
+      alert("Login error: " + error.message);
+    } finally {
+      setLoading(false);
     }
-
-    // data.session debe traer role si aplicas el cambio en backend
-    const role = data.session.role;
-
-    if (role === "driver") navigate("/DriverProfile");
-    else if (role === "admin" || role === "engineer") navigate("/Analytics");
-    else alert("User has no role assigned");
   };
-
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4 relative overflow-hidden">
@@ -91,6 +108,7 @@ const Login = () => {
                   onChange={(e) => setUsername(e.target.value)}
                   className="pl-10 bg-accent/50 border-border"
                   autoComplete="username"
+                  disabled={loading}
                 />
               </div>
             </div>
@@ -106,19 +124,35 @@ const Login = () => {
                   onChange={(e) => setPassword(e.target.value)}
                   className="pl-10 bg-accent/50 border-border"
                   autoComplete="current-password"
+                  disabled={loading}
                 />
               </div>
             </div>
 
-            <Button variant="racing" size="lg" className="w-full" type="submit">
-              <LogIn className="w-5 h-5" />
-              ENTER
+            <Button 
+              variant="racing" 
+              size="lg" 
+              className="w-full" 
+              type="submit"
+              disabled={loading}
+            >
+              {loading ? (
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+              ) : (
+                <>
+                  <LogIn className="w-5 h-5" />
+                  ENTER
+                </>
+              )}
             </Button>
           </form>
         
           <div className="mt-7 pt-2 border-t border-border">
             <p className="text-center text-sm text-muted-foreground">
                 version 0.0.8
+            </p>
+            <p className="text-center text-xs text-muted-foreground mt-2">
+              Default users: winAdmin / winEngineer / winDriver
             </p>
           </div>
         </div>

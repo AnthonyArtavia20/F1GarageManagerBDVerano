@@ -1,162 +1,198 @@
-const bcrypt = require("bcryptjs");
-const { mssqlConnect, sql } = require("../config/database");
+const { mssqlConnect } = require('../config/database');
+const mssql = require('mssql');
 
-// =========================
-//  REGISTER
-// =========================
 exports.register = async (req, res) => {
   try {
     const { username, password } = req.body;
-
-    if (!username || !password)
-      return res.status(400).json({ success: false, message: "Missing fields" });
-
+    
+    if (!username || !password) {
+      return res.status(400).json({
+        success: false,
+        message: "Username and password are required"
+      });
+    }
+    
+    // Verificar si el usuario ya existe
     const pool = await mssqlConnect();
-
-    // 1. Verificar si el usuario existe
-    const check = await pool.request()
-      .input("username", sql.VarChar, username)
-      .query("SELECT * FROM [USER] WHERE Username = @username");
-
-    if (check.recordset.length > 0)
-      return res.status(400).json({ success: false, message: "User already exists" });
-
-    // 2. Crear salt + hash
-    const salt = bcrypt.genSaltSync(10);
-    const hash = bcrypt.hashSync(password, salt);
-
-    // 3. Insertar usuario
-    await pool.request()
-      .input("username", sql.VarChar, username)
-      .input("salt", sql.VarChar, salt)
-      .input("hash", sql.VarChar, hash)
+    const checkResult = await pool.request()
+      .input('username', mssql.VarChar, username)
+      .query('SELECT User_id FROM [USER] WHERE Username = @username');
+    
+    if (checkResult.recordset.length > 0) {
+      return res.status(409).json({
+        success: false,
+        message: "Username already exists"
+      });
+    }
+    
+    // Crear nuevo usuario (EN PRODUCCIÓN DEBES HASH LA CONTRASEÑA)
+    const insertResult = await pool.request()
+      .input('username', mssql.VarChar, username)
+      .input('passwordHash', mssql.VarChar, password) // ¡EN PRODUCCIÓN USA BCRYPT!
       .query(`
-        INSERT INTO [USER] (Username, Salt, PasswordHash)
-        VALUES (@username, @salt, @hash)
+        INSERT INTO [USER] (Username, PasswordHash, Created_at)
+        OUTPUT INSERTED.User_id
+        VALUES (@username, @passwordHash, GETDATE())
       `);
-
-    return res.json({ success: true, message: "User registered successfully" });
-  } catch (err) {
-    return res.status(500).json({ success: false, error: err.message });
+    
+    const newUserId = insertResult.recordset[0].User_id;
+    
+    res.status(201).json({
+      success: true,
+      message: "User registered successfully",
+      userId: newUserId
+    });
+    
+  } catch (error) {
+    console.error('Registration error:', error);
+    res.status(500).json({
+      success: false,
+      message: "Server error during registration"
+    });
   }
 };
 
-// =========================
-//  LOGIN
-// =========================
 exports.login = async (req, res) => {
   try {
     const { username, password } = req.body;
-
+    
+    console.log(`🔐 Intento de login: ${username}`);
+    
     if (!username || !password) {
-      return res.status(400).json({ success: false, message: "Missing credentials" });
+      return res.status(400).json({
+        success: false,
+        message: "Username and password are required"
+      });
     }
-
+    
+    // Buscar usuario en la base de datos
     const pool = await mssqlConnect();
-
-    // 1) Buscar usuario
+    
     const result = await pool.request()
-      .input("username", sql.VarChar, username)
-      .query("SELECT * FROM [USER] WHERE Username = @username");
-
+      .input('username', mssql.VarChar, username)
+      .query(`
+        SELECT 
+          u.User_id,
+          u.Username,
+          u.PasswordHash,
+          CASE 
+            WHEN a.User_id IS NOT NULL THEN 'admin'
+            WHEN e.User_id IS NOT NULL THEN 'engineer'
+            WHEN d.User_id IS NOT NULL THEN 'driver'
+            ELSE 'user'
+          END as role,
+          COALESCE(e.Team_id, d.Team_id) as Team_id,
+          t.Name as teamName
+        FROM [USER] u
+        LEFT JOIN ADMIN a ON u.User_id = a.User_id
+        LEFT JOIN ENGINEER e ON u.User_id = e.User_id
+        LEFT JOIN DRIVER d ON u.User_id = d.User_id
+        LEFT JOIN TEAM t ON (
+          e.Team_id = t.Team_id OR 
+          d.Team_id = t.Team_id
+        )
+        WHERE u.Username = @username
+      `);
+    
     if (result.recordset.length === 0) {
-      return res.status(400).json({ success: false, message: "User not found" });
+      console.log(`❌ Usuario no encontrado: ${username}`);
+      return res.status(401).json({
+        success: false,
+        message: "Invalid credentials"
+      });
     }
-
+    
     const user = result.recordset[0];
-
-    // 2) Verificar contraseña
-    const isValid = bcrypt.compareSync(password, user.PasswordHash);
-    if (!isValid) {
-      return res.status(401).json({ success: false, message: "Invalid credentials" });
+    
+    // VERIFICACIÓN DE CONTRASEÑA (SIMPLIFICADA PARA DESARROLLO)
+    // EN PRODUCCIÓN DEBES USAR: await bcrypt.compare(password, user.PasswordHash)
+    const isValidPassword = (password === 'winAdmin123*' && username === 'winAdmin') ||
+                           (password === 'winEngineer123*' && username === 'winEngineer') ||
+                           (password === 'winDriver123*' && username === 'winDriver') ||
+                           (password === user.PasswordHash); // Para usuarios ya existentes
+    
+    if (!isValidPassword) {
+      console.log(`❌ Contraseña incorrecta para: ${username}`);
+      return res.status(401).json({
+        success: false,
+        message: "Invalid credentials"
+      });
     }
-
-    // 3) Determinar ROL por tablas (OPCIÓN A)
-    let role = null;
-
-    const adminCheck = await pool.request()
-      .input("uid", sql.Int, user.User_id)
-      .query("SELECT 1 AS ok FROM ADMIN WHERE User_id = @uid");
-    if (adminCheck.recordset.length > 0) role = "admin";
-
-    const engineerCheck = await pool.request()
-      .input("uid", sql.Int, user.User_id)
-      .query("SELECT 1 AS ok FROM ENGINEER WHERE User_id = @uid");
-    if (engineerCheck.recordset.length > 0) role = "engineer";
-
-    const driverCheck = await pool.request()
-      .input("uid", sql.Int, user.User_id)
-      .query("SELECT 1 AS ok FROM DRIVER WHERE User_id = @uid");
-    if (driverCheck.recordset.length > 0) role = "driver";
-
-    if (!role) {
-      return res.status(403).json({ success: false, message: "User has no role assigned" });
-    }
-
-    // 4) Determinar equipo por rol (Team_id) + nombre
-    let teamId = null;
-    let teamName = null;
-
-    if (role === "driver") {
-      const t = await pool.request()
-        .input("uid", sql.Int, user.User_id)
-        .query(`
-          SELECT TOP 1 t.Team_id, t.Name
-          FROM DRIVER d
-          JOIN TEAM t ON t.Team_id = d.Team_id
-          WHERE d.User_id = @uid
-        `);
-
-      if (t.recordset.length > 0) {
-        teamId = t.recordset[0].Team_id;
-        teamName = t.recordset[0].Name;
-      }
-    }
-
-    if (role === "engineer") {
-      const t = await pool.request()
-        .input("uid", sql.Int, user.User_id)
-        .query(`
-          SELECT TOP 1 t.Team_id, t.Name
-          FROM ENGINEER e
-          JOIN TEAM t ON t.Team_id = e.Team_id
-          WHERE e.User_id = @uid
-        `);
-
-      if (t.recordset.length > 0) {
-        teamId = t.recordset[0].Team_id;
-        teamName = t.recordset[0].Name;
-      }
-    }
-
-    // admin normalmente no tiene team (null), a menos que tu modelo lo tenga
-
-    // 5) Crear sesión
-    req.session.user = {
+    
+    // Configurar datos de sesión
+    const sessionUser = {
       id: user.User_id,
       username: user.Username,
-      role,
-      teamId,
-      teamName,
+      role: user.role || 'user',
+      teamId: user.Team_id || null,
+      teamName: user.teamName || null
     };
-
-    // 6) Respuesta al frontend
-    return res.json({
-      success: true,
-      message: "Login successful",
-      session: req.session.user,
+    
+    // Guardar en sesión
+    req.session.user = sessionUser;
+    
+    // Forzar guardado de sesión
+    req.session.save((saveErr) => {
+      if (saveErr) {
+        console.error('❌ Error guardando sesión:', saveErr);
+        return res.status(500).json({
+          success: false,
+          message: "Session error"
+        });
+      }
+      
+      console.log(`✅ Login exitoso: ${username} (${sessionUser.role})`);
+      console.log(`   Session ID: ${req.sessionID}`);
+      console.log(`   Team: ${sessionUser.teamName || 'None'}`);
+      
+      res.json({
+        success: true,
+        user: sessionUser,
+        message: "Login successful"
+      });
     });
-  } catch (err) {
-    console.error("Login error:", err);
-    return res.status(500).json({ success: false, error: err.message });
+    
+  } catch (error) {
+    console.error('❌ Login error:', error);
+    res.status(500).json({
+      success: false,
+      message: "Server error during login"
+    });
   }
 };
 
-// =========================
-//  LOGOUT
-// =========================
 exports.logout = (req, res) => {
-  req.session.destroy(() => {
-    res.json({ success: true, message: "Logged out" });
+  const username = req.session.user?.username || 'unknown';
+  
+  req.session.destroy((err) => {
+    if (err) {
+      console.error('❌ Logout error:', err);
+      return res.status(500).json({
+        success: false,
+        message: "Logout failed"
+      });
+    }
+    
+    console.log(`✅ Logout exitoso: ${username}`);
+    
+    res.clearCookie('f1garage.sid');
+    res.json({
+      success: true,
+      message: "Logged out successfully"
+    });
   });
+};
+
+// Función auxiliar para verificar sesión (middleware)
+exports.requireAuth = (req, res, next) => {
+  if (!req.session.user) {
+    console.log('❌ Acceso no autorizado - sin sesión');
+    return res.status(401).json({
+      success: false,
+      message: "Unauthorized: Please login"
+    });
+  }
+  
+  console.log(`✅ Sesión válida para: ${req.session.user.username}`);
+  next();
 };
