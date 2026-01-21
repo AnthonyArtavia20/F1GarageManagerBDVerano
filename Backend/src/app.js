@@ -81,9 +81,24 @@ async function initServer() {
   try {
     await mssqlConnect();
 
-    app.listen(PORT, () => {
-      console.log(`[SUCCESS] (◪_◪)- http://localhost:${PORT}`);
-    });
+    app.listen(PORT, '0.0.0.0', () => {
+    console.log(`[SUCCESS] Servidor escuchando en:`);
+    console.log(`  - Local: http://localhost:${PORT}`);
+    console.log(`  - Red:   http://${getLocalIP()}:${PORT}`);
+  });
+
+  // Agrega esta función para obtener la IP local
+  function getLocalIP() {
+    const interfaces = require('os').networkInterfaces();
+    for (const interfaceName in interfaces) {
+      for (const iface of interfaces[interfaceName]) {
+        if (iface.family === 'IPv4' && !iface.internal) {
+          return iface.address;
+        }
+      }
+    }
+    return 'localhost';
+  }
 
   } catch (error) {
     console.error('!ERROR: Web server could not be initialized:', error.message);
