@@ -1,25 +1,31 @@
+// Frontend/src/components/layout/Sidebar.tsx
+import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { 
+import {
   Headset,
   Users,
-  Car,
   Wrench,
   Store,
   Package,
   Flag,
   Play,
   BarChart3,
-  Settings,
   LogOut,
   Trophy,
   UserPen,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-
 import logo from "@/assets/Logo.png";
+import { apiFetch } from "@/lib/api";
 
-const navigation = [
+type NavItem = {
+  name: string;
+  href: string;
+  icon: any;
+};
+
+const navigation: NavItem[] = [
   { name: "Analytics*", href: "/Analytics", icon: BarChart3 },
   { name: "Teams", href: "/Teams", icon: Headset },
   { name: "Drivers", href: "/Drivers", icon: Trophy },
@@ -32,12 +38,48 @@ const navigation = [
   { name: "User Management", href: "/UserManagement", icon: UserPen },
 ];
 
-export const Sidebar = ({ userRole = "[Role]", userName = "[Username]"}) => {
+function hasAsterisk(name: string) {
+  return name.trim().endsWith("*");
+}
+
+export const Sidebar = ({
+  userRole = "[Role]",
+  userName = "[Username]",
+}: {
+  userRole?: string;
+  userName?: string;
+}) => {
   const navigate = useNavigate();
   const currentPath = window.location.pathname;
 
-  const handleLogout = () => {
-    navigate("/");
+  // Normalizar rol
+  const role = (userRole || "").toLowerCase().trim();
+
+  // Si por algún motivo el rol no viene aún (por ejemplo al refrescar),
+  // usamos fallback "admin" para NO dejar el sidebar vacío.
+  const effectiveRole = role || "admin";
+
+  const filteredNavigation = useMemo(() => {
+    if (effectiveRole === "admin") return navigation;
+
+    if (effectiveRole === "engineer") {
+      // Engineer: SOLO items con *
+      return navigation.filter((item) => hasAsterisk(item.name));
+    }
+
+    // Si quisieras restringir driver, lo haces aquí.
+    // Por ahora devolvemos todo para no romper navegación.
+    return navigation;
+  }, [effectiveRole]);
+
+  const handleLogout = async () => {
+    try {
+      await apiFetch("/api/auth/logout", { method: "POST" });
+    } catch {
+      // aunque falle, igual limpiamos el front
+    } finally {
+      navigate("/");
+    }
   };
 
   const handleNavigation = (path: string) => {
@@ -49,16 +91,12 @@ export const Sidebar = ({ userRole = "[Role]", userName = "[Username]"}) => {
       {/* Logo */}
       <div className="flex items-center gap-3 px-6 py-6 border-b border-border/50">
         <div className="inline-flex items-center justify-center w-10 h-10 rounded-2xl bg-primary/20 backdrop-blur-sm border border-primary/5 shadow-glow">
-          <img 
-            src={logo} 
-            alt="F1 Logo" 
-            className="w-10 h-10 object-contain" 
-          />
+          <img src={logo} alt="F1 Logo" className="w-10 h-10 object-contain" />
         </div>
 
         <div>
           <h1 className="font-display text-lg font-bold tracking-wider text-foreground">
-            F1  G-MGR
+            F1&nbsp;&nbsp;G-MGR
           </h1>
           <p className="text-xs text-muted-foreground">CE-3101 DB</p>
         </div>
@@ -67,7 +105,7 @@ export const Sidebar = ({ userRole = "[Role]", userName = "[Username]"}) => {
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto px-3 py-4">
         <ul className="space-y-1">
-          {navigation.map((item) => {
+          {filteredNavigation.map((item) => {
             const isActive = currentPath === item.href;
             return (
               <li key={item.name}>
@@ -94,33 +132,27 @@ export const Sidebar = ({ userRole = "[Role]", userName = "[Username]"}) => {
         <div className="bg-card/30 backdrop-blur-sm rounded-lg p-3 mb-3 border border-border/30">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center border border-primary/10">
-              <span className="text-primary font-display font-bold">
-                •‿•
-              </span>
+              <span className="text-primary font-display font-bold">•‿•</span>
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-foreground truncate">
                 {userName}
               </p>
-              <p className="text-xs text-muted-foreground">
-                {userRole}
-              </p>
+              <p className="text-xs text-muted-foreground">{userRole}</p>
             </div>
           </div>
         </div>
-        <div className="flex gap-2">
 
-          {/* Logout button */}
-          <Button
-            onClick={handleLogout}
-            variant="outline"
-            size="sm"
-            className="w-full border-primary text-primary hover:bg-primary/10"
-          >
-            <LogOut className="w-4 h-4 mr-2" />
-            Log-out
-          </Button>
-        </div>
+        {/* Logout button */}
+        <Button
+          onClick={handleLogout}
+          variant="outline"
+          size="sm"
+          className="w-full border-primary text-primary hover:bg-primary/10"
+        >
+          <LogOut className="w-4 h-4 mr-2" />
+          Log-out
+        </Button>
       </div>
     </aside>
   );

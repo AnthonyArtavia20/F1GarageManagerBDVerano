@@ -712,6 +712,45 @@ GO
 PRINT 'SP sp_AddPart creado';
 GO
 
+
+CREATE OR ALTER PROCEDURE sp_GetTeamInventory
+    @TeamId INT
+AS
+BEGIN
+    BEGIN TRY
+        SELECT 
+            P.Part_id AS id,
+            P.Name AS name,
+            P.Category AS category,
+            IP.Quantity AS quantity,
+            CONVERT(VARCHAR(10), IP.Acquisition_date, 120) AS acquiredDate,
+            P.p,
+            P.a,
+            P.m,
+            ISNULL((
+                SELECT COUNT(*) 
+                FROM CAR C
+                INNER JOIN CAR_CONFIGURATION CC ON C.Car_id = CC.Car_id
+                WHERE C.Team_id = @TeamId
+                AND CC.Part_id = P.Part_id
+            ), 0) AS installed
+        FROM INVENTORY I
+        INNER JOIN INVENTORY_PART IP ON I.Inventory_id = IP.Inventory_id
+        INNER JOIN PART P ON IP.Part_id = P.Part_id
+        WHERE I.Team_id = @TeamId
+        ORDER BY P.Category, P.Name;
+        
+    END TRY
+    BEGIN CATCH
+        DECLARE @ErrorMessage NVARCHAR(4000) = ERROR_MESSAGE();
+        DECLARE @ErrorSeverity INT = ERROR_SEVERITY();
+        DECLARE @ErrorState INT = ERROR_STATE();
+        
+        RAISERROR(@ErrorMessage, @ErrorSeverity, @ErrorState);
+    END CATCH
+END;
+GO
+
 PRINT '============================================================================';
 PRINT 'TODOS LOS STORED PROCEDURES CREADOS EXITOSAMENTE';
 PRINT '============================================================================';

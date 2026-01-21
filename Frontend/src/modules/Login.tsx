@@ -13,37 +13,39 @@ import {
 } from "@/components/ui/select";
 
 import logo from "@/assets/Logo.png";
+import { apiFetch } from "@/lib/api";
 
 const Login = () => {
   const navigate = useNavigate();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Handel Input according to role 
-    
-    if (username == "admin") {
-        navigate("/Analytics");
-        return;
-    }
-    if (username == "engineer") {
-        navigate("/Analytics");
-        return;
-    }
-    if (username == "driver") {
-        navigate("/DriverProfile");
-        return;
-    }
 
     if (!username.trim() || !password.trim()) {
       alert("Enter username and password");
       return;
     }
-    
-    navigate("/");
+
+    const { res, data } = await apiFetch("/api/auth/login", {
+      method: "POST",
+      body: JSON.stringify({ username, password }),
+    });
+
+    if (!res.ok || !data.success) {
+      alert(data.message || "Login failed");
+      return;
+    }
+
+    // data.session debe traer role si aplicas el cambio en backend
+    const role = data.session.role;
+
+    if (role === "driver") navigate("/DriverProfile");
+    else if (role === "admin" || role === "engineer") navigate("/Analytics");
+    else alert("User has no role assigned");
   };
+
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4 relative overflow-hidden">
