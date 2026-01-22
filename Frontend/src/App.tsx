@@ -20,6 +20,8 @@ import Sponsors from "@/modules/Sponsors";
 import Store from "@/modules/Store";
 import Inventory from "@/modules/Inventory";
 import CarAssembly from "@/modules/CarAssembly";
+import Simulation from "@/modules/Simulation";
+import Circuits from "@/modules/Circuits";
 import UserManagement from "@/modules/UserManagement";
 import Test from "@/modules/Test";
 
@@ -107,6 +109,24 @@ const App = () => (
               element={
                 <ProtectedRoute allowedRoles={["admin", "engineer"]}>
                   <CarAssembly />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/Simulation"
+              element={
+                <ProtectedRoute allowedRoles={["admin"]}>
+                  <Simulation />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/Circuits"
+              element={
+                <ProtectedRoute allowedRoles={["admin"]}>
+                  <Circuits />
                 </ProtectedRoute>
               }
             />
