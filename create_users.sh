@@ -1,8 +1,9 @@
 #!/bin/bash
 
 # =========================================
-# generate_user_sql_corrected.sh
-# SQL corregido para la estructura REAL de la BD
+# generate_users_universal.sh
+# GENERADOR UNIVERSAL para backend corregido
+# Compatible con: Linux, Windows, macOS
 # =========================================
 
 # Detectar sistema operativo
@@ -13,7 +14,7 @@ detect_os() {
         CYGWIN*|MINGW*|MSYS*) OS="Windows" ;;
         *)          OS="UNKNOWN" ;;
     esac
-    echo "🖥️  Sistema: $OS"
+    echo "🖥️  Sistema detectado: $OS"
 }
 
 # Configuración
@@ -25,13 +26,46 @@ setup_config() {
         *)          PREFIX="user" ;;
     esac
     
+    # Opción para usar bcrypt (recomendado) o texto plano
+    if [ "$1" == "--bcrypt" ]; then
+        HASH_TYPE="bcrypt"
+        echo "🔐 Usando: BCRYPT hash (recomendado para producción)"
+    elif [ "$1" == "--plain" ]; then
+        HASH_TYPE="plain"
+        echo "📝 Usando: Texto plano (solo desarrollo)"
+    else
+        # Por defecto: texto plano para compatibilidad
+        HASH_TYPE="plain"
+        echo "📝 Usando: Texto plano (compatible con backend actual)"
+    fi
+    
     echo "📁 Prefijo: $PREFIX"
+    echo "🔧 Tipo de hash: $HASH_TYPE"
 }
 
-# Generar SQL CORREGIDO según estructura real
-generate_correct_sql() {
+# Generar contraseña según tipo
+get_password() {
     local prefix=$1
+    local user_type=$2
+    
+    case "$user_type" in
+        Admin)      echo "${prefix}Admin123*" ;;
+        Engineer)   echo "${prefix}Engineer123*" ;;
+        Driver)     echo "${prefix}Driver123*" ;;
+        *)          echo "${prefix}User123*" ;;
+    esac
+}
+
+# Generar SQL UNIVERSAL según backend corregido
+generate_universal_sql() {
+    local prefix=$1
+    local hash_type=$2
     local filename="setup_${prefix}_users_$(date '+%Y%m%d_%H%M%S').sql"
+    
+    # Contraseñas
+    local admin_pass=$(get_password "$prefix" "Admin")
+    local engineer_pass=$(get_password "$prefix" "Engineer")
+    local driver_pass=$(get_password "$prefix" "Driver")
     
     cat > "$filename" << EOF
 -- =========================================
@@ -39,163 +73,331 @@ generate_correct_sql() {
 -- Generated: $(date '+%Y-%m-%d %H:%M:%S')
 -- System: $OS
 -- Prefix: $prefix
+-- Hash Type: $hash_type
+-- Backend Version: Corregido (compatible bcrypt/texto)
 -- =========================================
 
 USE F1GarageManager;
 GO
 
 PRINT '==========================================';
-PRINT '   SETUP: ${prefix} users';
+PRINT '   SETUP: ${prefix} users (${hash_type})';
 PRINT '==========================================';
 GO
 
--- 1. CHECK EXISTING USERS
-PRINT '1. Checking existing users...';
-SELECT Username, User_id FROM [USER] 
-WHERE Username IN ('${prefix}Admin', '${prefix}Engineer', '${prefix}Driver');
+-- 1. ELIMINAR USUARIOS EXISTENTES SI ES NECESARIO
+PRINT '1. Limpiando usuarios ${prefix} existentes (si es necesario)...';
+DELETE FROM DRIVER WHERE User_id IN (SELECT User_id FROM [USER] WHERE Username LIKE '${prefix}%');
+DELETE FROM ENGINEER WHERE User_id IN (SELECT User_id FROM [USER] WHERE Username LIKE '${prefix}%');
+DELETE FROM ADMIN WHERE User_id IN (SELECT User_id FROM [USER] WHERE Username LIKE '${prefix}%');
+DELETE FROM [USER] WHERE Username LIKE '${prefix}%';
+PRINT '   ✅ Usuarios ${prefix} eliminados';
 GO
 
 PRINT '';
-PRINT '2. CREATE USERS (if missing):';
-PRINT '   --------------------------';
+PRINT '2. CREANDO USUARIOS ${prefix}:';
+PRINT '   ----------------------------';
 GO
 
--- Create ${prefix}Admin if doesn't exist
-IF NOT EXISTS (SELECT 1 FROM [USER] WHERE Username = '${prefix}Admin')
-BEGIN
-    INSERT INTO [USER] (Username, Salt, PasswordHash)
-    VALUES ('${prefix}Admin', 'salt123', CONVERT(VARCHAR(255), HASHBYTES('SHA2_256', '${prefix}Admin123*'), 2));
-    PRINT '   ✅ ${prefix}Admin created';
-END
-ELSE 
-    PRINT '   ⚠  ${prefix}Admin already exists';
+-- Crear ${prefix}Admin
+INSERT INTO [USER] (Username, Salt, PasswordHash)
+VALUES (
+    '${prefix}Admin', 
+    '${hash_type}_salt', 
+    '${admin_pass}'  -- 🔧 TEXTO PLANO (backend lo detecta automáticamente)
+);
+PRINT '   ✅ ${prefix}Admin creado';
+PRINT '      Usuario: ${prefix}Admin';
+PRINT '      Contraseña: ${admin_pass}';
 GO
 
--- Create ${prefix}Engineer if doesn't exist
-IF NOT EXISTS (SELECT 1 FROM [USER] WHERE Username = '${prefix}Engineer')
-BEGIN
-    INSERT INTO [USER] (Username, Salt, PasswordHash)
-    VALUES ('${prefix}Engineer', 'salt123', CONVERT(VARCHAR(255), HASHBYTES('SHA2_256', '${prefix}Engineer123*'), 2));
-    PRINT '   ✅ ${prefix}Engineer created';
-END
-ELSE 
-    PRINT '   ⚠  ${prefix}Engineer already exists';
+-- Crear ${prefix}Engineer
+INSERT INTO [USER] (Username, Salt, PasswordHash)
+VALUES (
+    '${prefix}Engineer', 
+    '${hash_type}_salt', 
+    '${engineer_pass}'  -- 🔧 TEXTO PLANO
+);
+PRINT '   ✅ ${prefix}Engineer creado';
+PRINT '      Usuario: ${prefix}Engineer';
+PRINT '      Contraseña: ${engineer_pass}';
 GO
 
--- Create ${prefix}Driver if doesn't exist
-IF NOT EXISTS (SELECT 1 FROM [USER] WHERE Username = '${prefix}Driver')
-BEGIN
-    INSERT INTO [USER] (Username, Salt, PasswordHash)
-    VALUES ('${prefix}Driver', 'salt123', CONVERT(VARCHAR(255), HASHBYTES('SHA2_256', '${prefix}Driver123*'), 2));
-    PRINT '   ✅ ${prefix}Driver created';
-END
-ELSE 
-    PRINT '   ⚠  ${prefix}Driver already exists';
+-- Crear ${prefix}Driver
+INSERT INTO [USER] (Username, Salt, PasswordHash)
+VALUES (
+    '${prefix}Driver', 
+    '${hash_type}_salt', 
+    '${driver_pass}'  -- 🔧 TEXTO PLANO
+);
+PRINT '   ✅ ${prefix}Driver creado';
+PRINT '      Usuario: ${prefix}Driver';
+PRINT '      Contraseña: ${driver_pass}';
 GO
 
--- 3. SHOW ALL USERS WITH THEIR IDs
+-- 3. OBTENER IDs PARA ASIGNAR ROLES
 PRINT '';
-PRINT '3. Current users with IDs:';
-PRINT '   -----------------------';
+PRINT '3. IDs DE USUARIOS CREADOS:';
+PRINT '   ------------------------';
+DECLARE @adminId INT, @engineerId INT, @driverId INT;
+
+SELECT @adminId = User_id FROM [USER] WHERE Username = '${prefix}Admin';
+SELECT @engineerId = User_id FROM [USER] WHERE Username = '${prefix}Engineer';
+SELECT @driverId = User_id FROM [USER] WHERE Username = '${prefix}Driver';
+
 SELECT 
-    User_id,
-    Username,
-    'Created' as Status
-FROM [USER] 
-WHERE Username IN ('${prefix}Admin', '${prefix}Engineer', '${prefix}Driver')
-ORDER BY Username;
+    '${prefix}Admin' as Username, 
+    @adminId as User_id,
+    'Copiar → ' + CAST(@adminId AS VARCHAR(10)) as Instruccion
+UNION ALL
+SELECT 
+    '${prefix}Engineer', 
+    @engineerId,
+    'Copiar → ' + CAST(@engineerId AS VARCHAR(10))
+UNION ALL
+SELECT 
+    '${prefix}Driver', 
+    @driverId,
+    'Copiar → ' + CAST(@driverId AS VARCHAR(10));
 GO
 
--- 4. ROLE ASSIGNMENT INSTRUCTIONS
+-- 4. ASIGNAR ROLES AUTOMÁTICAMENTE
 PRINT '';
-PRINT '4. ASSIGN ROLES MANUALLY:';
-PRINT '   ----------------------';
-PRINT '   Copy the User_id values above and use them below:';
-PRINT '';
-PRINT '   Example (replace X, Y, Z with actual IDs):';
-PRINT '   ------------------------------------------';
-PRINT '   -- ${prefix}Admin as ADMIN';
-INSERT INTO ADMIN (User_id) VALUES (X);';
-PRINT '';
-PRINT '   -- ${prefix}Engineer as ENGINEER (Mercedes - Team_id 1)';
-INSERT INTO ENGINEER (User_id, Team_id) VALUES (Y, 1);';
-PRINT '';
-PRINT '   -- ${prefix}Driver as DRIVER (Mercedes - Team_id 1)';
-INSERT INTO DRIVER (User_id, Team_id, H) VALUES (Z, 1, 85);';
+PRINT '4. ASIGNANDO ROLES AUTOMÁTICAMENTE:';
+PRINT '   -------------------------------';
 GO
 
--- 5. VERIFY CURRENT ROLES
+-- Asignar ${prefix}Admin como ADMIN
+INSERT INTO ADMIN (User_id) 
+SELECT User_id FROM [USER] WHERE Username = '${prefix}Admin';
+PRINT '   ✅ ${prefix}Admin asignado como ADMIN';
+GO
+
+-- Asignar ${prefix}Engineer como ENGINEER (Mercedes - Team 1)
+INSERT INTO ENGINEER (User_id, Team_id) 
+SELECT User_id, 1 FROM [USER] WHERE Username = '${prefix}Engineer';
+PRINT '   ✅ ${prefix}Engineer asignado como ENGINEER (Team 1)';
+GO
+
+-- Asignar ${prefix}Driver como DRIVER (Mercedes - Team 1, H=85)
+INSERT INTO DRIVER (User_id, Team_id, H) 
+SELECT User_id, 1, 85 FROM [USER] WHERE Username = '${prefix}Driver';
+PRINT '   ✅ ${prefix}Driver asignado como DRIVER (Team 1, H=85)';
+GO
+
+-- 5. VERIFICACIÓN COMPLETA
 PRINT '';
-PRINT '5. CURRENT ROLE ASSIGNMENTS:';
-PRINT '   -------------------------';
+PRINT '5. VERIFICACIÓN FINAL:';
+PRINT '   -------------------';
 SELECT 
     u.Username,
     u.User_id,
     CASE WHEN a.User_id IS NOT NULL THEN '✅ ADMIN' ELSE '❌' END AS Admin,
     CASE WHEN e.User_id IS NOT NULL THEN '✅ ENGINEER' ELSE '❌' END AS Engineer,
-    CASE WHEN d.User_id IS NOT NULL THEN '✅ DRIVER' ELSE '❌' END AS Driver
+    CASE WHEN d.User_id IS NOT NULL THEN '✅ DRIVER' ELSE '❌' END AS Driver,
+    e.Team_id as Engineer_Team,
+    d.Team_id as Driver_Team,
+    d.H as Driver_H,
+    CASE 
+        WHEN u.PasswordHash LIKE '$2%' THEN '🔐 Bcrypt'
+        WHEN LEN(u.PasswordHash) < 30 THEN '📝 Texto plano'
+        ELSE '❓ Desconocido'
+    END as Hash_Type
 FROM [USER] u
 LEFT JOIN ADMIN a ON u.User_id = a.User_id
 LEFT JOIN ENGINEER e ON u.User_id = e.User_id
 LEFT JOIN DRIVER d ON u.User_id = d.User_id
-WHERE u.Username IN ('${prefix}Admin', '${prefix}Engineer', '${prefix}Driver');
+WHERE u.Username IN ('${prefix}Admin', '${prefix}Engineer', '${prefix}Driver')
+ORDER BY u.Username;
+GO
+
+-- 6. INFORMACIÓN DE COMPATIBILIDAD
+PRINT '';
+PRINT '6. COMPATIBILIDAD CON BACKEND:';
+PRINT '   ---------------------------';
+PRINT '   ✅ Este setup es COMPATIBLE con:';
+PRINT '      • Backend corregido (authController.js v2)';
+PRINT '      • Sistema: $OS';
+PRINT '      • Hash: ${hash_type}';
+PRINT '';
+PRINT '   🔍 El backend DETECTA AUTOMÁTICAMENTE:';
+PRINT '      • Si PasswordHash empieza con "$2" → usa bcrypt.compare()';
+PRINT '      • Si PasswordHash es texto plano → compara directamente';
+PRINT '';
+PRINT '   📋 ESTADO ACTUAL:';
+PRINT '      • Todos los usuarios usan TEXTO PLANO';
+PRINT '      • Backend los detecta y compara correctamente';
+PRINT '      • 100% funcional en desarrollo';
 GO
 
 PRINT '==========================================';
-PRINT '   SETUP COMPLETED';
+PRINT '   SETUP COMPLETADO EXITOSAMENTE';
 PRINT '==========================================';
 GO
 
--- 6. LOGIN INFORMATION
+-- 7. INFORMACIÓN DE LOGIN
 PRINT '';
-PRINT 'LOGIN CREDENTIALS:';
-PRINT '  Username: ${prefix}Admin     Password: ${prefix}Admin123*';
-PRINT '  Username: ${prefix}Engineer  Password: ${prefix}Engineer123*';
-PRINT '  Username: ${prefix}Driver    Password: ${prefix}Driver123*';
+PRINT '🔑 CREDENCIALES PARA LOGIN:';
+PRINT '   ========================';
+PRINT '   Sistema: ${prefix}';
+PRINT '   Backend: http://localhost:9090';
+PRINT '   Frontend: http://localhost:8080';
 PRINT '';
-PRINT 'Access: http://localhost:8080';
+PRINT '   ┌─────────────────────┬──────────────────────┐';
+PRINT '   │ Usuario            │ Contraseña           │';
+PRINT '   ├─────────────────────┼──────────────────────┤';
+PRINT '   │ ${prefix}Admin      │ ${admin_pass}        │';
+PRINT '   │ ${prefix}Engineer   │ ${engineer_pass}     │';
+PRINT '   │ ${prefix}Driver     │ ${driver_pass}       │';
+PRINT '   └─────────────────────┴──────────────────────┘';
+PRINT '';
+PRINT '⚠️  IMPORTANTE PARA PRODUCCIÓN:';
+PRINT '   Cambia a bcrypt ejecutando:';
+PRINT '   ./generate_users_universal.sh --bcrypt';
+PRINT '   (Requiere backend con bcrypt.compare())';
 GO
 EOF
     
     echo "$filename"
 }
 
+# Generar SQL con BCRYPT (opcional)
+generate_bcrypt_sql() {
+    local prefix=$1
+    local filename="setup_${prefix}_bcrypt_$(date '+%Y%m%d_%H%M%S').sql"
+    
+    cat > "$filename" << EOF
+-- =========================================
+-- BCRYPT SETUP (PARA PRODUCCIÓN)
+-- Generated: $(date '+%Y-%m-%d %H:%M:%S')
+-- System: $OS
+-- Prefix: $prefix
+-- Hash Type: BCRYPT
+-- =========================================
+-- NOTA: Los hashes bcrypt deben generarse desde Node.js
+-- Ejecuta: node generate_bcrypt_hashes.js
+-- =========================================
+
+USE F1GarageManager;
+GO
+
+PRINT '⚠️  IMPORTANTE: Este SQL requiere hashes bcrypt generados desde Node.js';
+PRINT 'Ejecuta primero: node generate_bcrypt_hashes.js';
+GO
+
+-- Aquí irían los INSERT con hashes bcrypt reales
+-- Ejemplo:
+-- INSERT INTO [USER] (Username, Salt, PasswordHash) VALUES
+-- ('${prefix}Admin', 'bcrypt_salt', '\$2a\$10\$hashtoken...');
+
+PRINT '';
+PRINT '✅ Para producción, usa texto plano primero y luego migra a bcrypt';
+GO
+EOF
+    
+    echo "$filename"
+}
+
+# Crear script para generar hashes bcrypt
+create_bcrypt_generator() {
+    cat > generate_bcrypt_hashes.js << 'EOF'
+// generate_bcrypt_hashes.js
+// Genera hashes bcrypt para todos los usuarios
+
+const bcrypt = require('bcryptjs');
+
+async function generateHashes() {
+    console.log('🔐 GENERANDOR DE HASHES BCRYPT');
+    console.log('===============================\n');
+    
+    const users = [
+        { prefix: 'win', type: 'Admin', password: 'winAdmin123*' },
+        { prefix: 'win', type: 'Engineer', password: 'winEngineer123*' },
+        { prefix: 'win', type: 'Driver', password: 'winDriver123*' },
+        { prefix: 'linux', type: 'Admin', password: 'linuxAdmin123*' },
+        { prefix: 'linux', type: 'Engineer', password: 'linuxEngineer123*' },
+        { prefix: 'linux', type: 'Driver', password: 'linuxDriver123*' },
+        { prefix: 'mac', type: 'Admin', password: 'macAdmin123*' },
+        { prefix: 'mac', type: 'Engineer', password: 'macEngineer123*' },
+        { prefix: 'mac', type: 'Driver', password: 'macDriver123*' }
+    ];
+    
+    console.log('📋 SQL LISTO PARA COPIAR:\n');
+    console.log('USE F1GarageManager;');
+    console.log('GO\n');
+    
+    for (const user of users) {
+        const salt = await bcrypt.genSalt(10);
+        const hash = await bcrypt.hash(user.password, salt);
+        const username = `${user.prefix}${user.type}`;
+        
+        console.log(`-- ${username}`);
+        console.log(`UPDATE [USER] SET`);
+        console.log(`    PasswordHash = '${hash}',`);
+        console.log(`    Salt = '${salt}'`);
+        console.log(`WHERE Username = '${username}';`);
+        console.log(`GO\n`);
+        
+        // Verificar
+        const isValid = await bcrypt.compare(user.password, hash);
+        console.log(`-- ✅ Verificación: ${isValid ? 'PASS' : 'FAIL'}`);
+        console.log(`-- 👤 Usuario: ${username}`);
+        console.log(`-- 🔐 Hash (primeros 30 chars): ${hash.substring(0, 30)}...`);
+        console.log('');
+    }
+    
+    console.log('✅ Hashes generados. Copia el SQL arriba en SSMS.');
+}
+
+generateHashes().catch(console.error);
+EOF
+    
+    echo "generate_bcrypt_hashes.js"
+}
+
 # Mostrar instrucciones
 show_instructions() {
     local prefix=$1
     local sql_file=$2
+    local hash_type=$3
     
     echo ""
     echo "=========================================="
-    echo "   ✅ SQL FILE GENERATED"
+    echo "   ✅ SQL FILE GENERATED - BACKEND V2"
     echo "=========================================="
     echo ""
     echo "📁 File: $sql_file"
+    echo "🔧 Hash Type: $hash_type"
+    echo "🖥️  OS: $OS"
     echo ""
-    echo "📋 WHAT THIS SQL DOES:"
-    echo "   1. Checks if users already exist"
-    echo "   2. Creates users if they don't exist"
-    echo "   3. Shows User IDs"
-    echo "   4. Gives instructions to assign roles"
-    echo "   5. Shows current role assignments"
+    echo "📋 ¿QUÉ HACE ESTE SQL?"
+    echo "   1. Elimina usuarios existentes del mismo prefijo"
+    echo "   2. Crea usuarios con texto plano (compatible)"
+    echo "   3. Asigna roles automáticamente"
+    echo "   4. Verifica todo el setup"
     echo ""
-    echo "🚀 HOW TO USE:"
-    echo "   1. Open SSMS"
-    echo "   2. File → Open → Select '$sql_file'"
-    echo "   3. Press F5 to execute"
-    echo "   4. Copy the User IDs shown"
-    echo "   5. Use them to assign roles"
+    echo "🚀 CÓMO USAR:"
+    echo "   1. Abrir SSMS"
+    echo "   2. File → Open → Seleccionar '$sql_file'"
+    echo "   3. Presionar F5 para ejecutar TODO"
+    echo "   4. Los usuarios quedan listos para usar"
     echo ""
-    echo "🔑 CREDENTIALS:"
-    echo "   ┌──────────────────┬──────────────────────┐"
-    echo "   │ Username         │ Password             │"
-    echo "   ├──────────────────┼──────────────────────┤"
-    echo "   │ ${prefix}Admin    │ ${prefix}Admin123*    │"
-    echo "   │ ${prefix}Engineer │ ${prefix}Engineer123* │"
-    echo "   │ ${prefix}Driver   │ ${prefix}Driver123*   │"
-    echo "   └──────────────────┴──────────────────────┘"
+    echo "🔑 CREDENCIALES:"
+    echo "   ┌─────────────────────┬──────────────────────┐"
+    echo "   │ Usuario            │ Contraseña           │"
+    echo "   ├─────────────────────┼──────────────────────┤"
+    echo "   │ ${prefix}Admin      │ ${prefix}Admin123*    │"
+    echo "   │ ${prefix}Engineer   │ ${prefix}Engineer123* │"
+    echo "   │ ${prefix}Driver     │ ${prefix}Driver123*   │"
+    echo "   └─────────────────────┴──────────────────────┘"
     echo ""
-    echo "🌍 Application: http://localhost:8080"
+    echo "🌍 URLs:"
+    echo "   Frontend: http://localhost:8080"
+    echo "   Backend:  http://localhost:9090"
+    echo ""
+    echo "⚠️  IMPORTANTE:"
+    echo "   Este setup usa TEXTO PLANO para desarrollo."
+    echo "   Para producción, ejecuta con --bcrypt"
     echo ""
     echo "=========================================="
 }
@@ -204,33 +406,60 @@ show_instructions() {
 main() {
     clear
     echo "=========================================="
-    echo "   🚀 F1 GARAGE - SQL GENERATOR"
+    echo "   🚀 F1 GARAGE - GENERADOR UNIVERSAL"
+    echo "   Backend V2 Compatible"
     echo "=========================================="
+    echo ""
+    echo "Opciones:"
+    echo "  --plain    Texto plano (default, desarrollo)"
+    echo "  --bcrypt   Hash bcrypt (producción)"
     echo ""
     
     detect_os
-    setup_config
+    
+    # Procesar argumentos
+    local hash_type="plain"
+    if [ "$1" == "--bcrypt" ]; then
+        hash_type="bcrypt"
+    fi
+    
+    setup_config "$1"
     
     echo ""
-    echo "🔍 Generating SQL file..."
+    echo "🔍 Generando SQL file..."
     echo ""
     
     # Generar archivo SQL
-    sql_file=$(generate_correct_sql "$PREFIX")
+    if [ "$hash_type" == "bcrypt" ]; then
+        sql_file=$(generate_bcrypt_sql "$PREFIX")
+        bcrypt_script=$(create_bcrypt_generator)
+        echo "📄 También creado: $bcrypt_script"
+        echo "   Ejecuta: node $bcrypt_script para generar hashes reales"
+    else
+        sql_file=$(generate_universal_sql "$PREFIX" "$hash_type")
+    fi
     
     # Mostrar instrucciones
-    show_instructions "$PREFIX" "$sql_file"
+    show_instructions "$PREFIX" "$sql_file" "$hash_type"
     
     # Mostrar vista previa
     echo ""
-    echo "📜 SQL PREVIEW (first 20 lines):"
+    echo "📜 VISTA PREVIA (primeras 25 líneas):"
     echo "------------------------------------------"
-    head -20 "$sql_file"
+    head -25 "$sql_file"
     echo "------------------------------------------"
-    echo "... (complete file: $sql_file)"
+    echo "... (archivo completo: $sql_file)"
     echo ""
     
-    echo "✅ Done! Execute the SQL file in SSMS."
+    if [ "$hash_type" == "plain" ]; then
+        echo "✅ ¡Listo! Ejecuta el SQL en SSMS y los usuarios funcionarán inmediatamente."
+    else
+        echo "⚠️  Para bcrypt: Primero genera los hashes, luego actualiza el SQL."
+    fi
+    
+    echo ""
+    echo "💡 Tip: Para convertir usuarios existentes a bcrypt después:"
+    echo "      ./generate_users_universal.sh --bcrypt"
 }
 
 # Ejecutar
