@@ -1,5 +1,6 @@
 const { mssqlConnect } = require('../config/database');
 const mssql = require('mssql');
+const bcrypt = require('bcryptjs');  // IMPORTANTE: npm install bcryptjs
 
 exports.register = async (req, res) => {
   try {
@@ -25,14 +26,18 @@ exports.register = async (req, res) => {
       });
     }
     
-    // Crear nuevo usuario (EN PRODUCCIÓN DEBES HASH LA CONTRASEÑA)
+    // Crear nuevo usuario con bcrypt
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+    
     const insertResult = await pool.request()
       .input('username', mssql.VarChar, username)
-      .input('passwordHash', mssql.VarChar, password) // ¡EN PRODUCCIÓN USA BCRYPT!
+      .input('passwordHash', mssql.VarChar, hashedPassword)
+      .input('salt', mssql.VarChar, salt)
       .query(`
-        INSERT INTO [USER] (Username, PasswordHash, Created_at)
+        INSERT INTO [USER] (Username, PasswordHash, Salt)
         OUTPUT INSERTED.User_id
-        VALUES (@username, @passwordHash, GETDATE())
+        VALUES (@username, @passwordHash, @salt)
       `);
     
     const newUserId = insertResult.recordset[0].User_id;
@@ -56,7 +61,8 @@ exports.login = async (req, res) => {
   try {
     const { username, password } = req.body;
     
-    console.log(`🔐 Intento de login: ${username}`);
+    console.log(`🔐 [LOGIN] Intento de login para: ${username}`);
+    console.log(`   Contraseña recibida: "${password}"`);
     
     if (!username || !password) {
       return res.status(400).json({
@@ -75,6 +81,7 @@ exports.login = async (req, res) => {
           u.User_id,
           u.Username,
           u.PasswordHash,
+          u.Salt,
           CASE 
             WHEN a.User_id IS NOT NULL THEN 'admin'
             WHEN e.User_id IS NOT NULL THEN 'engineer'
@@ -95,7 +102,7 @@ exports.login = async (req, res) => {
       `);
     
     if (result.recordset.length === 0) {
-      console.log(`❌ Usuario no encontrado: ${username}`);
+      console.log(`❌ [LOGIN] Usuario no encontrado: ${username}`);
       return res.status(401).json({
         success: false,
         message: "Invalid credentials"
@@ -104,15 +111,79 @@ exports.login = async (req, res) => {
     
     const user = result.recordset[0];
     
-    // VERIFICACIÓN DE CONTRASEÑA (SIMPLIFICADA PARA DESARROLLO)
-    // EN PRODUCCIÓN DEBES USAR: await bcrypt.compare(password, user.PasswordHash)
-    const isValidPassword = (password === 'winAdmin123*' && username === 'winAdmin') ||
-                           (password === 'winEngineer123*' && username === 'winEngineer') ||
-                           (password === 'winDriver123*' && username === 'winDriver') ||
-                           (password === user.PasswordHash); // Para usuarios ya existentes
+    console.log(`🔍 [LOGIN] Usuario encontrado en DB:`);
+    console.log(`   ID: ${user.User_id}, Rol: ${user.role || 'user'}`);
+    console.log(`   PasswordHash (primeros 30 chars): "${user.PasswordHash?.substring(0, 30)}..."`);
+    console.log(`   Tipo de hash: ${user.PasswordHash?.startsWith('$2') ? 'Bcrypt' : 'Texto plano'}`);
+    console.log(`   Salt: "${user.Salt}"`);
+    
+    // =================================================
+    // 🔧 VERIFICACIÓN DE CONTRASEÑA - VERSIÓN CORREGIDA
+    // =================================================
+    let isValidPassword = false;
+    let authMethod = '';
+    
+    // 1. SI ES HASH BCRYPT (usuarios Windows)
+    if (user.PasswordHash && user.PasswordHash.startsWith('$2')) {
+      authMethod = 'bcrypt';
+      try {
+        console.log(`   🔐 Intentando bcrypt.compare()...`);
+        isValidPassword = await bcrypt.compare(password, user.PasswordHash);
+        console.log(`   ✅ bcrypt.compare() resultado: ${isValidPassword}`);
+      } catch (bcryptError) {
+        console.error(`❌ Error en bcrypt.compare():`, bcryptError);
+        isValidPassword = false;
+      }
+    }
+    // 2. SI ES TEXTO PLANO (usuarios Linux)
+    else {
+      authMethod = 'texto_plano';
+      
+      // Definir todas las credenciales de desarrollo
+      const devCredentials = {
+        // Usuarios Windows (están en bcrypt, pero por si acaso)
+        'winAdmin': 'winAdmin123*',
+        'winEngineer': 'winEngineer123*',
+        'winDriver': 'winDriver123*',
+        
+        // Usuarios Linux (texto plano)
+        'linuxAdmin': 'linuxAdmin123*',
+        'linuxEngineer': 'linuxEngineer123*',
+        'linuxDriver': 'linuxDriver123*',
+        
+        // Usuarios Mac (si los agregas)
+        'macAdmin': 'macAdmin123*',
+        'macEngineer': 'macEngineer123*',
+        'macDriver': 'macDriver123*'
+      };
+      
+      // Verificar si está en las credenciales de desarrollo
+      if (devCredentials[username]) {
+        console.log(`   🔍 Comparando con credencial dev: "${devCredentials[username]}"`);
+        if (password === devCredentials[username]) {
+          isValidPassword = true;
+          console.log(`   ✅ Coincide con credencial dev`);
+        } else {
+          console.log(`   ❌ NO coincide con credencial dev`);
+        }
+      }
+      
+      // También verificar si coincide directamente con PasswordHash
+      if (!isValidPassword && password === user.PasswordHash) {
+        isValidPassword = true;
+        console.log(`   ✅ Coincide directamente con PasswordHash`);
+      }
+    }
+    
+    console.log(`📊 [LOGIN] Resumen:`);
+    console.log(`   Método: ${authMethod}`);
+    console.log(`   Válido: ${isValidPassword}`);
     
     if (!isValidPassword) {
-      console.log(`❌ Contraseña incorrecta para: ${username}`);
+      console.log(`❌ [LOGIN] Contraseña incorrecta para: ${username}`);
+      console.log(`   Método usado: ${authMethod}`);
+      console.log(`   ¿Necesitas convertir usuarios Windows a texto plano?`);
+      
       return res.status(401).json({
         success: false,
         message: "Invalid credentials"
@@ -141,9 +212,10 @@ exports.login = async (req, res) => {
         });
       }
       
-      console.log(`✅ Login exitoso: ${username} (${sessionUser.role})`);
+      console.log(`✅ [LOGIN] Login exitoso: ${username} (${sessionUser.role})`);
       console.log(`   Session ID: ${req.sessionID}`);
       console.log(`   Team: ${sessionUser.teamName || 'None'}`);
+      console.log(`   User ID: ${sessionUser.id}`);
       
       res.json({
         success: true,
@@ -153,7 +225,7 @@ exports.login = async (req, res) => {
     });
     
   } catch (error) {
-    console.error('❌ Login error:', error);
+    console.error('❌ [LOGIN] Error general:', error);
     res.status(500).json({
       success: false,
       message: "Server error during login"
@@ -195,4 +267,19 @@ exports.requireAuth = (req, res, next) => {
   
   console.log(`✅ Sesión válida para: ${req.session.user.username}`);
   next();
+};
+
+// Nueva función: Check current session
+exports.checkSession = (req, res) => {
+  if (!req.session.user) {
+    return res.status(401).json({
+      success: false,
+      message: "No active session"
+    });
+  }
+  
+  res.json({
+    success: true,
+    user: req.session.user
+  });
 };
