@@ -3,12 +3,14 @@ import { useNavigate } from "react-router-dom";
 import { User, Lock, LogIn } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useAuth } from "@/auth/authContext"; // ✅ IMPORTAR useAuth
 
 import logo from "@/assets/Logo.png";
 import { apiFetch } from "@/lib/api";
 
 const Login = () => {
   const navigate = useNavigate();
+  const { refresh } = useAuth(); // ✅ OBTENER refresh del contexto
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -24,30 +26,33 @@ const Login = () => {
     setLoading(true);
     
     try {
-      console.log('🔍 [LOGIN] Starting login for:', username);
+      console.log('🔐 [LOGIN] Starting login for:', username);
       
       const { res, data } = await apiFetch("/api/auth/login", {
         method: "POST",
         body: JSON.stringify({ username, password }),
       });
 
-      console.log('🔍 [LOGIN] Response:', { status: res.status, data });
+      console.log('🔐 [LOGIN] Response:', { status: res.status, data });
 
       if (!res.ok || !data.success) {
         alert(data.message || "Login failed");
         return;
       }
 
-      // CORREGIDO: Usar data.user en lugar de data.session
       if (!data.user || !data.user.role) {
         alert("Invalid user data received");
         return;
       }
 
       const role = data.user.role;
-      console.log('🔍 [LOGIN] Role detected:', role);
+      console.log('🔐 [LOGIN] Role detected:', role);
 
-      // Redirigir según rol
+      // ✅ CRÍTICO: Actualizar el AuthContext ANTES de navegar
+      await refresh();
+      console.log('✅ [LOGIN] AuthContext refreshed');
+
+      // Ahora sí navegar según rol
       if (role === "driver") {
         navigate("/DriverProfile");
       } else if (role === "admin" || role === "engineer") {
@@ -57,7 +62,7 @@ const Login = () => {
       }
 
     } catch (error: any) {
-      console.error('🔍 [LOGIN] Error:', error);
+      console.error('🔐 [LOGIN] Error:', error);
       alert("Login error: " + error.message);
     } finally {
       setLoading(false);
@@ -149,7 +154,7 @@ const Login = () => {
         
           <div className="mt-7 pt-2 border-t border-border">
             <p className="text-center text-sm text-muted-foreground">
-                version 0.0.8
+                version 0.0.9
             </p>
             <p className="text-center text-xs text-muted-foreground mt-2">
               Default users: winAdmin / winEngineer / winDriver
@@ -167,5 +172,3 @@ const Login = () => {
 };
 
 export default Login;
-
-//a
