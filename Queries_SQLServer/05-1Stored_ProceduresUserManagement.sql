@@ -1,7 +1,8 @@
 -- =========================================
 -- STORED PROCEDURES PARA USER MANAGEMENT
 -- =========================================
-
+USE F1GarageManager;
+GO
 -- 1. SP: Crear Usuario
 -- =========================================
 -- NOTA: El hash bcrypt se genera en el backend (Node.js)
