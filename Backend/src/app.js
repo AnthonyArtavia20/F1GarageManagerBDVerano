@@ -14,6 +14,8 @@ const teamsRoutes = require('./routes/teamsRoutes');
 const authRoutes = require('./routes/authRoutes');
 const inventoryRoutes = require('./routes/inventoryRoutes');
 
+const carAssemblyRoutes = require('./routes/modules/CarAssembly');
+
 const app = express();
 const PORT = process.env.PORT || 9090;
 
@@ -29,21 +31,19 @@ app.use(express.urlencoded({ extended: true }));
 // 3. Session (CONFIGURACIÓN SIMPLIFICADA PARA DEV)
 app.use(session({
   secret: process.env.SESSION_SECRET || "dev_secret_f1_garage_2024",
-  resave: true,                     // IMPORTANTE: true para evitar pérdida de sesión
-  saveUninitialized: true,          // true para desarrollo
+  resave: true,
+  saveUninitialized: true,
   cookie: {
     httpOnly: true,
-    secure: false,                  // false porque usas HTTP (no HTTPS)
-    sameSite: 'lax',                // 'lax' funciona mejor que 'none' para desarrollo
-    maxAge: 24 * 60 * 60 * 1000,    // 24 horas
-    // NO uses domain con IPs locales, causa problemas
+    secure: false,
+    sameSite: 'lax',
+    maxAge: 24 * 60 * 60 * 1000,
   },
   name: 'f1garage.sid',
 }));
 
-// 4. Middleware de debug (opcional pero útil)
+// 4. Middleware de debug
 app.use((req, res, next) => {
-  // Solo muestra logs para rutas de API
   if (req.path.startsWith('/api/')) {
     console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
     console.log(`  Origin: ${req.headers.origin || 'none'}`);
@@ -61,7 +61,13 @@ app.get('/', (req, res) => {
     status: 'Online',
     database: process.env.DB_NAME,
     server: process.env.DB_SERVER,
-    sessionEnabled: true
+    sessionEnabled: true,
+    routes: {
+      carAssembly: '/api/sp', // Documenta la nueva ruta
+      teams: '/api/teams',
+      inventory: '/api/inventory',
+      // ... otras rutas
+    }
   });
 });
 
@@ -89,10 +95,18 @@ app.get('/status', async (req, res) => {
 });
 
 // ===== RUTAS DE API =====
+// ⚠️ ORDEN CRÍTICO: CarAssembly DEBE estar ANTES que spRoutes
 
 app.use('/api/auth', authRoutes);
 app.use('/api/test', testRoutes);
-app.use('/api/sp', spRoutes);
+
+// CarAssembly PRIMERO (rutas específicas)
+app.use('/api/sp/assembly', carAssemblyRoutes);
+
+// spRoutes DESPUÉS (rutas generales)
+app.use('/api/sp', spRoutes);  // <-- Mantiene /api/sp/teams
+
+// TERCERO: Otras rutas
 app.use('/api/parts', partsRoutes);
 app.use('/api/sponsors', sponsorsRoutes);
 app.use('/api/teams', teamsRoutes);
@@ -130,6 +144,14 @@ async function initServer() {
       console.log(`✅ Backend API: http://localhost:${PORT}`);
       console.log(`🌐 Acceso desde red: http://${getLocalIP()}:${PORT}`);
       console.log(`📡 Modo: ${process.env.NODE_ENV || 'development'}`);
+      console.log('📊 Rutas activas:');
+      console.log('  • /api/auth - Autenticación');
+      console.log('  • /api/sp - Armado de autos (CarAssembly)');
+      console.log('  • /api/general - Stored Procedures generales');
+      console.log('  • /api/teams - Equipos');
+      console.log('  • /api/inventory - Inventario');
+      console.log('  • /api/parts - Partes');
+      console.log('  • /api/sponsors - Sponsors');
       console.log('================================\n');
     });
 

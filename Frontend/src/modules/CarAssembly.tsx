@@ -210,7 +210,7 @@ const CarAssembly = () => {
 
       console.log(`Fetching inventory for team ${selectedTeam}...`);
       
-      const { res, data } = await apiFetch(`/api/sp/team-inventory/${selectedTeam}`);
+      const { res, data } = await apiFetch(`/api/sp/assembly/team-inventory/${selectedTeam}`);
       
       console.log('Inventory response:', { status: res.status, data });
 
@@ -249,7 +249,7 @@ const CarAssembly = () => {
     try {
       console.log(`🔄 Fetching configuration for car ${selectedCarId}...`);
       
-      const { res, data } = await apiFetch(`/api/sp/car-configuration/${selectedCarId}`);
+      const { res, data } = await apiFetch(`/api/sp/assembly/car-configuration/${selectedCarId}`);
       
       console.log('📊 Configuration response:', { status: res.status, data });
 
@@ -288,20 +288,24 @@ const CarAssembly = () => {
     try {
       console.log(`🔄 Fetching stats for car ${selectedCarId}...`);
       
-      const { res, data } = await apiFetch(`/api/sp/car-stats/${selectedCarId}`);
-      
-      console.log('📊 Stats response:', { status: res.status, data });
+      const { res, data } = await apiFetch(`/api/sp/assembly/car-stats/${selectedCarId}`);
 
-      if (res.ok && data.success) {
+      
+      console.log('📊 Stats response FULL:', { status: res.status, statusText: res.statusText,ok: res.ok, data: data 
+    });
+
+        if (res.ok && data && data.success) {
+        console.log('✅ Car stats loaded via SP:', data.stats);
         setCarStats(data.stats);
-        console.log('✅ Car stats loaded:', data.stats);
       } else {
-        console.log(' No stats found, calculating manually');
-        // Calcular stats manualmente basado en partes instaladas
+        console.log('⚠️ SP returned but with issues, calculating manually');
+        console.log('res.ok:', res.ok);
+        console.log('data:', data);
+        console.log('data.success:', data?.success);
         calculateManualStats();
       }
     } catch (err) {
-      console.error('Error al cargar stats:', err);
+      console.error('❌ Error al cargar stats:', err);
       calculateManualStats();
     }
   };
@@ -350,7 +354,7 @@ const CarAssembly = () => {
       setLoading(true);
       setError(null);
 
-      const endpoint = isReplacement ? '/api/sp/replace-part' : '/api/sp/install-part';
+      const endpoint = isReplacement ? '/api/sp/assembly/replace-part' : '/api/sp/assembly/install-part';
       const body = isReplacement
         ? {
             carId: parseInt(selectedCarId),
@@ -402,7 +406,7 @@ const CarAssembly = () => {
 
       console.log(`🔄 Uninstalling part ${partId} from car ${selectedCarId}...`);
       
-      const { res, data } = await apiFetch("/api/sp/uninstall-part", {
+      const { res, data } = await apiFetch("/api/sp/assembly/uninstall-part", {
         method: 'POST',
         body: JSON.stringify({
           carId: parseInt(selectedCarId),
@@ -435,7 +439,7 @@ const CarAssembly = () => {
     try {
       console.log(`🔄 Validating part ${partId} for car ${selectedCarId}...`);
       
-      const { res, data } = await apiFetch(`/api/sp/validate-part/${selectedCarId}/${partId}`);
+      const { res, data } = await apiFetch(`/api/sp/assembly/validate-part/${selectedCarId}/${partId}`);
 
       if (res.ok && data.success) {
         if (data.validation?.Status === 'INVALID') {
