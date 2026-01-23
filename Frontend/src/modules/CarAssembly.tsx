@@ -611,7 +611,7 @@ const CarAssembly = () => {
         )}
 
         {!selectedTeam ? (
-          <div className="glass-card rounded-xl p-12 text-center relative z-10">
+          <div className="glass-card rounded-xl p-12 text-center relative z-99999">
             <Car className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
             <h3 className="text-xl font-display font-semibold text-foreground mb-2">
               {loadingSession ? "Loading..." : isAdmin ? "Select a Team" : "No Team Assigned"}
