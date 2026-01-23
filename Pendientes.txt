@@ -1,0 +1,8 @@
+1. Pasar el log de "Usuario no encontrado" al Front cuando se ingrea el Username de un usuario 
+    que no existe.
+
+2. Arreglar errores del backend
+3. coenctar front + end para Usermanagment.
+4. Mejorar documentación de como se conecta todo atravez de Endpoints y modules/routes
+5. Borrar del SQL de población tantos Usuarios  y dejar solo 3(Uno de cada tipo)
+6. Ver si hay rutas repetidas para el resto de páginas, en spControllers spRoutes y así, mejorar código
