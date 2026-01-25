@@ -18,9 +18,9 @@ NC='\033[0m'
 # Configuración de SQL Server (¡AJUSTAR ESTOS VALORES!)
 DB_SERVER="localhost"
 DB_NAME="F1GarageManager"
-DB_USER="sa"
-DB_PASSWORD="TuPassword"  # ⚠️ Cambia esto
-USE_SQLCMD=true  # Cambiar a false si no tienes sqlcmd
+DB_USER="nodeuser"
+DB_PASSWORD="Node123*"  # ⚠️ Cambia esto
+USE_SQLCMD=false  # Cambiar a false si no tienes sqlcmd
 
 # Detectar SO y configurar
 detect_and_setup() {
