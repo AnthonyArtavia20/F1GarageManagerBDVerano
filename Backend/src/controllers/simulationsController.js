@@ -271,9 +271,9 @@ const getCircuitStatistics = async (req, res) => {
 const runSimulation = async (req, res) => {
     try {
         const { circuitId, carIds, dc = 0.5 } = req.body;
-        const adminId = req.session.user?.userId; // Asumiendo que la sesión tiene userId
+        const userId = req.session.user?.userId; // Cambiado de adminId a userId
         
-        console.log('🚀 Iniciando simulación con datos:', { circuitId, carIds, dc, adminId });
+        console.log('🚀 Iniciando simulación con datos:', { circuitId, carIds, dc, userId });
         
         // Validaciones básicas
         if (!circuitId) {
@@ -297,33 +297,34 @@ const runSimulation = async (req, res) => {
             });
         }
         
-        if (!adminId) {
+        if (!userId) {
             return res.status(401).json({
                 success: false,
-                message: 'No autorizado. Se requiere sesión de administrador'
+                message: 'No autorizado. Se requiere inicio de sesión'
             });
         }
         
-        // Verificar que el usuario es admin
+        // VERIFICACIÓN OPCIONAL: Solo chequear que el usuario existe
+        // Ya no verificamos si es admin
         const pool = await mssqlConnect();
-        const adminCheck = await pool.request()
-            .input('User_id', sql.Int, adminId)
-            .query('SELECT 1 FROM ADMIN WHERE User_id = @User_id');
+        const userCheck = await pool.request()
+            .input('User_id', sql.Int, userId)
+            .query('SELECT User_id FROM [USER] WHERE User_id = @User_id');
         
-        if (adminCheck.recordset.length === 0) {
+        if (userCheck.recordset.length === 0) {
             return res.status(403).json({
                 success: false,
-                message: 'Solo administradores pueden ejecutar simulaciones'
+                message: 'Usuario no encontrado'
             });
         }
         
         // Convertir array a string separado por comas
         const carIdsString = carIds.join(',');
         
-        // Ejecutar simulación
+        // Ejecutar simulación - AHORA USA userId DIRECTAMENTE
         const result = await pool.request()
             .input('Circuit_id', sql.Int, circuitId)
-            .input('Admin_id', sql.Int, adminId)
+            .input('Admin_id', sql.Int, userId) // Usamos userId aunque se llame Admin_id
             .input('Car_ids', sql.NVarChar(sql.MAX), carIdsString)
             .input('dc', sql.Decimal(10, 2), dc)
             .output('Success', sql.Bit)
@@ -379,9 +380,9 @@ const runSimulation = async (req, res) => {
 const deleteSimulation = async (req, res) => {
     try {
         const { id } = req.params;
-        const adminId = req.session.user?.userId;
+        const userId = req.session.user?.userId;
         
-        if (!adminId) {
+        if (!userId) {
             return res.status(401).json({
                 success: false,
                 message: 'No autorizado'
@@ -390,9 +391,38 @@ const deleteSimulation = async (req, res) => {
         
         const pool = await mssqlConnect();
         
+        // Verificar permisos: solo admin o el creador puede eliminar
+        const checkPermission = await pool.request()
+            .input('Simulation_id', sql.Int, id)
+            .input('User_id', sql.Int, userId)
+            .query(`
+                SELECT 
+                    s.Created_by_admin_id,
+                    (SELECT 1 FROM ADMIN WHERE User_id = @User_id) AS IsAdmin
+                FROM SIMULATION s
+                WHERE s.Simulation_id = @Simulation_id
+            `);
+        
+        if (checkPermission.recordset.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'Simulación no encontrada'
+            });
+        }
+        
+        const canDelete = checkPermission.recordset[0].Created_by_admin_id === userId || 
+                         checkPermission.recordset[0].IsAdmin === 1;
+        
+        if (!canDelete) {
+            return res.status(403).json({
+                success: false,
+                message: 'No tiene permisos para eliminar esta simulación'
+            });
+        }
+        
         const result = await pool.request()
             .input('Simulation_id', sql.Int, id)
-            .input('Admin_id', sql.Int, adminId)
+            .input('Admin_id', sql.Int, userId)
             .output('Success', sql.Bit)
             .output('Message', sql.NVarChar(500))
             .execute('sp_DeleteSimulation');

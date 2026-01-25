@@ -80,7 +80,7 @@ interface SimulationResult {
     Circuit_Name: string;
     Total_distance: number;
     N_Curves: number;
-    Admin_Username: string;
+    Created_By_Username: string;
   };
   participants: SimulationParticipant[];
   setupDetails: Array<{
@@ -241,8 +241,22 @@ const Simulation = () => {
 };
 
   const getCarsByTeam = (teamId: number) => {
-    return availableCars.filter(car => car.Team_id === teamId && car.isFinalized && car.Installed_Categories === 5);
-  };
+  // Filtrar carros únicos por ID y que estén completos
+  const seenCarIds = new Set();
+  return availableCars.filter(car => {
+    if (car.Team_id !== teamId || !car.isFinalized || car.Installed_Categories !== 5) {
+      return false;
+    }
+    
+    // Evitar duplicados
+    if (seenCarIds.has(car.Car_id)) {
+      return false;
+    }
+    
+    seenCarIds.add(car.Car_id);
+    return true;
+  });
+};
 
  const addParticipant = (car: CarForSimulation) => {
   // Verificar si ya está seleccionado
@@ -838,7 +852,7 @@ const Simulation = () => {
                       </div>
                       <div className="p-3 rounded-lg bg-accent/50">
                         <p className="text-xs text-muted-foreground">Ejecutado por</p>
-                        <p className="font-bold text-lg">{simulationResults.simulation.Admin_Username}</p>
+                        <p className="font-bold text-lg">{simulationResults.simulation.Created_By_Username}</p>
                       </div>
                     </div>
                   </CardContent>

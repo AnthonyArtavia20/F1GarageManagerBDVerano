@@ -234,7 +234,7 @@ GO
 -- ============================================================================
 CREATE OR ALTER PROCEDURE sp_RunSimulation
     @Circuit_id INT,
-    @Admin_id INT,
+    @User_id INT,
     @Car_ids NVARCHAR(MAX),  -- Lista de IDs separados por comas: '1,2,3,4'
     @Driver_ids NVARCHAR(MAX), -- Lista de IDs de conductores: '10,12,15,18'
     @dc DECIMAL(10,2) = 0.5,
@@ -250,6 +250,13 @@ BEGIN
     
     BEGIN TRY
         BEGIN TRANSACTION;
+
+        IF NOT EXISTS (SELECT 1 FROM [USER] WHERE User_id = @User_id)
+        BEGIN
+            SET @Message = 'Usuario no encontrado';
+            ROLLBACK TRANSACTION;
+            RETURN;
+        END
         
         -- 1. Validar número de participantes (2 a 10)
         DECLARE @CarCount INT;
@@ -312,7 +319,7 @@ BEGIN
         
         -- 3. Crear registro de simulación
         INSERT INTO SIMULATION (Circuit_id, Created_by_admin_id, Data_time)
-        VALUES (@Circuit_id, @Admin_id, GETDATE());
+        VALUES (@Circuit_id, @User_id, GETDATE());
         
         SET @Simulation_id = SCOPE_IDENTITY();
         
@@ -540,12 +547,12 @@ BEGIN
         c.Name AS Circuit_Name,
         c.Total_distance,
         c.N_Curves,
-        a.User_id AS Admin_id,
-        u.Username AS Admin_Username
+        s.Created_by_admin_id AS Admin_id,
+        u.Username AS Created_By_Username
     FROM SIMULATION s
     INNER JOIN CIRCUIT c ON s.Circuit_id = c.Circuit_id
-    INNER JOIN ADMIN a ON s.Created_by_admin_id = a.User_id
-    INNER JOIN [USER] u ON a.User_id = u.User_id
+    LEFT JOIN ADMIN a ON s.Created_by_admin_id = a.User_id
+    LEFT JOIN [USER] u ON a.User_id = u.User_id
     WHERE s.Simulation_id = @Simulation_id;
     
     -- Resultados de participantes
@@ -600,7 +607,7 @@ BEGIN
 END
 GO
 
-PRINT 'SP sp_GetSimulationResults creado';
+PRINT 'SP sp_GetSimulationResults corregido y creado';
 GO
 
 -- ============================================================================
@@ -624,14 +631,14 @@ BEGIN
     FROM SIMULATION s
     INNER JOIN CIRCUIT c ON s.Circuit_id = c.Circuit_id
     INNER JOIN SIMULATION_PARTICIPANT sp ON s.Simulation_id = sp.simulation_id
-    INNER JOIN ADMIN a ON s.Created_by_admin_id = a.User_id
-    INNER JOIN [USER] u ON a.User_id = u.User_id
+    LEFT JOIN ADMIN a ON s.Created_by_admin_id = a.User_id
+    LEFT JOIN [USER] u ON a.User_id = u.User_id
     GROUP BY s.Simulation_id, s.Data_time, c.Name, c.Total_distance, c.N_Curves, u.Username
     ORDER BY s.Data_time DESC;
 END
 GO
 
-PRINT 'SP sp_GetSimulationHistory creado';
+PRINT 'SP sp_GetSimulationHistory corregido y creado';
 GO
 
 -- ============================================================================
@@ -757,30 +764,51 @@ AS
 BEGIN
     SET NOCOUNT ON;
     
+    -- Verificar carros completos (5 categorías distintas)
+    ;WITH CarCategories AS (
+        SELECT 
+            c.Car_id,
+            c.Team_id,
+            COUNT(DISTINCT cc.Part_Category) AS CategoryCount
+        FROM CAR c
+        LEFT JOIN CAR_CONFIGURATION cc ON c.Car_id = cc.Car_id
+        WHERE c.isFinalized = 1
+        GROUP BY c.Car_id, c.Team_id
+        HAVING COUNT(DISTINCT cc.Part_Category) = 5  -- Solo carros completos
+    ),
+    CarStats AS (
+        SELECT 
+            c.Car_id,
+            t.Team_id,
+            t.Name AS Team_Name,
+            -- Calcular totales P, A, M solo si tiene las 5 categorías
+            SUM(p.p) AS Total_P,
+            SUM(p.a) AS Total_A,
+            SUM(p.m) AS Total_M
+        FROM CAR c
+        INNER JOIN CarCategories cc ON c.Car_id = cc.Car_id
+        INNER JOIN TEAM t ON c.Team_id = t.Team_id
+        INNER JOIN CAR_CONFIGURATION ccfg ON c.Car_id = ccfg.Car_id
+        INNER JOIN PART p ON ccfg.Part_id = p.Part_id
+        WHERE (@Team_id IS NULL OR t.Team_id = @Team_id)
+        GROUP BY c.Car_id, t.Team_id, t.Name
+    )
     SELECT 
-        c.Car_id,
-        t.Team_id,
-        t.Name AS Team_Name,
-        COUNT(DISTINCT cc.Part_Category) AS Installed_Categories,
-        -- Obtener conductor del equipo
+        cs.Car_id,
+        cs.Team_id,
+        cs.Team_Name,
+        5 AS Installed_Categories, 
+        cs.Total_P,
+        cs.Total_A,
+        cs.Total_M,
+
         d.User_id AS Driver_id,
         du.Username AS Driver_Name,
-        d.H AS Driver_H,
-        -- Calcular totales P, A, M
-        SUM(p.p) AS Total_P,
-        SUM(p.a) AS Total_A,
-        SUM(p.m) AS Total_M
-    FROM CAR c
-    INNER JOIN TEAM t ON c.Team_id = t.Team_id
-    LEFT JOIN CAR_CONFIGURATION cc ON c.Car_id = cc.Car_id
-    LEFT JOIN PART p ON cc.Part_id = p.Part_id
-    LEFT JOIN DRIVER d ON t.Team_id = d.Team_id
+        d.H AS Driver_H
+    FROM CarStats cs
+    LEFT JOIN DRIVER d ON cs.Team_id = d.Team_id
     LEFT JOIN [USER] du ON d.User_id = du.User_id
-    WHERE c.isFinalized = 1
-        AND (@Team_id IS NULL OR t.Team_id = @Team_id)
-    GROUP BY c.Car_id, t.Team_id, t.Name, d.User_id, du.Username, d.H
-    HAVING COUNT(DISTINCT cc.Part_Category) = 5  -- Solo carros completos
-    ORDER BY t.Name, c.Car_id;
+    ORDER BY cs.Team_Name, cs.Car_id;
 END
 GO
 
