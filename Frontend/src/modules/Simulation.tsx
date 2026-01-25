@@ -192,19 +192,26 @@ const Simulation = () => {
   };
 
   const fetchDriversByTeam = async (teamId: number) => {
-  if (driversByTeam[teamId]) {
-    return; 
-  }
   try {
-    const { res, data } = await apiFetch(`/api/sp/teams/${teamId}/drivers`);
+    const { res, data } = await apiFetch(`/api/simulations/teams/${teamId}/drivers`);
     if (res.ok && data.success) {
       setDriversByTeam(prev => ({
         ...prev,
-        [teamId]: data.data
+        [teamId]: data.data || [] // Siempre actualizar, incluso si es array vacío
+      }));
+    } else {
+      // Si hay error, establecer array vacío
+      setDriversByTeam(prev => ({
+        ...prev,
+        [teamId]: []
       }));
     }
   } catch (err) {
     console.error(`Error al cargar conductores del equipo ${teamId}:`, err);
+    setDriversByTeam(prev => ({
+      ...prev,
+      [teamId]: []
+    }));
   }
 };
 
@@ -225,7 +232,7 @@ const Simulation = () => {
       ? prev.filter(id => id !== teamId)
       : [...prev, teamId];
     
-    if (newExpanded.includes(teamId) && !driversByTeam[teamId]) {
+    if (newExpanded.includes(teamId)) {
       fetchDriversByTeam(teamId);
     }
     
@@ -237,7 +244,7 @@ const Simulation = () => {
     return availableCars.filter(car => car.Team_id === teamId && car.isFinalized && car.Installed_Categories === 5);
   };
 
-  const addParticipant = (car: CarForSimulation) => {
+ const addParticipant = (car: CarForSimulation) => {
   // Verificar si ya está seleccionado
   if (selectedParticipants.some(p => p.carId === car.Car_id)) {
     return;
@@ -252,51 +259,27 @@ const Simulation = () => {
   // Obtener conductores del equipo
   const teamDrivers = driversByTeam[car.Team_id] || [];
   
-  // Si no hay conductores cargados aún
   if (teamDrivers.length === 0) {
-    // Intentar cargar conductores
-    fetchDriversByTeam(car.Team_id).then(() => {
-      const updatedDrivers = driversByTeam[car.Team_id] || [];
-      if (updatedDrivers.length === 0) {
-        alert(`El equipo ${car.Team_Name} no tiene conductores asignados`);
-        return;
-      }
-      
-      // Tomar el primer conductor por defecto
-      const defaultDriver = updatedDrivers[0];
-      
-      const newParticipant: SelectedParticipant = {
-        carId: car.Car_id,
-        teamId: car.Team_id,
-        teamName: car.Team_Name,
-        driverId: defaultDriver.Driver_id,
-        driverName: defaultDriver.Driver_Name,
-        driverH: defaultDriver.Driver_H,
-        carP: car.Total_P,
-        carA: car.Total_A,
-        carM: car.Total_M
-      };
-      
-      setSelectedParticipants(prev => [...prev, newParticipant]);
-    });
-  } else {
-    // Ya tenemos conductores
-    const defaultDriver = teamDrivers[0];
-    
-    const newParticipant: SelectedParticipant = {
-      carId: car.Car_id,
-      teamId: car.Team_id,
-      teamName: car.Team_Name,
-      driverId: defaultDriver.Driver_id,
-      driverName: defaultDriver.Driver_Name,
-      driverH: defaultDriver.Driver_H,
-      carP: car.Total_P,
-      carA: car.Total_A,
-      carM: car.Total_M
-    };
-    
-    setSelectedParticipants(prev => [...prev, newParticipant]);
+    alert(`El equipo ${car.Team_Name} no tiene conductores asignados. No se puede seleccionar carros de este equipo.`);
+    return;
   }
+  
+  // Tomar el primer conductor por defecto
+  const defaultDriver = teamDrivers[0];
+  
+  const newParticipant: SelectedParticipant = {
+    carId: car.Car_id,
+    teamId: car.Team_id,
+    teamName: car.Team_Name,
+    driverId: defaultDriver.Driver_id,
+    driverName: defaultDriver.Driver_Name,
+    driverH: defaultDriver.Driver_H,
+    carP: car.Total_P || 0,
+    carA: car.Total_A || 0,
+    carM: car.Total_M || 0
+  };
+  
+  setSelectedParticipants(prev => [...prev, newParticipant]);
 };
 
   const removeParticipant = (carId: number) => {
@@ -367,12 +350,19 @@ const Simulation = () => {
 
       setIsLoading(prev => ({ ...prev, simulation: true }));
 
-      const requestData = {
-        circuitId: parseInt(selectedCircuit),
-        carIds: selectedParticipants.map(p => p.carId),
-        driverIds: selectedParticipants.map(p => p.driverId),
-        dc: DC_CURVE_DISTANCE
-      };
+      const driverIds = selectedParticipants.map(p => {
+      if (!p.driverId) {
+        throw new Error(`Carro #${p.carId} no tiene conductor seleccionado`);
+      }
+      return p.driverId;
+    });
+
+    const requestData = {
+      circuitId: parseInt(selectedCircuit),
+      carIds: selectedParticipants.map(p => p.carId),
+      driverIds: driverIds, // ← Usar array validado
+      dc: DC_CURVE_DISTANCE
+    };
 
       const { res, data } = await apiFetch("/api/simulations", {
         method: "POST",
@@ -680,37 +670,80 @@ const Simulation = () => {
       </button>
       
       {expandedTeams.includes(team.Team_id) && (
-        <div className="p-4 border-t">
-          {!driversByTeam[team.Team_id] ? (
-            <div className="text-center py-4">
-              <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-2" />
-              <p className="text-sm text-muted-foreground">Cargando conductores...</p>
+  <div className="p-4 border-t">
+    {/* Mostrar estado de carga */}
+    {!driversByTeam[team.Team_id] && (
+      <div className="text-center py-4">
+        <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-2" />
+        <p className="text-sm text-muted-foreground">Cargando conductores...</p>
+      </div>
+    )}
+    
+    {/* Si ya se cargaron los conductores (incluso array vacío) */}
+    {driversByTeam[team.Team_id] && driversByTeam[team.Team_id].length === 0 && (
+      <div className="text-center py-4 text-destructive">
+        <AlertCircle className="w-6 h-6 mx-auto mb-2" />
+        <p className="text-sm">Este equipo no tiene conductores asignados</p>
+        <p className="text-xs mt-1">No se pueden seleccionar carros de este equipo</p>
+      </div>
+    )}
+    
+    {/* Si hay conductores, mostrar los carros */}
+    {driversByTeam[team.Team_id] && driversByTeam[team.Team_id].length > 0 && (
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {teamCars.map(car => (
+          <div
+            key={car.Car_id}
+            className={cn(
+              "p-4 rounded-lg border-2 cursor-pointer transition-all duration-200",
+              selectedParticipants.some(p => p.carId === car.Car_id)
+                ? "border-primary bg-primary/10"
+                : "border-border bg-card hover:border-primary/50"
+            )}
+            onClick={() => addParticipant(car)}
+          >
+            <div className="flex justify-between items-start mb-2">
+              <div>
+                <h4 className="font-semibold">Carro #{car.Car_id}</h4>
+                <p className="text-sm text-muted-foreground">Equipo: {team.Name}</p>
+              </div>
+              <Badge variant="outline" className="ml-2">
+                {car.Installed_Categories}/5 categorías
+              </Badge>
             </div>
-          ) : driversByTeam[team.Team_id].length === 0 ? (
-            <div className="text-center py-4 text-destructive">
-              <AlertCircle className="w-6 h-6 mx-auto mb-2" />
-              <p className="text-sm">Este equipo no tiene conductores asignados</p>
+            
+            <div className="grid grid-cols-3 gap-2 mb-3">
+              <div className="text-center p-2 rounded bg-primary/10">
+                <p className="text-xs text-muted-foreground">P</p>
+                <p className="font-bold">{car.Total_P || 0}</p>
+              </div>
+              <div className="text-center p-2 rounded bg-primary/10">
+                <p className="text-xs text-muted-foreground">A</p>
+                <p className="font-bold">{car.Total_A || 0}</p>
+              </div>
+              <div className="text-center p-2 rounded bg-primary/10">
+                <p className="text-xs text-muted-foreground">M</p>
+                <p className="font-bold">{car.Total_M || 0}</p>
+              </div>
             </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {teamCars.map(car => (
-                <div
-                  key={car.Car_id}
-                  className={cn(
-                    "p-4 rounded-lg border-2 cursor-pointer transition-all duration-200",
-                    selectedParticipants.some(p => p.carId === car.Car_id)
-                      ? "border-primary bg-primary/10"
-                      : "border-border bg-card hover:border-primary/50"
-                  )}
-                  onClick={() => addParticipant(car)}
-                >
-                  {/* ... resto del código ... */}
-                </div>
-              ))}
+            
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1">
+                <User className="w-4 h-4 text-muted-foreground" />
+                <span className="text-sm">
+                  {driversByTeam[team.Team_id]?.length || 0} conductor(es) disponible(s)
+                </span>
+              </div>
+              <Badge variant="secondary">
+                {selectedParticipants.some(p => p.carId === car.Car_id) ? "Seleccionado" : "Disponible"}
+              </Badge>
             </div>
-          )}
-        </div>
-      )}
+          </div>
+        ))}
+      </div>
+    )}
+  </div>
+)}
     </div>
   ) : null;
 })}
