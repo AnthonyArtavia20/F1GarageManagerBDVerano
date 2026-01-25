@@ -353,7 +353,95 @@ PRINT 'Inventarios creados: ' + CAST(@@ROWCOUNT AS VARCHAR);
 GO
 
 -- ============================================================================
--- RESULTADO FINAL
+-- 12. INSERTAR SIMULACIONES DE PRUEBA (NUEVO)
+-- ============================================================================
+PRINT 'Insertando Simulaciones de prueba...';
+
+-- Primero, insertar algunas simulaciones
+INSERT INTO SIMULATION (Circuit_id, Created_by_admin_id, Data_time) VALUES
+(1, (SELECT User_id FROM [USER] WHERE Username = 'admin'), DATEADD(DAY, -7, GETDATE())),
+(2, (SELECT User_id FROM [USER] WHERE Username = 'admin'), DATEADD(DAY, -6, GETDATE())),
+(3, (SELECT User_id FROM [USER] WHERE Username = 'admin'), DATEADD(DAY, -5, GETDATE())),
+(4, (SELECT User_id FROM [USER] WHERE Username = 'admin'), DATEADD(DAY, -4, GETDATE())),
+(5, (SELECT User_id FROM [USER] WHERE Username = 'admin'), DATEADD(DAY, -3, GETDATE()));
+
+-- Primero necesitamos comprar algunas partes e instalar en carros para poder tener simulaciones
+PRINT 'Comprando partes e instalando para pruebas de simulaciones...';
+
+-- Mercedes compra partes
+INSERT INTO PURCHASE (Engineer_User_id, Part_id, Quantity, Unit_price, Total_price) VALUES
+((SELECT User_id FROM [USER] WHERE Username = 'engineer_mercedes'), 1, 1, 1200000, 1200000),
+((SELECT User_id FROM [USER] WHERE Username = 'engineer_mercedes'), 6, 1, 550000, 550000),
+((SELECT User_id FROM [USER] WHERE Username = 'engineer_mercedes'), 11, 1, 220000, 220000),
+((SELECT User_id FROM [USER] WHERE Username = 'engineer_mercedes'), 16, 1, 450000, 450000),
+((SELECT User_id FROM [USER] WHERE Username = 'engineer_mercedes'), 21, 1, 420000, 420000);
+
+-- Agregar al inventario de Mercedes
+INSERT INTO INVENTORY_PART (Inventory_id, Part_id, Quantity, Acquisition_date) VALUES
+(1, 1, 1, GETDATE()),
+(1, 6, 1, GETDATE()),
+(1, 11, 1, GETDATE()),
+(1, 16, 1, GETDATE()),
+(1, 21, 1, GETDATE());
+
+-- Instalar partes en el carro 1 de Mercedes
+INSERT INTO CAR_CONFIGURATION (Car_id, Part_Category, Part_id) VALUES
+(1, 'Power_Unit', 1),
+(1, 'Aerodynamics_pkg', 6),
+(1, 'Wheels', 11),
+(1, 'Suspension', 16),
+(1, 'Gearbox', 21);
+
+-- Marcar carro como finalizado
+UPDATE CAR SET isFinalized = 1 WHERE Car_id = 1;
+
+-- Red Bull hace lo mismo para su primer carro
+INSERT INTO PURCHASE (Engineer_User_id, Part_id, Quantity, Unit_price, Total_price) VALUES
+((SELECT User_id FROM [USER] WHERE Username = 'engineer_redbull'), 2, 1, 1100000, 1100000),
+((SELECT User_id FROM [USER] WHERE Username = 'engineer_redbull'), 7, 1, 650000, 650000),
+((SELECT User_id FROM [USER] WHERE Username = 'engineer_redbull'), 12, 1, 180000, 180000),
+((SELECT User_id FROM [USER] WHERE Username = 'engineer_redbull'), 17, 1, 380000, 380000),
+((SELECT User_id FROM [USER] WHERE Username = 'engineer_redbull'), 22, 1, 350000, 350000);
+
+INSERT INTO INVENTORY_PART (Inventory_id, Part_id, Quantity, Acquisition_date) VALUES
+(2, 2, 1, GETDATE()),
+(2, 7, 1, GETDATE()),
+(2, 12, 1, GETDATE()),
+(2, 17, 1, GETDATE()),
+(2, 22, 1, GETDATE());
+
+INSERT INTO CAR_CONFIGURATION (Car_id, Part_Category, Part_id) VALUES
+(2, 'Power_Unit', 2),
+(2, 'Aerodynamics_pkg', 7),
+(2, 'Wheels', 12),
+(2, 'Suspension', 17),
+(2, 'Gearbox', 22);
+
+UPDATE CAR SET isFinalized = 1 WHERE Car_id = 2;
+
+-- Ahora insertar participantes en simulaciones
+PRINT 'Insertando participantes en simulaciones...';
+
+-- Simulación 1: Monza
+INSERT INTO SIMULATION_PARTICIPANT (simulation_id, car_id, driver_id, team_id, position, time_seconds, v_recta, v_curva, penalty, setup_p, setup_a, setup_m, driver_h) VALUES
+(1, 1, (SELECT User_id FROM [USER] WHERE Username = 'hamilton'), 1, 1, 5200.45, 350.2, 150.8, 2.5, 9, 3, 2, 95),
+(1, 2, (SELECT User_id FROM [USER] WHERE Username = 'verstappen'), 2, 2, 5250.12, 345.8, 148.3, 3.1, 8, 4, 3, 98);
+
+-- Simulación 2: Silverstone
+INSERT INTO SIMULATION_PARTICIPANT (simulation_id, car_id, driver_id, team_id, position, time_seconds, v_recta, v_curva, penalty, setup_p, setup_a, setup_m, driver_h) VALUES
+(2, 1, (SELECT User_id FROM [USER] WHERE Username = 'hamilton'), 1, 2, 6200.75, 340.1, 145.6, 3.8, 9, 3, 2, 95),
+(2, 2, (SELECT User_id FROM [USER] WHERE Username = 'verstappen'), 2, 1, 6150.23, 348.5, 152.1, 2.2, 8, 4, 3, 98);
+
+-- Simulación 3: Suzuka
+INSERT INTO SIMULATION_PARTICIPANT (simulation_id, car_id, driver_id, team_id, position, time_seconds, v_recta, v_curva, penalty, setup_p, setup_a, setup_m, driver_h) VALUES
+(3, 1, (SELECT User_id FROM [USER] WHERE Username = 'hamilton'), 1, 1, 5800.89, 355.4, 155.2, 1.8, 9, 3, 2, 95),
+(3, 2, (SELECT User_id FROM [USER] WHERE Username = 'verstappen'), 2, 2, 5850.34, 352.1, 151.7, 2.5, 8, 4, 3, 98);
+
+PRINT 'Datos de simulaciones insertados correctamente';
+GO
+
+-- ============================================================================
+-- RESULTADO FINAL (actualizado)
 -- ============================================================================
 PRINT '';
 PRINT '============================================================================';
@@ -362,19 +450,19 @@ PRINT '=========================================================================
 PRINT 'RESUMEN:';
 PRINT '--------';
 PRINT '- Sponsors: 17';
-PRINT '- Equipos: 10 (Mercedes, Red Bull, Ferrari, McLaren, Aston Martin, Alpine, Williams, AlphaTauri, Alfa Romeo, Haas)';
-PRINT '- Aportes: 21 (presupuestos actualizados)';
-PRINT '- Partes en catálogo: 25 (5 de cada categoría)';
+PRINT '- Equipos: 10';
+PRINT '- Aportes: 21';
+PRINT '- Partes en catálogo: 25';
 PRINT '- Circuitos: 10';
-PRINT '- Usuarios: 31 (1 admin + 10 engineers + 20 drivers)';
+PRINT '- Usuarios: 31';
 PRINT '- Admin: 1';
-PRINT '- Engineers: 10 (1 por equipo)';
-PRINT '- Drivers: 20 (2 por equipo)';
-PRINT '- Carros: 20 (2 por equipo)';
-PRINT '- Inventarios: 10 (1 por equipo, TODOS VACÍOS)';
+PRINT '- Engineers: 10';
+PRINT '- Drivers: 20';
+PRINT '- Carros: 20 (2 completos para pruebas)';
+PRINT '- Inventarios: 10';
+PRINT '- Simulaciones: 5';
+PRINT '- Participaciones en simulaciones: 6';
 PRINT '';
-PRINT 'NOTA: Los inventarios están vacíos intencionalmente.';
-PRINT '      Para ensamblar autos, primero debes comprar partes desde la tienda.';
 PRINT '============================================================================';
 GO
 
@@ -457,6 +545,72 @@ IF (SELECT COUNT(*) FROM INVENTORY_PART) = 0
        PRINT '✓ Correcto: Ninguna parte en inventarios (listo para compras)';
 ELSE
        PRINT '✗ Error: Hay partes en inventarios';
+GO
+
+PRINT '============================================================================';
+PRINT 'DATOS DE SIMULACIONES PARA GRAFANA';
+PRINT '============================================================================';
+GO
+
+-- 1. Datos de simulaciones para gráficos
+PRINT '1. RESULTADOS DE SIMULACIONES';
+SELECT 
+    s.Simulation_id,
+    c.Name AS Circuito,
+    FORMAT(s.Data_time, 'yyyy-MM-dd HH:mm') AS Fecha_Simulacion,
+    t.Name AS Equipo,
+    u.Username AS Piloto,
+    sp.position AS Posicion,
+    CONCAT(FLOOR(sp.time_seconds/60), ':', FORMAT(sp.time_seconds%60, '00.000')) AS Tiempo_Total,
+    sp.v_recta AS Velocidad_Recta,
+    sp.v_curva AS Velocidad_Curva,
+    sp.penalty AS Penalizacion,
+    CONCAT('P:', sp.setup_p, ' A:', sp.setup_a, ' M:', sp.setup_m) AS Setup_Carro,
+    sp.driver_h AS Habilidad_Piloto
+FROM SIMULATION s
+JOIN CIRCUIT c ON s.Circuit_id = c.Circuit_id
+JOIN SIMULATION_PARTICIPANT sp ON s.Simulation_id = sp.simulation_id
+JOIN TEAM t ON sp.team_id = t.Team_id
+JOIN DRIVER d ON sp.driver_id = d.User_id
+JOIN [USER] u ON d.User_id = u.User_id
+ORDER BY s.Data_time DESC, sp.position ASC;
+GO
+
+-- 2. Estadísticas por equipo
+PRINT '2. ESTADÍSTICAS POR EQUIPO';
+SELECT 
+    t.Name AS Equipo,
+    COUNT(DISTINCT sp.simulation_id) AS Total_Simulaciones,
+    COUNT(sp.car_id) AS Total_Participaciones,
+    AVG(sp.position) AS Posicion_Promedio,
+    MIN(sp.position) AS Mejor_Posicion,
+    AVG(sp.time_seconds) AS Tiempo_Promedio,
+    AVG(sp.v_recta) AS Velocidad_Recta_Promedio,
+    AVG(sp.v_curva) AS Velocidad_Curva_Promedio
+FROM SIMULATION_PARTICIPANT sp
+JOIN TEAM t ON sp.team_id = t.Team_id
+GROUP BY t.Name
+ORDER BY Posicion_Promedio ASC;
+GO
+
+-- 3. Evolución de tiempos por piloto
+PRINT '3. EVOLUCIÓN DE TIEMPOS POR PILOTO';
+SELECT 
+    u.Username AS Piloto,
+    t.Name AS Equipo,
+    s.Data_time AS Fecha,
+    c.Name AS Circuito,
+    sp.time_seconds AS Tiempo,
+    sp.position AS Posicion,
+    LAG(sp.time_seconds) OVER (PARTITION BY sp.driver_id ORDER BY s.Data_time) AS Tiempo_Anterior,
+    sp.time_seconds - LAG(sp.time_seconds) OVER (PARTITION BY sp.driver_id ORDER BY s.Data_time) AS Diferencia
+FROM SIMULATION_PARTICIPANT sp
+JOIN SIMULATION s ON sp.simulation_id = s.Simulation_id
+JOIN CIRCUIT c ON s.Circuit_id = c.Circuit_id
+JOIN DRIVER d ON sp.driver_id = d.User_id
+JOIN [USER] u ON d.User_id = u.User_id
+JOIN TEAM t ON sp.team_id = t.Team_id
+ORDER BY u.Username, s.Data_time;
 GO
 
 PRINT '';

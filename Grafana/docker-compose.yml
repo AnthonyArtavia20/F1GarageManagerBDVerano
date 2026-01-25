@@ -1,0 +1,27 @@
+services:
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana-f1
+    ports:
+      - "3002:3000"
+    environment:
+      - GF_SECURITY_ALLOW_EMBEDDING=true
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Viewer
+      - GF_AUTH_ANONYMOUS_ORG_NAME=Main Org.
+      
+      - GF_SECURITY_CORS_ALLOW_ORIGIN=*
+      - GF_SECURITY_CORS_ALLOW_HEADERS=Content-Type,Authorization,Accept
+      - GF_SECURITY_CORS_ALLOW_METHODS=GET,POST,OPTIONS
+      - GF_SECURITY_CORS_ALLOW_CREDENTIALS=true
+      - GF_SECURITY_CORS_EXPOSE_HEADERS=*
+
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - grafana_data:/var/lib/grafana
+
+volumes:
+  grafana_data:
