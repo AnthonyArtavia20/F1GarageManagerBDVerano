@@ -12,6 +12,12 @@ export function useAuth() {
   const [user, setUser] = useState<SessionUser | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const storedUser = JSON.parse(localStorage.getItem("user") || "null");
+  return { 
+    user: storedUser,
+    isAdmin: storedUser?.role === "admin",
+   };
+
   async function refresh() {
     setLoading(true);
     const { res, data } = await apiFetch("/api/auth/me", { method: "GET" });
