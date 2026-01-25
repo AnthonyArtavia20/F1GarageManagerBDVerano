@@ -7,7 +7,7 @@ exports.register = async (req, res) => {
     const { username, password } = req.body;
     
     if (!username || !password) {
-      return res.status(400).json({
+      return res.status(200).json({ //se cambia de 401(Unauthorized) para 200 OK + success: false, para errores de validación/negocio (credenciales incorrectas, campos faltantes, etc.)
         success: false,
         message: "Username and password are required"
       });
@@ -20,7 +20,7 @@ exports.register = async (req, res) => {
       .query('SELECT User_id FROM [USER] WHERE Username = @username');
     
     if (checkResult.recordset.length > 0) {
-      return res.status(409).json({
+      return res.status(200).json({
         success: false,
         message: "Username already exists"
       });
@@ -65,7 +65,7 @@ exports.login = async (req, res) => {
     console.log(`   Contraseña recibida: "${password}"`);
     
     if (!username || !password) {
-      return res.status(400).json({
+      return res.status(200).json({ //Cambio de 400 a 200 para poder mostrar correctamente el feedback
         success: false,
         message: "Username and password are required"
       });
@@ -103,7 +103,7 @@ exports.login = async (req, res) => {
     
     if (result.recordset.length === 0) {
       console.log(`❌ [LOGIN] Usuario no encontrado: ${username}`);
-      return res.status(401).json({
+      return res.status(200).json({ //En lugar de 401, 200, para mostrar la feedback
         success: false,
         message: "Invalid credentials"
       });
@@ -184,7 +184,7 @@ exports.login = async (req, res) => {
       console.log(`   Método usado: ${authMethod}`);
       console.log(`   ¿Necesitas convertir usuarios Windows a texto plano?`);
       
-      return res.status(401).json({
+      return res.status(200).json({ // De igual forma pasamos de 401 a 20 para mostrar errores desde la BD
         success: false,
         message: "Invalid credentials"
       });

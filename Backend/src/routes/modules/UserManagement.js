@@ -101,8 +101,7 @@ router.put('/:userId/update', async (req, res) => {
         let salt = null;
         let passwordHash = null;
 
-        // Si se proporciona nueva contraseña, generar nuevo hash
-        if (password) {
+        if (password) { // Si se proporciona nueva contraseña, generar nuevo hash
         const saltRounds = 10;
         salt = await bcrypt.genSalt(saltRounds);
         passwordHash = await bcrypt.hash(password, salt);
@@ -110,7 +109,6 @@ router.put('/:userId/update', async (req, res) => {
     }
 
     const pool = await mssqlConnect();
-
     const result = await pool.request()
         .input('UserId', sql.Int, parseInt(userId))
         .input('NewUsername', sql.NVarChar(100), username || null)
@@ -121,9 +119,7 @@ router.put('/:userId/update', async (req, res) => {
         .execute('sp_UpdateUser');
 
     const userData = result.recordset[0];
-
-    console.log(`✅ User updated: ${userData.Username}`);
-
+    console.log(`✅ User updated: ${userData.Username}`)
     res.json({ 
         success: true, 
         message: userData.Message,
@@ -134,12 +130,22 @@ router.put('/:userId/update', async (req, res) => {
         teamId: userData.Team_id
         }
     });
-
     } catch (error) {
         console.error('❌ Error updating user:', error);
-        res.status(500).json({ 
-        success: false,
-        error: error.message 
+        let errorMessage = 'Error al actualizar usuario' //captura errores que el SQLServer pase desde los SP
+
+        if (error.number === 51004) {
+            errorMessage = 'Usuario no encontrado';
+        } else if (error.number === 51005) {
+            errorMessage = 'El nombre de usuario ya existe';
+        } else if (error.number === 51006 || error.number === 51007) {
+            errorMessage = 'El equipo es requerido para este rol';
+        } else if (error.message) {
+            errorMessage = error.message;
+        }
+        res.status(error.number === 51004 ? 404 : 500).json({ 
+            success: false,
+            error: errorMessage
         });
     }
 });
