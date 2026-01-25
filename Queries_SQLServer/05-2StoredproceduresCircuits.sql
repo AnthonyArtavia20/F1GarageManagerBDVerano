@@ -88,6 +88,7 @@ GO
 -- SP: Obtener todos los circuitos
 -- ============================================================================
 CREATE OR ALTER PROCEDURE sp_GetAllCircuits
+    @dc DECIMAL(10,2) = 0.5
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -97,9 +98,14 @@ BEGIN
         Name,
         Total_distance,
         N_Curves,
-        -- Calcular distancias para preview (asumiendo dc = 0.5 km como default)
-        (N_Curves * 0.5) AS Calculated_Curve_Distance,
-        (Total_distance - (N_Curves * 0.5)) AS Calculated_Straight_Distance
+        -- Calcular distancias para preview
+        (N_Curves * @dc) AS Calculated_Curve_Distance,
+        (Total_distance - (N_Curves * @dc)) AS Calculated_Straight_Distance,
+        -- Validación: D_rectas >= 0 (PODRÍA SER 0)
+        CASE 
+            WHEN (Total_distance - (N_Curves * @dc)) >= 0 THEN 1
+            ELSE 0
+        END AS IsValid
     FROM CIRCUIT
     ORDER BY Name;
 END
