@@ -13,6 +13,7 @@ const sponsorsRoutes = require('./routes/sponsorsRoutes');
 const teamsRoutes = require('./routes/teamsRoutes');
 const authRoutes = require('./routes/authRoutes');
 const inventoryRoutes = require('./routes/inventoryRoutes');
+const circuitsRoutes = require('./routes/circuitsRoutes');
 
 const carAssemblyRoutes = require('./routes/modules/CarAssembly');
 
@@ -111,6 +112,7 @@ app.use('/api/parts', partsRoutes);
 app.use('/api/sponsors', sponsorsRoutes);
 app.use('/api/teams', teamsRoutes);
 app.use('/api/inventory', inventoryRoutes);
+app.use('/api/circuits', circuitsRoutes);
 
 // ===== MANEJO DE ERRORES =====
 
