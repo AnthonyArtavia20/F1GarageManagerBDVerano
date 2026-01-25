@@ -105,7 +105,7 @@ exports.login = async (req, res) => {
       console.log(`❌ [LOGIN] Usuario no encontrado: ${username}`);
       return res.status(200).json({ //En lugar de 401, 200, para mostrar la feedback
         success: false,
-        message: "Invalid credentials"
+        message: "Usuario no encontrado"
       });
     }
     
@@ -171,7 +171,7 @@ exports.login = async (req, res) => {
       // También verificar si coincide directamente con PasswordHash
       if (!isValidPassword && password === user.PasswordHash) {
         isValidPassword = true;
-        console.log(`   ✅ Coincide directamente con PasswordHash`);
+        console.log(` Coincide directamente con PasswordHash`);
       }
     }
     
@@ -186,7 +186,7 @@ exports.login = async (req, res) => {
       
       return res.status(200).json({ // De igual forma pasamos de 401 a 20 para mostrar errores desde la BD
         success: false,
-        message: "Invalid credentials"
+        message: "Contraseña incorrecta"
       });
     }
     
