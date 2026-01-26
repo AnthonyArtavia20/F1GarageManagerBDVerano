@@ -32,7 +32,7 @@ BEGIN
         WHERE e.User_id = p.Engineer_User_id AND e.Team_id = @Team_id
     ) OR EXISTS (
         SELECT 1 FROM ADMIN a 
-        WHERE a.User_id = p.Engineer_User_id and a.Team_id = @Team_id
+        WHERE a.User_id = p.Engineer_User_id
     );
 
     SELECT
