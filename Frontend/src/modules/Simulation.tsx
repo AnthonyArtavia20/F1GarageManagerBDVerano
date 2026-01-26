@@ -2,7 +2,8 @@ import { useState, useEffect } from "react";
 import { 
   Play, Trophy, Clock, Gauge, Timer, Flag, Car, Users, 
   CheckCircle, XCircle, AlertCircle, ChevronDown, ChevronUp,
-  Download, Trash2, Eye, Filter, RefreshCw, User, Settings
+  Download, Trash2, Eye, Filter, RefreshCw, User, Settings,
+  Package // Icono nuevo para piezas
 } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
@@ -73,6 +74,17 @@ interface SimulationParticipant {
   Driver_H: number;
 }
 
+interface SetupDetail {
+  category: string;
+  part_id: number;
+  Part_Name: string;
+  part_p: number;
+  part_a: number;
+  part_m: number;
+  car_id: number;
+  Team_Name: string;
+}
+
 interface SimulationResult {
   simulation: {
     Simulation_id: number;
@@ -83,16 +95,7 @@ interface SimulationResult {
     Created_By_Username: string;
   };
   participants: SimulationParticipant[];
-  setupDetails: Array<{
-    category: string;
-    part_id: number;
-    Part_Name: string;
-    part_p: number;
-    part_a: number;
-    part_m: number;
-    car_id: number;
-    Team_Name: string;
-  }>;
+  setupDetails: SetupDetail[];
 }
 
 interface SelectedParticipant {
@@ -118,6 +121,7 @@ const Simulation = () => {
   const [driversByTeam, setDriversByTeam] = useState<Record<number, Driver[]>>({});
   const [selectedParticipants, setSelectedParticipants] = useState<SelectedParticipant[]>([]);
   const [expandedTeams, setExpandedTeams] = useState<number[]>([]);
+  const [expandedCarDetails, setExpandedCarDetails] = useState<number[]>([]); // Nuevo estado para detalles de carros
   const [isLoading, setIsLoading] = useState({
     circuits: true,
     teams: true,
@@ -224,6 +228,38 @@ const Simulation = () => {
     } catch (err) {
       console.error("Error al cargar historial:", err);
     }
+  };
+
+  // Función para alternar la expansión de detalles de un carro
+  const toggleCarDetails = (carId: number) => {
+    setExpandedCarDetails(prev => {
+      if (prev.includes(carId)) {
+        return prev.filter(id => id !== carId);
+      } else {
+        return [...prev, carId];
+      }
+    });
+  };
+
+  // Función para obtener las piezas de un carro específico
+  const getCarSetupDetails = (carId: number): SetupDetail[] => {
+    if (!simulationResults) return [];
+    return simulationResults.setupDetails.filter(detail => detail.car_id === carId);
+  };
+
+  // Función para agrupar piezas por categoría
+  const groupSetupByCategory = (carId: number) => {
+    const details = getCarSetupDetails(carId);
+    const grouped: Record<string, SetupDetail[]> = {};
+    
+    details.forEach(detail => {
+      if (!grouped[detail.category]) {
+        grouped[detail.category] = [];
+      }
+      grouped[detail.category].push(detail);
+    });
+    
+    return grouped;
   };
 
   const toggleTeamExpansion = (teamId: number) => {
@@ -994,34 +1030,96 @@ const Simulation = () => {
                               <th className="text-left p-3">V.Curva</th>
                               <th className="text-left p-3">Penalización</th>
                               <th className="text-left p-3">P/A/M/H</th>
+                              <th className="text-left p-3">Piezas</th>
                             </tr>
                           </thead>
                           <tbody>
-                            {simulationResults.participants.map(participant => (
-                              <tr key={participant.Car_id} className="border-b hover:bg-accent/30">
-                                <td className="p-3 font-bold">{participant.position}</td>
-                                <td className="p-3">{participant.Team_Name}</td>
-                                <td className="p-3">#{participant.Car_id}</td>
-                                <td className="p-3">
-                                  {participant.Driver_Username}
-                                  <span className="text-xs text-muted-foreground block">H: {participant.Driver_H}</span>
-                                </td>
-                                <td className="p-3 font-mono">{formatTime(participant.time_seconds)}</td>
-                                <td className="p-3">{participant.v_recta.toFixed(1)} km/h</td>
-                                <td className="p-3">{participant.v_curva.toFixed(1)} km/h</td>
-                                <td className="p-3">{participant.penalty.toFixed(2)}s</td>
-                                <td className="p-3">
-                                  <div className="flex gap-1">
-                                    <Badge variant="secondary" className="text-xs">{participant.setup_p}</Badge>
-                                    <Badge variant="secondary" className="text-xs">{participant.setup_a}</Badge>
-                                    <Badge variant="secondary" className="text-xs">{participant.setup_m}</Badge>
-                                    <Badge variant="outline" className="text-xs">{participant.driver_h}</Badge>
-                                  </div>
-                                </td>
-                              </tr>
-                            ))}
+                            {simulationResults.participants.map(participant => {
+                              const isExpanded = expandedCarDetails.includes(participant.Car_id);
+                              const carSetupDetails = groupSetupByCategory(participant.Car_id);
+                              
+                              return (
+                                <>
+                                  <tr key={participant.Car_id} className="border-b hover:bg-accent/30">
+                                    <td className="p-3 font-bold">{participant.position}</td>
+                                    <td className="p-3">{participant.Team_Name}</td>
+                                    <td className="p-3">#{participant.Car_id}</td>
+                                    <td className="p-3">
+                                      {participant.Driver_Username}
+                                      <span className="text-xs text-muted-foreground block">H: {participant.Driver_H}</span>
+                                    </td>
+                                    <td className="p-3 font-mono">{formatTime(participant.time_seconds)}</td>
+                                    <td className="p-3">{participant.v_recta.toFixed(1)} km/h</td>
+                                    <td className="p-3">{participant.v_curva.toFixed(1)} km/h</td>
+                                    <td className="p-3">{participant.penalty.toFixed(2)}s</td>
+                                    <td className="p-3">
+                                      <div className="flex gap-1">
+                                        <Badge variant="secondary" className="text-xs">{participant.setup_p}</Badge>
+                                        <Badge variant="secondary" className="text-xs">{participant.setup_a}</Badge>
+                                        <Badge variant="secondary" className="text-xs">{participant.setup_m}</Badge>
+                                        <Badge variant="outline" className="text-xs">{participant.driver_h}</Badge>
+                                      </div>
+                                    </td>
+                                    <td className="p-3">
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => toggleCarDetails(participant.Car_id)}
+                                        className="flex items-center gap-1"
+                                      >
+                                        <Package className="w-4 h-4" />
+                                        {isExpanded ? (
+                                          <ChevronUp className="w-4 h-4" />
+                                        ) : (
+                                          <ChevronDown className="w-4 h-4" />
+                                        )}
+                                      </Button>
+                                    </td>
+                                  </tr>
+                                  
+                                  {/* Fila expandida con detalles de piezas */}
+                                  {isExpanded && (
+                                    <tr className="border-b bg-accent/20">
+                                      <td colSpan={10} className="p-4">
+                                        <div className="ml-8">
+                                          <h4 className="font-semibold mb-3 flex items-center gap-2">
+                                            <Package className="w-4 h-4" />
+                                            Piezas Instaladas - Carro #{participant.Car_id} ({participant.Team_Name})
+                                          </h4>
+                                          
+                                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                                            {Object.entries(carSetupDetails).map(([category, parts]) => (
+                                              <div key={category} className="border rounded-lg p-4 bg-card">
+                                                <h5 className="font-medium mb-2 text-sm">
+                                                  {category.replace('_', ' ')}
+                                                </h5>
+                                                {parts.map(part => (
+                                                  <div key={part.part_id} className="mb-3 last:mb-0">
+                                                    <div className="font-medium text-sm">{part.Part_Name}</div>
+                                                  </div>
+                                                ))}
+                                              </div>
+                                            ))}
+                                          </div>
+                                        </div>
+                                      </td>
+                                    </tr>
+                                  )}
+                                </>
+                              );
+                            })}
                           </tbody>
                         </table>
+                      </div>
+                      
+                      {/* Nota informativa */}
+                      <div className="mt-4 p-3 rounded-lg bg-accent/50 text-sm">
+                        <p className="flex items-center gap-2">
+                          <Package className="w-4 h-4" />
+                          <span>
+                            Haz clic en el botón <strong>Piezas</strong> para ver los detalles de configuración de cada carro participante.
+                          </span>
+                        </p>
                       </div>
                     </CardContent>
                   </Card>
@@ -1043,6 +1141,8 @@ const Simulation = () => {
               </Card>
             )}
           </TabsContent>
+
+
 
           {/* Tab: Historial */}
           <TabsContent value="history">
