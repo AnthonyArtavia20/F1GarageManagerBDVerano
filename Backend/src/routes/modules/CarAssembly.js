@@ -14,12 +14,17 @@ const { mssqlConnect, sql } = require('../../config/database');
 router.post('/install-part', async (req, res) => {
   try {
     const { carId, partId, teamId } = req.body;
+    console.log('[INSTALL-PART] Request body:', { carId, partId, teamId });
 
     if (!carId || !partId || !teamId) {
-      return res.status(400).json({ error: 'carId, partId, teamId requeridos' });
+      return res.status(400).json({ 
+        success: false,
+        error: 'carId, partId, teamId requeridos' 
+      });
     }
 
     const pool = await mssqlConnect();
+    console.log(`[INSTALL-PART] Executing SP with: Car=${carId}, Part=${partId}, Team=${teamId}`);
 
     const result = await pool.request()
       .input('Car_id', sql.Int, carId)
@@ -27,9 +32,15 @@ router.post('/install-part', async (req, res) => {
       .input('Team_id', sql.Int, teamId)
       .execute('sp_InstallPart');
 
+      console.log('✅ [INSTALL-PART] Part installed successfully');
+
     res.json({ success: true, message: 'Parte instalada exitosamente' });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('❌ [INSTALL-PART] Error:', error);
+    res.status(500).json({ 
+      success: false,
+      error: error.message 
+    });
   }
 });
 
@@ -41,12 +52,17 @@ router.post('/replace-part', async (req, res) => {
   try {
     const { carId, oldPartId, newPartId, teamId } = req.body;
     
+    console.log('📦 [REPLACE-PART] Request body:', { carId, oldPartId, newPartId, teamId });
+
     if (!carId || !oldPartId || !newPartId || !teamId) {
-      return res.status(400).json({ error: 'carId, oldPartId, newPartId, teamId requeridos' });
+      return res.status(400).json({ 
+        success: false,
+        error: 'carId, oldPartId, newPartId, teamId requeridos' 
+      });
     }
     
     const pool = await mssqlConnect();
-
+    console.log(`📦 [REPLACE-PART] Executing SP: Car=${carId}, Old=${oldPartId}, New=${newPartId}, Team=${teamId}`);
     const result = await pool.request()
       .input('Car_id', sql.Int, carId)
       .input('OldPart_id', sql.Int, oldPartId)
@@ -54,6 +70,7 @@ router.post('/replace-part', async (req, res) => {
       .input('Team_id', sql.Int, teamId)
       .execute('sp_ReplacePart');
 
+    console.log('✅ [REPLACE-PART] Part replaced successfully');
     res.json({ success: true, message: 'Parte reemplazada exitosamente' });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -304,6 +321,44 @@ router.get('/car-configuration/:carId', async (req, res) => {
     });
   } catch (error) {
     console.error('Error en car-configuration:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message 
+    });
+  }
+});
+
+/** Nuevo Endpoint para gurdar correctamente un carro en un equipo
+ * GET /api/sp/assembly/team-cars/:teamId
+ * Obtiene los carros de un equipo
+ */
+router.get('/team-cars/:teamId', async (req, res) => {
+  try {
+    const { teamId } = req.params;
+    const pool = await mssqlConnect();
+    
+    console.log(`[ModuloArmado] Fetching cars for team ${teamId}`);
+    
+    const result = await pool.request()
+      .input('Team_id', sql.Int, parseInt(teamId))
+      .query(`
+        SELECT 
+          Car_id,
+          Team_id,
+          isFinalized
+        FROM CAR
+        WHERE Team_id = @Team_id
+        ORDER BY Car_id
+      `);
+    
+    console.log(`[ModuloArmado] Found ${result.recordset.length} cars`);
+    
+    res.json({ 
+      success: true, 
+      data: result.recordset 
+    });
+  } catch (error) {
+    console.error('[ModuloArmado] Error:', error);
     res.status(500).json({ 
       success: false, 
       error: error.message 
