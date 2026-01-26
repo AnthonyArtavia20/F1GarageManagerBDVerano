@@ -30,6 +30,12 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { apiFetch } from "@/lib/api";
 
+/*
+============================================================================
+INTERFACES Y TIPOS
+============================================================================
+Define la estructura de un usuario tal como viene de la base de datos
+*/
 interface User {
   User_id: number;
   Username: string;
@@ -38,25 +44,30 @@ interface User {
   Team_name?: string;
 }
 
-type UserRole = "Admin" | "Engineer" | "Driver";
+type UserRole = "Admin" | "Engineer" | "Driver";// Tipo para los roles disponibles en el sistema
 
-interface FormData {
+interface FormData {// Estructura del formulario para crear/editar usuarios
   username: string;
   password: string;
   role: UserRole;
   teamId: string;
 }
-
+/*
+============================================================================
+COMPONENTE PRINCIPAL
+============================================================================
+*/
 const UserManagement = () => {
-  const [users, setUsers] = useState<User[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingUser, setEditingUser] = useState<User | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  //ESTADOS DEL COMPONENTE
+  const [users, setUsers] = useState<User[]>([]);// Lista de todos los usuarios cargados desde la BD
+  const [loading, setLoading] = useState(false);// Estado de carga para mostrar spinners
+  const [searchQuery, setSearchQuery] = useState("");// Query de búsqueda para filtrar usuarios localmente
+  const [isDialogOpen, setIsDialogOpen] = useState(false);// Query de búsqueda para filtrar usuarios localmente
+  const [editingUser, setEditingUser] = useState<User | null>(null);// Usuario que se está editando (null si se está creando uno nuevo)
+  const [error, setError] = useState<string | null>(null);// Mensajes de error para mostrar al usuario
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);// Mensajes de éxito para mostrar al usuario
 
-  // Form state
+  //Estado del formulario (username, password, role, teamId)
   const [formData, setFormData] = useState<FormData>({
     username: "",
     password: "",
@@ -64,13 +75,19 @@ const UserManagement = () => {
     teamId: "",
   });
   
-  // Cargar usuarios al montar
-  useEffect(() => {
+  /*
+  ============================================================================
+  EFECTOS (useEffect)
+  ============================================================================
+  */
+  useEffect(() => {// Cargar usuarios al montar el componente
     fetchUsers();
   }, []);
 
-  // Fetch all users
-  const fetchUsers = async () => {
+  // ============================================================================
+  // FUNCIONES DE API
+  // ============================================================================
+  const fetchUsers = async () => {// Obtiene todos los usuarios de la base de datos
     try {
       setLoading(true);
       setError(null);
@@ -80,7 +97,7 @@ const UserManagement = () => {
       const { res, data } = await apiFetch('/api/sp/users');
       
       if (res.ok && data.success) {
-        console.log(`✅ Loaded ${data.data.length} users`);
+        console.log(`Loaded ${data.data.length} users`);
         setUsers(data.data);
       } else {
         setError('Error al cargar usuarios');
@@ -93,6 +110,11 @@ const UserManagement = () => {
     }
   };
 
+  // ============================================================================
+  // FILTRADO LOCAL
+  // ============================================================================
+  // Filtra usuarios en el cliente (sin llamadas a API) basado en searchQuery
+  // Busca coincidencias en: Username, Role, y Team_name
   const filteredUsers = users.filter((user) => {
     const searchLower = searchQuery.toLowerCase();
     return (
@@ -102,11 +124,14 @@ const UserManagement = () => {
     );
   });
 
-  // Create or Update user
+  // ============================================================================
+  // HANDLERS DE FORMULARIO
+  // ============================================================================
+  // Maneja el envío del formulario (crear o actualizar usuario)
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Validaciones
+    //Validaciones básicas del formulario
     if (!formData.username.trim()) {
       setError('Username es requerido');
       return;
@@ -128,16 +153,16 @@ const UserManagement = () => {
       setSuccessMessage(null);
 
       if (editingUser) {
-        // UPDATE
+        //MODO EDICIÓN: Actualizar usuario existente
         console.log(`[UPDATE] Updating user ${editingUser.User_id}`);
         
-        const body: any = {
+        const body: any = {// Construir body solo con campos que cambiaron
           username: formData.username !== editingUser.Username ? formData.username : undefined,
           role: formData.role !== editingUser.Role ? formData.role : undefined,
           teamId: formData.teamId ? parseInt(formData.teamId) : undefined,
         };
         
-        // Solo incluir password si cambió
+        //Solo incluir password si el usuario ingresó uno nuevo
         if (formData.password.trim()) {
           body.password = formData.password;
         }
@@ -148,17 +173,18 @@ const UserManagement = () => {
         });
         
         if (res.ok && data.success) {
-          console.log('✅ User updated successfully');
+          console.log('User updated successfully');
           setSuccessMessage('Usuario actualizado exitosamente');
-          await fetchUsers();
-          resetForm();
+          await fetchUsers();// Recargar lista
+          resetForm();// Limpiar formulario
         } else {
           setError(data.error || 'Error al actualizar usuario');
         }
       } else {
-        // CREATE
+        // ============================================================================
+        // MODO CREACIÓN: Crear nuevo usuario
+        // =========================================================================
         console.log(`[CREATE] Creating new user: ${formData.username}`);
-        
         const { res, data } = await apiFetch('/api/sp/users/create', {
           method: 'POST',
           body: JSON.stringify({
@@ -172,8 +198,8 @@ const UserManagement = () => {
         if (res.ok && data.success) {
           console.log('✅ User created successfully');
           setSuccessMessage('Usuario creado exitosamente');
-          await fetchUsers();
-          resetForm();
+          await fetchUsers();// Recargar lista
+          resetForm();// Limpiar formulario
         } else {
           setError(data.error || 'Error al crear usuario');
         }
@@ -186,7 +212,10 @@ const UserManagement = () => {
     }
   };
 
-  // Reset form
+  /// ============================================================================
+  // UTILIDADES DE FORMULARIO
+  // ============================================================================
+  // Limpia el formulario y cierra el diálogo
   const resetForm = () => {
     setFormData({ username: "", password: "", role: "Driver", teamId: "" });
     setEditingUser(null);
@@ -194,12 +223,12 @@ const UserManagement = () => {
     setError(null);
   };
 
-  // Handle edit
+  // Carga los datos del usuario en el formulario para editar
   const handleEdit = (user: User) => {
     setEditingUser(user);
     setFormData({
       username: user.Username,
-      password: "",
+      password: "",// Vacío porque no queremos mostrar la contraseña actual
       role: user.Role,
       teamId: user.Team_id?.toString() || "",
     });
@@ -208,9 +237,13 @@ const UserManagement = () => {
     setSuccessMessage(null);
   };
 
+  // ============================================================================
+  // HANDLER DE ELIMINACIÓN
+  // ============================================================================
+  // Elimina un usuario después de confirmar
   // Handle delete
   const handleDelete = async (userId: number, username: string) => {
-    if (!confirm(`¿Estás seguro de eliminar al usuario "${username}"?`)) {
+    if (!confirm(`¿Estás seguro de eliminar al usuario "${username}"?`)) {// Confirmación antes de eliminar
       return;
     }
 
@@ -228,7 +261,7 @@ const UserManagement = () => {
       if (res.ok && data.success) {
         console.log('✅ User deleted successfully');
         setSuccessMessage('Usuario eliminado exitosamente');
-        await fetchUsers();
+        await fetchUsers();// Recargar lista
       } else {
         setError(data.error || 'Error al eliminar usuario');
       }
@@ -243,19 +276,23 @@ const UserManagement = () => {
   const getRoleBadgeVariant = (role: string) => {
     switch (role) {
       case "Admin":
-        return "destructive";
+        return "destructive"; //Rojo
       case "Engineer":
-        return "default";
+        return "default"; //Szul
       case "Driver":
-        return "secondary";
+        return "secondary"; //Gris
       default:
         return "outline";
     }
   };
 
+   // ============================================================================
+  // RENDER DEL COMPONENTE
+  // ============================================================================
   return (
     <MainLayout>
       <div className="p-8">
+        // HEADER - Título y botón de crear usuario
         {/* Header */}
         <div className="flex items-center justify-between mb-8 opacity-0 animate-fade-in">
           <div>
@@ -267,7 +304,7 @@ const UserManagement = () => {
             </p>
           </div>
 
-          {/* Create User Dialog */}
+          {/* DIÁLOGO DE CREAR/EDITAR USUARIO */}
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
               <Button 
@@ -290,8 +327,11 @@ const UserManagement = () => {
                 </DialogTitle>
               </DialogHeader>
               
+              {/* ============================================================================ */}
+              {/* FORMULARIO */}
+              {/* ============================================================================ */}
               <form onSubmit={handleSubmit} className="space-y-4 mt-4">
-                {/* Error Message */}
+                // Mensajes de error dentro del diálogo
                 {error && (
                   <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
                     <div className="flex items-center gap-2">
@@ -311,7 +351,7 @@ const UserManagement = () => {
                   </div>
                 )}
 
-                {/* Username */}
+                {/* Campo: Username */}
                 <div className="space-y-2">
                   <Label>Username</Label>
                   <Input
@@ -324,7 +364,7 @@ const UserManagement = () => {
                   />
                 </div>
 
-                {/* Password */}
+                {/* Campo: Password */}
                 <div className="space-y-2">
                   <Label>
                     Password 
@@ -345,7 +385,7 @@ const UserManagement = () => {
                   />
                 </div>
 
-                {/* Role */}
+                {/*Campo: Role */}
                 <div className="space-y-2">
                   <Label>Role</Label>
                   <Select
@@ -413,7 +453,7 @@ const UserManagement = () => {
           </Dialog>
         </div>
 
-        {/* Global Messages */}
+        {/* MENSAJES GLOBALES (fuera del diálogo) */}
         {error && !isDialogOpen && (
           <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-lg">
             <div className="flex items-center gap-2">
@@ -432,7 +472,7 @@ const UserManagement = () => {
           </div>
         )}
 
-        {/* Search */}
+        {/* BARRA DE BÚSQUEDA */}
         <div className="relative mb-6 opacity-0 animate-fade-in" style={{ animationDelay: "250ms" }}>
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
           <Input
@@ -444,15 +484,16 @@ const UserManagement = () => {
           />
         </div>
 
-        {/*Mostrar estadísticas de filtrado */}
+        {/* CONTADOR DE RESULTADOS */}
         {users.length > 0 && (
           <div className="mb-4 text-sm text-muted-foreground">
             Showing {filteredUsers.length} of {users.length} users
           </div>
         )}
 
-        {/* Users Table */}
+        {/* TABLA USUARIOS */}
         <div className="glass-card rounded-xl overflow-hidden opacity-0 animate-fade-in" style={{ animationDelay: "300ms" }}>
+          {/* Estado: Cargando */}
           {loading && users.length === 0 ? (
             <div className="p-12 text-center">
               <Loader2 className="w-8 h-8 text-primary mx-auto animate-spin mb-4" />
@@ -473,6 +514,7 @@ const UserManagement = () => {
               )}
             </div>
           ) : (
+            /*Estado: Mostrando usuarios*/
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
@@ -484,10 +526,10 @@ const UserManagement = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {/* ✅ CAMBIAR users.map por filteredUsers.map */}
+                  {/* Se cambia users.map por filteredUsers.map para una óptima búsqueda. Mapeo de usuarios fultrados*/}
                   {filteredUsers.map((user) => (
                     <TableRow key={user.User_id} className="border-border hover:bg-accent/20 transition-colors">
-                      {/* ... resto del código de la fila sin cambios ... */}
+                      //Columna: Usuario
                       <TableCell>
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
@@ -503,17 +545,17 @@ const UserManagement = () => {
                           </div>
                         </div>
                       </TableCell>
-                      <TableCell>
+                      <TableCell> // Columna: Rol, según color.
                         <Badge variant={getRoleBadgeVariant(user.Role)}>
                           {user.Role}
                         </Badge>
-                      </TableCell>
+                      </TableCell> //Equipo asignado
                       <TableCell className="font-medium text-foreground">
                         {user.Team_name || (
                           <span className="text-muted-foreground italic">—</span>
                         )}
                       </TableCell>
-                      <TableCell className="text-right">
+                      <TableCell className="text-right">//Acciones (editar/eliminar)
                         <div className="flex justify-end gap-2">
                           <Button 
                             variant="ghost" 
