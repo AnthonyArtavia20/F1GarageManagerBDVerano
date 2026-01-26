@@ -172,18 +172,25 @@ const CarAssembly = () => {
     try {
       setLoading(true);
       setError(null);
-
-      // Datos de ejemplo para desarrollo
-      const teamIdNum = parseInt(selectedTeam);
-      const mockTeamCars: TeamCar[] = [
-        { Car_id: (teamIdNum * 2) - 1, Team_id: teamIdNum, isFinalized: false },
-        { Car_id: teamIdNum * 2, Team_id: teamIdNum, isFinalized: false }
-      ];
-
-      setTeamCars(mockTeamCars);
-      setSelectedCarIndex(0);
       
-      console.log('Team cars loaded:', mockTeamCars);
+      console.log(`[ModuloArmado] Fetching cars for team ${selectedTeam}`);
+      const { res, data } = await apiFetch(`/api/sp/assembly/team-cars/${selectedTeam}`);
+
+      if (res.ok && data.success) {
+      console.log(`[ModuloArmado] Loaded ${data.data.length} real cars:`, data.data);
+      setTeamCars(data.data);
+      setSelectedCarIndex(0);
+      } else {
+        console.warn('⚠️ [ModuloArmado] No cars found, using mock data');
+        // Fallback a mock data
+        const teamIdNum = parseInt(selectedTeam);
+        const mockTeamCars: TeamCar[] = [
+          { Car_id: (teamIdNum * 2) - 1, Team_id: teamIdNum, isFinalized: false },
+          { Car_id: teamIdNum * 2, Team_id: teamIdNum, isFinalized: false }
+        ];
+        setTeamCars(mockTeamCars);
+        setSelectedCarIndex(0);
+      }
       
     } catch (err: any) {
       console.error('Error al cargar carros del equipo:', err);
@@ -197,7 +204,6 @@ const CarAssembly = () => {
       ];
       setTeamCars(mockTeamCars);
       setSelectedCarIndex(0);
-      
     } finally {
       setLoading(false);
     }
@@ -353,6 +359,14 @@ const CarAssembly = () => {
     try {
       setLoading(true);
       setError(null);
+
+      //LOGS PARA DEBUG
+      console.log('📦 [INSTALL] Estado actual:');
+      console.log('  - selectedTeam:', selectedTeam);
+      console.log('  - selectedTeamName:', selectedTeamName);
+      console.log('  - selectedCarId:', selectedCarId);
+      console.log('  - sessionUser:', sessionUser);
+      console.log('  - isAdmin:', isAdmin);
 
       const endpoint = isReplacement ? '/api/sp/assembly/replace-part' : '/api/sp/assembly/install-part';
       const body = isReplacement

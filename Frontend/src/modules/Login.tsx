@@ -10,7 +10,7 @@ import { apiFetch } from "@/lib/api";
 
 const Login = () => {
   const navigate = useNavigate();
-  const { refresh } = useAuth(); // ✅ OBTENER refresh del contexto
+  const { refresh } = useAuth();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -26,19 +26,28 @@ const Login = () => {
     setLoading(true);
     
     try {
-      console.log('🔐 [LOGIN] Starting login for:', username);
+      console.log(' [LOGIN] Starting login for:', username);
+      console.log(' [LOGIN] Password:', password);
       
       const { res, data } = await apiFetch("/api/auth/login", {
         method: "POST",
         body: JSON.stringify({ username, password }),
       });
 
-      console.log('🔐 [LOGIN] Response:', { status: res.status, data });
+      console.log('🔐 [LOGIN] Full response object:', res);
+      console.log('🔐 [LOGIN] Response status:', res.status);
+      console.log('🔐 [LOGIN] Response ok:', res.ok);
+      console.log('🔐 [LOGIN] Response data:', data);
+      console.log('🔐 [LOGIN] data.success:', data.success);
+      console.log('🔐 [LOGIN] data.message:', data.message);
 
-      if (!res.ok || !data.success) {
+      if (data.success === false) {
+        console.log('❌ [LOGIN] Login failed, showing message:', data.message);
         alert(data.message || "Login failed");
         return;
       }
+
+      console.log('[LOGIN] Login successful!');
 
       if (!data.user || !data.user.role) {
         alert("Invalid user data received");
@@ -48,9 +57,9 @@ const Login = () => {
       const role = data.user.role;
       console.log('🔐 [LOGIN] Role detected:', role);
 
-      // ✅ CRÍTICO: Actualizar el AuthContext ANTES de navegar
+      //Actualizar el AuthContext ANTES de navegar
       await refresh();
-      console.log('✅ [LOGIN] AuthContext refreshed');
+      console.log('[LOGIN] AuthContext refreshed');
 
       // Ahora sí navegar según rol
       if (role === "driver") {

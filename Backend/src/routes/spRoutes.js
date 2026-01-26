@@ -11,7 +11,11 @@ router.post('/execute', spController.executeStoredProcedure);
 router.get('/teams', spController.getAllTeams);
 router.get('/teams/search', spController.searchTeams);
 
-// Rutas para inventario
+// ====== NUEVO: USER MANAGEMENT ======
+const userManagementRoutes = require('./modules/UserManagement');
+router.use('/users', userManagementRoutes);
+
+//Rutas para inventario
 router.get('/team-inventory/:teamId', spController.getTeamInventory);
 
 //Elimié de aquí las rutas de los endpoints de CarAssembly que iban hacia spController puesto que mi backend 
