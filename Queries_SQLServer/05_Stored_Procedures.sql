@@ -23,12 +23,17 @@ BEGIN
         t.Total_Budget,
         t.Total_Spent,
         (t.Total_Budget - t.Total_Spent) AS Available_Budget,
+        (SELECT COUNT(*) FROM CONTRIBUTION WHERE Team_id = @Team_id) AS Total_Contributions,
+        (SELECT COUNT(*) FROM PURCHASE p 
+        t.Team_id,
+        t.Name,
+        t.Total_Budget,
+        t.Total_Spent,
+        (t.Total_Budget - t.Total_Spent) AS Available_Budget,
         (SELECT COUNT() FROM CONTRIBUTION WHERE Team_id = @Team_id) AS Total_Contributions,
         (SELECT COUNT() FROM PURCHASE p 
             INNER JOIN ENGINEER e ON p.Engineer_User_id = e.User_id
-            WHERE e.Team_id = @Team_id) AS Total_Purchases
-    FROM TEAM t
-    WHERE t.Team_id = @Team_id;
+            WHERE e.Team_id = @Team_id) AS Total_Purchases;
 END
 GO
 PRINT 'SP sp_GetTeamBudget creado';
