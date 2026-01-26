@@ -14,6 +14,7 @@ const teamsRoutes = require('./routes/teamsRoutes');
 const authRoutes = require('./routes/authRoutes');
 const inventoryRoutes = require('./routes/inventoryRoutes');
 const circuitsRoutes = require('./routes/circuitsRoutes');
+const simulationsRoutes = require('./routes/simulationsRoutes');
 
 const carAssemblyRoutes = require('./routes/modules/CarAssembly');
 
@@ -113,6 +114,7 @@ app.use('/api/sponsors', sponsorsRoutes);
 app.use('/api/teams', teamsRoutes);
 app.use('/api/inventory', inventoryRoutes);
 app.use('/api/circuits', circuitsRoutes);
+app.use('/api/simulations', simulationsRoutes);
 
 // ===== MANEJO DE ERRORES =====
 
@@ -154,6 +156,7 @@ async function initServer() {
       console.log('  • /api/inventory - Inventario');
       console.log('  • /api/parts - Partes');
       console.log('  • /api/sponsors - Sponsors');
+      console.log('  • /api/simulations - Simulaciones de carreras');
       console.log('================================\n');
     });
 
