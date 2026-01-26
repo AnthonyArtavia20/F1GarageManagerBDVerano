@@ -40,6 +40,39 @@ END
 GO
 
 -- ============================================================================
+-- SP: Validar circuito para simulacion
+-- ============================================================================
+CREATE OR ALTER PROCEDURE sp_ValidateCircuitForSimulation
+    @Circuit_id INT,
+    @dc DECIMAL(10,2) = 0.5
+AS
+BEGIN
+    SET NOCOUNT ON;
+    
+    SELECT 
+        Circuit_id,
+        Name,
+        Total_distance,
+        N_Curves,
+        -- Calcular distancias con dc proporcionado
+        (@dc * N_Curves) AS Calculated_Curve_Distance,
+        (Total_distance - (@dc * N_Curves)) AS Calculated_Straight_Distance,
+        -- Validación
+        CASE 
+            WHEN (Total_distance - (@dc * N_Curves)) >= 0 THEN 1
+            ELSE 0
+        END AS IsValid,
+        CASE 
+            WHEN (Total_distance - (@dc * N_Curves)) >= 0 
+            THEN 'Circuito válido para simulación'
+            ELSE 'Error: Las curvas ocupan más distancia que el total del circuito'
+        END AS Message
+    FROM CIRCUIT
+    WHERE Circuit_id = @Circuit_id;
+END
+GO
+
+-- ============================================================================
 -- SP: Validar carro para simulación
 -- ============================================================================
 CREATE OR ALTER PROCEDURE sp_ValidateCarForSimulation
@@ -234,9 +267,9 @@ GO
 -- ============================================================================
 CREATE OR ALTER PROCEDURE sp_RunSimulation
     @Circuit_id INT,
-    @User_id INT,
-    @Car_ids NVARCHAR(MAX),  -- Lista de IDs separados por comas: '1,2,3,4'
-    @Driver_ids NVARCHAR(MAX), -- Lista de IDs de conductores: '10,12,15,18'
+    @User_id INT,  -- ← Cambiado de @Admin_id a @User_id
+    @Car_ids NVARCHAR(MAX),
+    @Driver_ids NVARCHAR(MAX),
     @dc DECIMAL(10,2) = 0.5,
     @Success BIT OUTPUT,
     @Message NVARCHAR(500) OUTPUT,
@@ -251,6 +284,7 @@ BEGIN
     BEGIN TRY
         BEGIN TRANSACTION;
 
+        -- Solo verificar que el usuario existe (no importa el rol)
         IF NOT EXISTS (SELECT 1 FROM [USER] WHERE User_id = @User_id)
         BEGIN
             SET @Message = 'Usuario no encontrado';
@@ -318,8 +352,9 @@ BEGIN
         END
         
         -- 3. Crear registro de simulación
+        -- CORRECCIÓN: Cambiar @User_id por @Admin_id
         INSERT INTO SIMULATION (Circuit_id, Created_by_admin_id, Data_time)
-        VALUES (@Circuit_id, @User_id, GETDATE());
+         VALUES (@Circuit_id, @User_id, GETDATE());
         
         SET @Simulation_id = SCOPE_IDENTITY();
         
@@ -527,9 +562,6 @@ BEGIN
 END
 GO
 
-PRINT 'SP sp_RunSimulation creado';
-GO
-
 -- ============================================================================
 -- SP: Obtener resultados de simulación
 -- ============================================================================
@@ -646,7 +678,7 @@ GO
 -- ============================================================================
 CREATE OR ALTER PROCEDURE sp_DeleteSimulation
     @Simulation_id INT,
-    @Admin_id INT,
+    @User_id INT,  -- ← Cambiado de Admin_id a User_id
     @Success BIT OUTPUT,
     @Message NVARCHAR(500) OUTPUT
 AS
@@ -666,21 +698,20 @@ BEGIN
             RETURN;
         END
         
-        -- Verificar permisos (solo el admin que creó la simulación o admin general)
-        DECLARE @CreatedByAdmin INT;
-        SELECT @CreatedByAdmin = Created_by_admin_id 
+        -- Verificar permisos: ahora solo verificar que es el creador
+        DECLARE @CreatedByUser INT;
+        SELECT @CreatedByUser = Created_by_admin_id 
         FROM SIMULATION 
         WHERE Simulation_id = @Simulation_id;
         
-        IF @Admin_id != @CreatedByAdmin 
-        AND NOT EXISTS (SELECT 1 FROM ADMIN WHERE User_id = @Admin_id)
+        IF @User_id != @CreatedByUser 
         BEGIN
-            SET @Message = 'No tiene permisos para eliminar esta simulación';
+            SET @Message = 'Solo el creador de la simulación puede eliminarla';
             ROLLBACK TRANSACTION;
             RETURN;
         END
         
-        -- Eliminar datos relacionados (en orden correcto)
+        -- Eliminar datos relacionados
         DELETE FROM SIMULATION_SETUP_DETAIL WHERE simulation_id = @Simulation_id;
         DELETE FROM SIMULATION_PARTICIPANT WHERE simulation_id = @Simulation_id;
         DELETE FROM SIMULATION WHERE Simulation_id = @Simulation_id;

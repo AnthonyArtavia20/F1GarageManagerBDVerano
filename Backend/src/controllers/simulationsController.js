@@ -269,109 +269,156 @@ const getCircuitStatistics = async (req, res) => {
 // POST - Ejecutar nueva simulación
 // ============================================================================
 const runSimulation = async (req, res) => {
-    try {
-        const { circuitId, carIds, dc = 0.5 } = req.body;
-        const userId = req.session.user?.userId; // Cambiado de adminId a userId
-        
-        console.log('🚀 Iniciando simulación con datos:', { circuitId, carIds, dc, userId });
-        
-        // Validaciones básicas
-        if (!circuitId) {
-            return res.status(400).json({
-                success: false,
-                message: 'El ID del circuito es requerido'
-            });
-        }
-        
-        if (!carIds || !Array.isArray(carIds) || carIds.length < 2) {
-            return res.status(400).json({
-                success: false,
-                message: 'Se requieren al menos 2 carros para la simulación'
-            });
-        }
-        
-        if (carIds.length > 10) {
-            return res.status(400).json({
-                success: false,
-                message: 'Máximo 10 carros por simulación'
-            });
-        }
-        
-        if (!userId) {
-            return res.status(401).json({
-                success: false,
-                message: 'No autorizado. Se requiere inicio de sesión'
-            });
-        }
-        
-        // VERIFICACIÓN OPCIONAL: Solo chequear que el usuario existe
-        // Ya no verificamos si es admin
-        const pool = await mssqlConnect();
-        const userCheck = await pool.request()
-            .input('User_id', sql.Int, userId)
-            .query('SELECT User_id FROM [USER] WHERE User_id = @User_id');
-        
-        if (userCheck.recordset.length === 0) {
-            return res.status(403).json({
-                success: false,
-                message: 'Usuario no encontrado'
-            });
-        }
-        
-        // Convertir array a string separado por comas
-        const carIdsString = carIds.join(',');
-        
-        // Ejecutar simulación - AHORA USA userId DIRECTAMENTE
-        const result = await pool.request()
-            .input('Circuit_id', sql.Int, circuitId)
-            .input('Admin_id', sql.Int, userId) // Usamos userId aunque se llame Admin_id
-            .input('Car_ids', sql.NVarChar(sql.MAX), carIdsString)
-            .input('dc', sql.Decimal(10, 2), dc)
-            .output('Success', sql.Bit)
-            .output('Message', sql.NVarChar(500))
-            .output('Simulation_id', sql.Int)
-            .execute('sp_RunSimulation');
-        
-        const success = result.output.Success;
-        const message = result.output.Message;
-        const simulationId = result.output.Simulation_id;
-        
-        if (success) {
-            console.log('✅ Simulación ejecutada exitosamente. ID:', simulationId);
-            
-            // Obtener resultados completos
-            const results = await pool.request()
-                .input('Simulation_id', sql.Int, simulationId)
-                .execute('sp_GetSimulationResults');
-            
-            const [simulationInfo, participants, setupDetails] = results.recordsets;
-            
-            res.status(201).json({
-                success: true,
-                message: message,
-                data: {
-                    simulationId: simulationId,
-                    simulation: simulationInfo[0] || {},
-                    participants: participants || [],
-                    setupDetails: setupDetails || []
-                }
-            });
-        } else {
-            console.error('❌ Error en simulación:', message);
-            res.status(400).json({
-                success: false,
-                message: message
-            });
-        }
-    } catch (error) {
-        console.error('❌ Error al ejecutar simulación:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Error al ejecutar simulación',
-            error: error.message,
-            stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
-        });
+  try {
+    const { circuitId, carIds, driverIds, dc = 0.5 } = req.body;
+    
+    console.log('🚀 Iniciando simulación con datos:', { 
+      circuitId, 
+      carIds, 
+      driverIds, 
+      dc 
+    });
+    
+    // Validaciones básicas
+    if (!circuitId) {
+      return res.status(400).json({
+        success: false,
+        message: 'El ID del circuito es requerido'
+      });
     }
+    
+    if (!carIds || !Array.isArray(carIds) || carIds.length < 2) {
+      return res.status(400).json({
+        success: false,
+        message: 'Se requieren al menos 2 carros para la simulación'
+      });
+    }
+    
+    if (carIds.length > 10) {
+      return res.status(400).json({
+        success: false,
+        message: 'Máximo 10 carros por simulación'
+      });
+    }
+    
+    // VERIFICAR que driverIds sea array y tenga misma longitud
+    if (!driverIds || !Array.isArray(driverIds) || driverIds.length !== carIds.length) {
+      return res.status(400).json({
+        success: false,
+        message: 'Debe proporcionar un conductor para cada carro'
+      });
+    }
+    
+    // Verificación de sesión - solo verificar que haya usuario, no el rol
+    if (!req.session || !req.session.user) {
+      console.error("❌ No hay sesión de usuario activa");
+      return res.status(401).json({
+        success: false,
+        message: 'No autorizado. Por favor, inicie sesión primero.'
+      });
+    }
+    
+    const userId = req.session.user.id;
+    const username = req.session.user.username;
+    
+    console.log(`✅ Usuario autenticado: ${username} (ID: ${userId}, Rol: ${req.session.user.role})`);
+    
+    // ELIMINADO: Verificación de rol de Admin
+    
+    const pool = await mssqlConnect();
+    
+    // Validar circuito primero
+    const circuitResult = await pool.request()
+      .input('Circuit_id', sql.Int, circuitId)
+      .execute('sp_GetCircuitForSimulation');
+    
+    if (circuitResult.recordset.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Circuito no encontrado'
+      });
+    }
+    
+    const circuit = circuitResult.recordset[0];
+    if (!circuit.IsValid) {
+      return res.status(400).json({
+        success: false,
+        message: `Circuito inválido: ${circuit.Message}`
+      });
+    }
+    
+    // Convertir arrays a string separado por comas
+    const carIdsString = carIds.join(',');
+    const driverIdsString = driverIds.join(',');
+    
+    console.log('📤 Ejecutando SP con:', {
+      Circuit_id: circuitId,
+      User_id: userId,  // ← Cambiado de Admin_id a User_id
+      Car_ids: carIdsString,
+      Driver_ids: driverIdsString,
+      dc: dc
+    });
+    
+    // Ejecutar simulación - ahora con User_id en lugar de Admin_id
+    const result = await pool.request()
+      .input('Circuit_id', sql.Int, circuitId)
+      .input('User_id', sql.Int, userId)  // ← CAMBIADO: de Admin_id a User_id
+      .input('Car_ids', sql.NVarChar(sql.MAX), carIdsString)
+      .input('Driver_ids', sql.NVarChar(sql.MAX), driverIdsString)
+      .input('dc', sql.Decimal(10, 2), dc)
+      .output('Success', sql.Bit)
+      .output('Message', sql.NVarChar(500))
+      .output('Simulation_id', sql.Int)
+      .execute('sp_RunSimulation');
+    
+    const success = result.output.Success;
+    const message = result.output.Message;
+    const simulationId = result.output.Simulation_id;
+    
+    if (success) {
+      console.log('✅ Simulación ejecutada exitosamente. ID:', simulationId);
+      
+      // Obtener resultados completos
+      const results = await pool.request()
+        .input('Simulation_id', sql.Int, simulationId)
+        .execute('sp_GetSimulationResults');
+      
+      const [simulationInfo, participants, setupDetails] = results.recordsets;
+      
+      res.status(201).json({
+        success: true,
+        message: message,
+        data: {
+          simulationId: simulationId,
+          simulation: simulationInfo[0] || {},
+          participants: participants || [],
+          setupDetails: setupDetails || []
+        }
+      });
+    } else {
+      console.error('❌ Error en simulación:', message);
+      res.status(400).json({
+        success: false,
+        message: message
+      });
+    }
+  } catch (error) {
+    console.error('❌ Error al ejecutar simulación:', error);
+    console.error('Stack:', error.stack);
+    
+    // Más detalles del error
+    let errorMessage = 'Error al ejecutar simulación';
+    if (error.message.includes('User_id')) {
+      errorMessage = 'Error: Parámetro incorrecto en stored procedure. Verifique sp_RunSimulation.';
+    }
+    
+    res.status(500).json({
+      success: false,
+      message: errorMessage,
+      error: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
+  }
 };
 
 // ============================================================================
@@ -380,14 +427,14 @@ const runSimulation = async (req, res) => {
 const deleteSimulation = async (req, res) => {
     try {
         const { id } = req.params;
-        const userId = req.session.user?.userId;
         
-        if (!userId) {
-            return res.status(401).json({
-                success: false,
-                message: 'No autorizado'
-            });
-        }
+        // VERIFICACIÓN CORREGIDA
+    if (!req.session || !req.session.user) {
+      return res.status(401).json({
+        success: false,
+        message: 'No autorizado'
+      });
+    }
         
         const pool = await mssqlConnect();
         
