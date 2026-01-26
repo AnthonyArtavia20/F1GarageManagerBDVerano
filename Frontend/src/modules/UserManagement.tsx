@@ -529,7 +529,7 @@ const UserManagement = () => {
                   {/* Se cambia users.map por filteredUsers.map para una óptima búsqueda. Mapeo de usuarios fultrados*/}
                   {filteredUsers.map((user) => (
                     <TableRow key={user.User_id} className="border-border hover:bg-accent/20 transition-colors">
-                      //Columna: Usuario
+                      {/* Columna: Usuario */}
                       <TableCell>
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
@@ -545,17 +545,17 @@ const UserManagement = () => {
                           </div>
                         </div>
                       </TableCell>
-                      <TableCell> // Columna: Rol, según color.
+                      <TableCell>{/*Columna: Rol, según color.*/}
                         <Badge variant={getRoleBadgeVariant(user.Role)}>
                           {user.Role}
                         </Badge>
-                      </TableCell> //Equipo asignado
+                      </TableCell> {/*Equipo asignado*/}
                       <TableCell className="font-medium text-foreground">
                         {user.Team_name || (
                           <span className="text-muted-foreground italic">—</span>
                         )}
-                      </TableCell>
-                      <TableCell className="text-right">//Acciones (editar/eliminar)
+                      </TableCell> 
+                      <TableCell className="text-right">{/*Acciones (editar/eliminar)*/}
                         <div className="flex justify-end gap-2">
                           <Button 
                             variant="ghost" 
