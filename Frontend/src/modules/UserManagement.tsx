@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect} from "react";
 import { UserPlus, Edit, Trash2, Search, Loader2, AlertCircle, Check } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
@@ -55,7 +55,7 @@ const UserManagement = () => {
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  
+
   // Form state
   const [formData, setFormData] = useState<FormData>({
     username: "",
@@ -63,20 +63,11 @@ const UserManagement = () => {
     role: "Driver",
     teamId: "",
   });
-
+  
   // Cargar usuarios al montar
   useEffect(() => {
     fetchUsers();
   }, []);
-
-  // Buscar usuarios cuando cambia el query
-  useEffect(() => {
-    if (searchQuery.trim() === '') {
-      fetchUsers();
-    } else {
-      searchUsers(searchQuery);
-    }
-  }, [searchQuery]);
 
   // Fetch all users
   const fetchUsers = async () => {
@@ -102,29 +93,14 @@ const UserManagement = () => {
     }
   };
 
-  // Search users
-  const searchUsers = async (query: string) => {
-    try {
-      setLoading(true);
-      setError(null);
-      
-      console.log(`[USERS] Searching: ${query}`);
-      
-      const { res, data } = await apiFetch(`/api/sp/users/search?query=${encodeURIComponent(query)}`);
-      
-      if (res.ok && data.success) {
-        console.log(`✅ Found ${data.data.length} users`);
-        setUsers(data.data);
-      } else {
-        setError('Error al buscar usuarios');
-      }
-    } catch (err: any) {
-      console.error('Error searching users:', err);
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const filteredUsers = users.filter((user) => {
+    const searchLower = searchQuery.toLowerCase();
+    return (
+      user.Username.toLowerCase().includes(searchLower) ||
+      user.Role.toLowerCase().includes(searchLower) ||
+      (user.Team_name && user.Team_name.toLowerCase().includes(searchLower))
+    );
+  });
 
   // Create or Update user
   const handleSubmit = async (e: React.FormEvent) => {
@@ -468,6 +444,13 @@ const UserManagement = () => {
           />
         </div>
 
+        {/*Mostrar estadísticas de filtrado */}
+        {users.length > 0 && (
+          <div className="mb-4 text-sm text-muted-foreground">
+            Showing {filteredUsers.length} of {users.length} users
+          </div>
+        )}
+
         {/* Users Table */}
         <div className="glass-card rounded-xl overflow-hidden opacity-0 animate-fade-in" style={{ animationDelay: "300ms" }}>
           {loading && users.length === 0 ? (
@@ -475,11 +458,19 @@ const UserManagement = () => {
               <Loader2 className="w-8 h-8 text-primary mx-auto animate-spin mb-4" />
               <p className="text-muted-foreground">Loading users...</p>
             </div>
-          ) : users.length === 0 ? (
+          ) : filteredUsers.length === 0 ? (
             <div className="p-12 text-center">
               <p className="text-muted-foreground">
                 {searchQuery ? `No users found for "${searchQuery}"` : "No users found"}
               </p>
+              {searchQuery && (
+                <button 
+                  onClick={() => setSearchQuery("")} 
+                  className="mt-4 text-sm text-primary hover:underline"
+                >
+                  Clear search
+                </button>
+              )}
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -493,8 +484,10 @@ const UserManagement = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {users.map((user) => (
+                  {/* ✅ CAMBIAR users.map por filteredUsers.map */}
+                  {filteredUsers.map((user) => (
                     <TableRow key={user.User_id} className="border-border hover:bg-accent/20 transition-colors">
+                      {/* ... resto del código de la fila sin cambios ... */}
                       <TableCell>
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
