@@ -1,0 +1,18 @@
+{
+  "panels": [
+    {
+      "id": "panel-1",
+      "title": "Global Analytics Dashboard",
+      "description": "Overall system performance and metrics",
+      "url": "http://localhost:3002/d/adbc4jx/f1-garage-manager?orgId=1&from=2026-01-25T12:41:52.706Z&to=2026-01-25T18:41:52.706Z&timezone=browser&var-team_id=2&viewPanel=panel-1&theme=dark",
+      "tag": "admin"
+    },
+    {
+      "id": "panel-2",
+      "title": "Team Performance Dashboard",
+      "description": "Your team's performance analytics",
+      "url": "http://localhost:3002/d/adbc4jx/f1-garage-manager?orgId=1&from=2026-01-25T12:41:52.706Z&to=2026-01-25T18:41:52.706Z&timezone=browser&var-team_id=2&viewPanel=panel-2&theme=dark",
+      "tag": "engineer"
+    }
+  ]
+}

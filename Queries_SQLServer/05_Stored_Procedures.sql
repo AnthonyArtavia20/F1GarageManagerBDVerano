@@ -9,42 +9,26 @@ GO
 -- ============================================================================
 -- 1. SP: Calcular presupuesto de un equipo
 -- ============================================================================
+
+--A
 CREATE OR ALTER PROCEDURE sp_GetTeamBudget
     @Team_id INT
 AS
 BEGIN
     SET NOCOUNT ON;
 
-    DECLARE @TotalIncome DECIMAL(10,2);
-    DECLARE @TotalSpent DECIMAL(10,2);
-    DECLARE @TeamName VARCHAR(100);
-
-    SELECT @TeamName = Name FROM TEAM WHERE Team_id = @Team_id;
-
-    SELECT @TotalIncome = ISNULL(SUM(Amount), 0)
-    FROM CONTRIBUTION WHERE Team_id = @Team_id;
-    
-    -- Both Admin and Engineers allowed to make a purchase
-    SELECT @TotalSpent = ISNULL(SUM(p.Total_price), 0)
-    FROM PURCHASE p
-    WHERE EXISTS (
-        SELECT 1 FROM ENGINEER e 
-        WHERE e.User_id = p.Engineer_User_id AND e.Team_id = @Team_id
-    ) OR EXISTS (
-        SELECT 1 FROM ADMIN a 
-        WHERE a.User_id = p.Engineer_User_id
-    );
-
     SELECT
-        @Team_id AS Team_id,
-        @TeamName AS Name,
-        @TotalIncome AS Total_Budget,
-        @TotalSpent AS Total_Spent,
-        (@TotalIncome - @TotalSpent) AS Available_Budget,
+        t.Team_id,
+        t.Name,
+        t.Total_Budget,
+        t.Total_Spent,
+        (t.Total_Budget - t.Total_Spent) AS Available_Budget,
         (SELECT COUNT(*) FROM CONTRIBUTION WHERE Team_id = @Team_id) AS Total_Contributions,
         (SELECT COUNT(*) FROM PURCHASE p 
             INNER JOIN ENGINEER e ON p.Engineer_User_id = e.User_id
-            WHERE e.Team_id = @Team_id) AS Total_Purchases;
+            WHERE e.Team_id = @Team_id) AS Total_Purchases
+    FROM TEAM t
+    WHERE t.Team_id = @Team_id;
 END
 GO
 PRINT 'SP sp_GetTeamBudget creado';
