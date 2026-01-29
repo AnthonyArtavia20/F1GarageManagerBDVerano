@@ -19,7 +19,6 @@ import { TeamSelector } from "@/components/TeamSelector";
 import { cn } from "@/lib/utils";
 import { apiFetch } from "@/lib/api";
 
-// ✅ INTERFAZ ACTUALIZADA para coincidir con el stored procedure
 interface InventoryPart {
   Part_id: number;      //Cambiado de 'id' a 'Part_id'
   Name: string;         //Cambiado de 'name' a 'Name'
@@ -31,7 +30,6 @@ interface InventoryPart {
   a: number;
   m: number;
   acquiredDate?: string; //Opcional
-  installed?: number;    //Opcional
 }
 
 interface SessionUser {
@@ -178,8 +176,7 @@ const Inventory = () => {
           p: item.p || 0,
           a: item.a || 0,
           m: item.m || 0,
-          acquiredDate: item.acquiredDate || item.AcquiredDate || new Date().toISOString().split('T')[0],
-          installed: item.installed || item.Installed || 0
+          acquiredDate: item.acquiredDate || item.AcquiredDate || new Date().toISOString().split('T')[0]
         }));
         
         setInventory(normalizedData);
@@ -208,8 +205,7 @@ const Inventory = () => {
               p: item.p || 0,
               a: item.a || 0,
               m: item.m || 0,
-              acquiredDate: item.acquiredDate || item.AcquiredDate || "N/A",
-              installed: item.installed || item.Installed || 0
+              acquiredDate: item.acquiredDate || item.AcquiredDate || "N/A"
             }));
             
             setInventory(normalizedLegacyData);
@@ -254,13 +250,6 @@ const Inventory = () => {
     const quantity = item.Quantity || item.Stock || 0;
     return sum + quantity;
   }, 0);
-  
-  const installedParts = filteredInventory.reduce((sum, item) => {
-    const installed = item.installed || 0;
-    return sum + installed;
-  }, 0);
-  
-  const availableParts = totalParts - installedParts;
 
   const noTeamAssigned =
     !loadingSession &&
@@ -372,49 +361,6 @@ const Inventory = () => {
           )}
         </div>
 
-        {selectedTeamId && inventory.length > 0 && (
-          <div
-            className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8 opacity-0 animate-fade-in"
-            style={{ animationDelay: "100ms" }}
-          >
-            <div className="glass-card rounded-xl p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Total Parts</p>
-                  <p className="font-display font-bold text-xl text-foreground">{totalParts}</p>
-                </div>
-                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                  <Package className="w-5 h-5 text-primary" />
-                </div>
-              </div>
-            </div>
-
-            <div className="glass-card rounded-xl p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Installed Parts</p>
-                  <p className="font-display font-bold text-xl text-success">{installedParts}</p>
-                </div>
-                <div className="w-10 h-10 rounded-lg bg-success/10 flex items-center justify-center">
-                  <Settings2 className="w-5 h-5 text-success" />
-                </div>
-              </div>
-            </div>
-
-            <div className="glass-card rounded-xl p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Available Parts</p>
-                  <p className="font-display font-bold text-xl text-blue-400">{availableParts}</p>
-                </div>
-                <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
-                  <CircleDot className="w-5 h-5 text-blue-400" />
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
           <div className="relative max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
@@ -497,7 +443,6 @@ const Inventory = () => {
                     <th className="text-left p-4 text-sm font-medium text-muted-foreground">Category</th>
                     <th className="text-center p-4 text-sm font-medium text-muted-foreground">p / a / m</th>
                     <th className="text-center p-4 text-sm font-medium text-muted-foreground">Quantity</th>
-                    <th className="text-center p-4 text-sm font-medium text-muted-foreground">Installed</th>
                     <th className="text-left p-4 text-sm font-medium text-muted-foreground">Acquisition</th>
                   </tr>
                 </thead>
@@ -505,7 +450,6 @@ const Inventory = () => {
                   {filteredInventory.map((item) => {
                     const CategoryIcon = getCategoryIcon(item.Category);
                     const quantity = item.Quantity || item.Stock || 0;
-                    const installed = item.installed || 0;
                     
                     return (
                       <tr
@@ -545,24 +489,6 @@ const Inventory = () => {
                           {quantity === 0 && (
                             <span className="block text-xs text-destructive mt-1">Out of stock</span>
                           )}
-                        </td>
-
-                        <td className="p-4 text-center">
-                          <div className="flex flex-col items-center">
-                            <span
-                              className={cn(
-                                "font-display font-bold text-lg",
-                                installed > 0 ? "text-success" : "text-muted-foreground"
-                              )}
-                            >
-                              {installed}
-                            </span>
-                            {installed > 0 && quantity > 0 && (
-                              <span className="text-xs text-muted-foreground mt-1">
-                                {((installed / quantity) * 100).toFixed(0)}% used
-                              </span>
-                            )}
-                          </div>
                         </td>
 
                         <td className="p-4">

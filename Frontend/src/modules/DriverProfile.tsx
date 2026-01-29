@@ -1,45 +1,120 @@
-import { LogOut } from "lucide-react";
+import { LogOut, ExternalLink } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { apiFetch } from "@/lib/api";
+import panelData from "@/../../Grafana/grafana-panels.json";
 
-const stats = [
-  { name: "Random_Stat_1", value: 92 },
-  { name: "Random_Stat_2", value: 16 },
-  { name: "Random_Stat_3", value: 67 },
-  { name: "Random_Stat_4", value: 38 },
-  { name: "Random_Stat_5", value: 80 },
-];
-
-const driverData = {
-  name: "[Driver's Name]",
-  teamName: "[Driver's Team]",
-  initials: "•‿•"
+type PanelType = {
+  panelId: string;
+  title: string;
+  description: string;
+  dashboardUid: string;
+  dashboardSlug: string;
+  tag: string;
+  fullWidth?: boolean;
 };
 
 const DriverProfile = () => {
   const navigate = useNavigate();
+  const panels: PanelType[] = panelData.panels;
+  
+  const [driverData, setDriverData] = useState({
+    name: "[Driver's Name]",
+    teamName: "[Driver's Team]",
+    initials: "•‿•",
+    driverId: 1,
+    teamId: 1
+  });
+  
+  const [loading, setLoading] = useState(true);
+  const [loadedPanels, setLoadedPanels] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    fetchDriverData();
+  }, []);
+
+  const fetchDriverData = async () => {
+    try {
+      const { res, data } = await apiFetch("/api/auth/me");
+      if (res.ok && data?.success) {
+        const user = data.user;
+        setDriverData({
+          name: user.username || "[Driver's Name]",
+          teamName: user.teamName || "[Driver's Team]",
+          initials: user.username?.charAt(0) || "•‿•",
+          driverId: user.id || 1,
+          teamId: user.teamId || 1
+        });
+      }
+    } catch (error) {
+      console.error("Session error:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleLogout = () => {
     navigate("/");
   };
 
+  const getFilteredPanels = () => {
+    return panels.filter(panel => panel.tag === 'driver');
+  };
+
+  const getPanelUrl = (panel: PanelType) => {
+    const baseUrl = "http://localhost:3000";
+    const params = new URLSearchParams();
+    
+    params.set('orgId', '1');
+    params.set('theme', 'dark');
+    params.set('viewPanel', panel.panelId);
+    params.set('kiosk', '');
+    
+    params.set('var-driver_id', driverData.driverId.toString());
+    
+    if (driverData.teamId) {
+      params.set('var-team_id', driverData.teamId.toString());
+    }
+    
+    return `${baseUrl}/d/${panel.dashboardUid}/${panel.dashboardSlug}?${params.toString()}`;
+  };
+
+  const handlePanelLoad = (panelId: string) => {
+    setLoadedPanels(prev => ({ ...prev, [panelId]: true }));
+  };
+
+  const getPanelClasses = (panel: PanelType) => {
+    return panel.fullWidth ? "lg:col-span-2" : "";
+  };
+
+  const filteredPanels = getFilteredPanels();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <div className="flex items-center justify-center h-screen">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background">
-
       {/* Bg Effects */}
       <div className="absolute inset-0 overflow-hidden">
         <div className="absolute top-3/4 left-4/3 w-96 h-96 bg-primary/10 rounded-full blur-3xl animate-pulse delay-500" />
       </div>
-
 
       {/* Header */}
       <div className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-40">
         <div className="container mx-auto px-8 py-4">
           <div className="flex justify-between items-center">
             
-            {/* Tittle */}
+            {/* Title */}
             <div className="text-center">
               <h1 className="text-xl font-display font-bold text-foreground">
                 Drivers Profile
@@ -62,9 +137,8 @@ const DriverProfile = () => {
       </div>
 
       <div className="container mx-auto p-8">
-
         {/* Profile */}
-       <div className="mb-8 opacity-0 animate-fade-in">
+        <div className="mb-8 opacity-0 animate-fade-in">
           <div className="flex items-center gap-6">
             <div className="w-24 h-24 rounded-full bg-primary/20 flex items-center justify-center border-4 border-primary">
               <span className="text-4xl font-display font-bold text-primary">
@@ -76,43 +150,84 @@ const DriverProfile = () => {
                 {driverData.name}
               </h1>
               <p className="text-lg text-primary font-medium">{driverData.teamName}</p>
-              <p className="text-muted-foreground">Profesional F1 Driver</p>
+              <p className="text-muted-foreground">Professional F1 Driver</p>
             </div>
           </div>
         </div>
 
-        {/* Skills */}
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4 mb-8">
-          <Card className="glass-card opacity-0 animate-fade-in" style={{ animationDelay: "50ms" }}>
-            <CardContent className="p-4 text-center">
-              <p className="text-6xl font-display text-f1-gold">H</p>
-              <p className="text-2xl font-display font-bold text-foreground">10000</p>
-              <p className="text-xs text-muted-foreground">Skill</p>
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className="grid grid-cols-1 gap-6">
-
-        {/* Stat */}
-          <Card className="glass-card opacity-25 animate-fade-in" style={{ animationDelay: "400ms" }}>
-            <CardHeader>
-              <CardTitle className="font-display text-foreground">STATS</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {stats.map((stats) => (
-                <div key={stats.name}>
-                  <div className="flex justify-between mb-1">
-                    <span className="text-sm text-foreground">{stats.name}</span>
-                    <span className="text-sm font-medium text-primary">{stats.value}%</span>
+        {/* Paneles de Grafana para Drivers */}
+        {filteredPanels.length > 0 && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            {filteredPanels.map((panel) => {
+              const panelUrl = getPanelUrl(panel);
+              const isLoaded = loadedPanels[panel.panelId];
+              const panelClasses = getPanelClasses(panel);
+              
+              return (
+                <div 
+                  key={panel.panelId}
+                  className={`border rounded-lg overflow-hidden bg-card ${panelClasses}`}
+                >
+                  {/* Panel Header */}
+                  <div className="p-4 border-b">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1">
+                        <h3 className="font-semibold mb-1">{panel.title}</h3>
+                        <p className="text-sm text-muted-foreground">{panel.description}</p>
+                      </div>
+                      <a 
+                        href={panelUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm text-primary hover:underline flex items-center gap-1 whitespace-nowrap"
+                      >
+                        <ExternalLink className="w-3 h-3" />
+                        Open
+                      </a>
+                    </div>
                   </div>
-                  <Progress value={stats.value} className="h-2" />
-                </div>
-              ))}
-            </CardContent>
-          </Card>
 
-        </div>
+                  {/* Panel Content */}
+                  <div className="relative bg-black">
+                    {/* Loading State */}
+                    {!isLoaded && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-black z-10">
+                        <div className="text-center">
+                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
+                          <p className="text-sm text-gray-400">Loading dashboard...</p>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Iframe */}
+                    <iframe
+                      src={panelUrl}
+                      title={`${panel.title} - Driver Analytics`}
+                      className="w-full h-[400px]"
+                      style={{ 
+                        display: 'block',
+                        border: 'none'
+                      }}
+                      onLoad={() => handlePanelLoad(panel.panelId)}
+                      sandbox="allow-scripts allow-same-origin"
+                      loading="lazy"
+                    />
+                  </div>
+
+                  {/* Panel Footer */}
+                  <div className="p-3 border-t text-xs text-muted-foreground flex items-center justify-between">
+                    <div className="flex items-center gap-1">
+                      <div className={`w-2 h-2 rounded-full ${
+                        isLoaded ? 'bg-green-500' : 'bg-yellow-500'
+                      }`}></div>
+                      <span>{isLoaded ? 'Loaded' : 'Loading'}</span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );

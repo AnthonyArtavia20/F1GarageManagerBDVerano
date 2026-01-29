@@ -5,11 +5,13 @@ import { apiFetch } from "@/lib/api";
 import panelData from "@/../../Grafana/grafana-panels.json";
 
 type PanelType = {
-  id: string;
+  panelId: string;
   title: string;
   description: string;
-  url: string;
+  dashboardUid: string;
+  dashboardSlug: string;
   tag: string;
+  fullWidth?: boolean;
 };
 
 interface SessionUser {
@@ -58,47 +60,34 @@ const Analytics = () => {
   };
 
   const getPanelUrl = (panel: PanelType) => {
-    let url = panel.url;
+    const baseUrl = "http://localhost:3000";
+    const params = new URLSearchParams();
     
+    // Parámetros básicos
+    params.set('orgId', '1');
+    params.set('theme', 'dark');
+    
+    // hide UI
+    params.set('viewPanel', panel.panelId);
+    params.set('kiosk', '');
+    
+    // On engineer user add team as parameter
     if (sessionUser?.role === 'engineer' && sessionUser.teamId && panel.tag === 'engineer') {
-      url = url.replace(/var-team_id=\d+/, `var-team_id=${sessionUser.teamId}`);
+      params.set('var-team_id', sessionUser.teamId.toString());
     }
     
-    return `${url}?orgId=1&theme=dark&kiosk`;
-  };
-
-  const getFullDashboardUrl = () => {
-    const baseUrl = "http://localhost:3000/d/adbc4jx/f1-garage-manager";
-    
-    if (sessionUser?.role === 'engineer' && sessionUser.teamId) {
-      return `${baseUrl}?orgId=1&var-team_id=${sessionUser.teamId}`;
-    }
-    
-    return `${baseUrl}?orgId=1`;
+    return `${baseUrl}/d/${panel.dashboardUid}/${panel.dashboardSlug}?${params.toString()}`;
   };
 
   const handlePanelLoad = (panelId: string) => {
     setLoadedPanels(prev => ({ ...prev, [panelId]: true }));
   };
 
-  const getLayoutClass = (panelCount: number) => {
-    switch (panelCount) {
-      case 1:
-        return "grid-cols-1";
-      case 2:
-        return "grid-cols-1 lg:grid-cols-2";
-      case 3:
-        return "grid-cols-1 lg:grid-cols-2 xl:grid-cols-3";
-      case 4:
-        return "grid-cols-1 lg:grid-cols-2 xl:grid-cols-4";
-      default:
-        return "grid-cols-1 lg:grid-cols-2 xl:grid-cols-3";
-    }
+  const getPanelClasses = (panel: PanelType) => {
+    return panel.fullWidth ? "lg:col-span-2" : "";
   };
 
   const filteredPanels = getFilteredPanels();
-  const layoutClass = getLayoutClass(filteredPanels.length);
-  const fullDashboardUrl = getFullDashboardUrl();
 
   if (loading) {
     return (
@@ -161,29 +150,20 @@ const Analytics = () => {
                 </span>
               </div>
             </div>
-            
-            <a 
-              href={fullDashboardUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
-            >
-              <ExternalLink className="w-4 h-4" />
-              Open Full Dashboard
-            </a>
           </div>
         </div>
 
         {/* Dynamic Grid Layout */}
-        <div className={`grid ${layoutClass} gap-6`}>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {filteredPanels.map((panel) => {
             const panelUrl = getPanelUrl(panel);
-            const isLoaded = loadedPanels[panel.id];
+            const isLoaded = loadedPanels[panel.panelId];
+            const panelClasses = getPanelClasses(panel);
             
             return (
               <div 
-                key={panel.id}
-                className="border rounded-lg overflow-hidden bg-card"
+                key={panel.panelId}
+                className={`border rounded-lg overflow-hidden bg-card ${panelClasses}`}
               >
                 {/* Panel Header */}
                 <div className="p-4 border-b">
@@ -225,7 +205,7 @@ const Analytics = () => {
                       display: 'block',
                       border: 'none'
                     }}
-                    onLoad={() => handlePanelLoad(panel.id)}
+                    onLoad={() => handlePanelLoad(panel.panelId)}
                     sandbox="allow-scripts allow-same-origin"
                     loading="lazy"
                   />
@@ -233,14 +213,6 @@ const Analytics = () => {
 
                 {/* Panel Footer */}
                 <div className="p-3 border-t text-xs text-muted-foreground flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <span>Panel: {panel.id}</span>
-                    {sessionUser?.role === 'engineer' && panel.tag === 'engineer' && (
-                      <span className="text-blue-500">
-                        Team {sessionUser.teamId}
-                      </span>
-                    )}
-                  </div>
                   <div className="flex items-center gap-1">
                     <div className={`w-2 h-2 rounded-full ${
                       isLoaded ? 'bg-green-500' : 'bg-yellow-500'
@@ -251,22 +223,6 @@ const Analytics = () => {
               </div>
             );
           })}
-        </div>
-
-        {/* Footer Info */}
-        <div className="mt-8 pt-6 border-t">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 text-sm text-muted-foreground">
-            <div>
-              <p>Grafana Dashboard • UID: adbc4jx</p>
-              {sessionUser?.role === 'engineer' && sessionUser.teamId && (
-                <p className="mt-1">Team Filter: team_id={sessionUser.teamId}</p>
-              )}
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-green-500"></div>
-              <span>Connected</span>
-            </div>
-          </div>
         </div>
       </div>
     </MainLayout>

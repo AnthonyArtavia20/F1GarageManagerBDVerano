@@ -1,18 +1,139 @@
 {
   "panels": [
+
+    { "_comment": "ADMIN DASHBOARD" }, 
+
     {
-      "id": "panel-1",
-      "title": "Administrator Dashboard",
-      "description": "Global system overview with all teams and metrics",
-      "url": "http://localhost:3000/d/adbc4jx/f1-garage-manager?orgId=1&viewPanel=panel-1&theme=dark&kiosk&view-only",
-      "tag": "admin"
+      "panelId": "3",
+      "title": "System Overview Metrics",
+      "description": "Global system overview across the entire system",
+      "dashboardUid": "ad684xl",
+      "dashboardSlug": "admin",
+      "tag": "admin",
+      "fullWidth": false
     },
     {
-      "id": "panel-2",
-      "title": "Team Performance Dashboard",
-      "description": "Team-specific analytics and performance metrics",
-      "url": "http://localhost:3000/d/adbc4jx/f1-garage-manager?orgId=1&viewPanel=panel-2&theme=dark&kiosk&var-team_id=2&view-only",
-      "tag": "engineer"
+      "panelId": "4",
+      "title": "Circuit Performance Summary",
+      "description": "Aggregated performance metrics per circuit, including distance, curves, race times, speeds, and penalties",
+      "dashboardUid": "ad684xl",
+      "dashboardSlug": "admin",
+      "tag": "admin",
+      "fullWidth": false
+    },
+    {
+      "panelId": "2",
+      "title": "Car Setup vs Race Time Over Time",
+      "description": "Time-based evolution of car setup values (P/A/M) and race time across simulations",
+      "dashboardUid": "ad684xl",
+      "dashboardSlug": "admin",
+      "tag": "admin",
+      "fullWidth": true
+    },
+    {
+      "panelId": "1",
+      "title": "Simulation Results & Performance Breakdown",
+      "description": "Race ranking with driver, team, car setup, lap time, speeds, and penalties for the selected simulation",
+      "dashboardUid": "ad684xl",
+      "dashboardSlug": "admin",
+      "tag": "admin",
+      "fullWidth": true
+    },
+
+    { "_comment": "ENGINEER DASHBOARD" }, 
+
+    {
+      "panelId": "1",
+      "title": "Team Performance Overview",
+      "description": "General results for the team in simulations",
+      "dashboardUid": "ad5z78h",
+      "dashboardSlug": "engineer",
+      "tag": "engineer",
+      "fullWidth": false
+    },
+    {
+      "panelId": "5",
+      "title": "Team Simulation Results",
+      "description": "Data and results of specific simulation",
+      "dashboardUid": "ad5z78h",
+      "dashboardSlug": "engineer",
+      "tag": "engineer",
+      "fullWidth": false
+    },
+    {
+      "panelId": "4",
+      "title": "Profile by Circuit",
+      "description": "Comparison of straight and cornering speeds per circuit, highlighting speed differences and track characteristics",
+      "dashboardUid": "ad5z78h",
+      "dashboardSlug": "engineer",
+      "tag": "engineer",
+      "fullWidth": false 
+    },
+    {
+      "panelId": "3",
+      "title": "Parts Impact",
+      "description": "Average part attributes and race results, showing how each component category impacts performance",
+      "dashboardUid": "ad5z78h",
+      "dashboardSlug": "engineer",
+      "tag": "engineer",
+      "fullWidth": false
+    },
+    {
+      "panelId": "2",
+      "title": "Team Car Setup & Race Time Trend",
+      "description": "Time-based trend of car setup values (P/A/M) and race time for the selected team and car",
+      "dashboardUid": "ad5z78h",
+      "dashboardSlug": "engineer",
+      "tag": "engineer",
+      "fullWidth": true
+    },
+
+    { "_comment": "DRIVER DASHBOARD" }, 
+
+    {
+      "panelId": "5",
+      "title": "Driver Skill Level",
+      "description": "Current skill level of the selected driver",
+      "dashboardUid": "adl8cd2",
+      "dashboardSlug": "driver",
+      "tag": "driver",
+      "fullWidth": false 
+    },
+    {
+      "panelId": "1",
+      "title": "Driver Performance Summary",
+      "description": "Summary of race including wins, podiums, positions, and lap times",
+      "dashboardUid": "adl8cd2",
+      "dashboardSlug": "driver",
+      "tag": "driver",
+      "fullWidth": false 
+    },
+    {
+      "panelId": "3",
+      "title": "Race Time Trend",
+      "description": "Race time progression over simulations",
+      "dashboardUid": "adl8cd2",
+      "dashboardSlug": "driver",
+      "tag": "driver",
+      "fullWidth": false 
+    },
+    {
+      "panelId": "4",
+      "title": "Performance by Circuit",
+      "description": "Average race performance across different circuits",
+      "dashboardUid": "adl8cd2",
+      "dashboardSlug": "driver",
+      "tag": "driver",
+      "fullWidth": false 
+    },
+    {
+      "panelId": "2",
+      "title": "Race History",
+      "description": "Detailed race history",
+      "dashboardUid": "adl8cd2",
+      "dashboardSlug": "driver",
+      "tag": "driver",
+      "fullWidth": true 
     }
   ]
 }

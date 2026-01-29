@@ -1,0 +1,724 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": 0,
+  "links": [],
+  "panels": [
+    {
+      "datasource": {
+        "type": "mssql",
+        "uid": "efb6j40xjyadce"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "#930414",
+            "mode": "fixed"
+          },
+          "mappings": [],
+          "noValue": "-",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 11,
+        "w": 9,
+        "x": 0,
+        "y": 0
+      },
+      "id": 1,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "12.3.1",
+      "targets": [
+        {
+          "dataset": "F1GarageManager",
+          "datasource": {
+            "type": "mssql",
+            "uid": "efb6j40xjyadce"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT\n    COUNT(DISTINCT sp.simulation_id) AS 'Total Races',\n    SUM(CASE WHEN sp.position = 1 THEN 1 ELSE 0 END) AS 'Win',\n    SUM(CASE WHEN sp.position <= 3 THEN 1 ELSE 0 END) AS 'Podiums (Top 3)',\n    ROUND(AVG(sp.position), 2) AS 'Average Position',\n    MIN(sp.position) AS 'Best Position',\n    ROUND(AVG(sp.time_seconds), 2) AS 'Average Time'\nFROM SIMULATION_PARTICIPANT sp\nWHERE sp.team_id = ${Team};",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "title": "Team Stats",
+      "transparent": true,
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "mssql",
+        "uid": "efb6j40xjyadce"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "#c71c30",
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisGridShow": true,
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineStyle": {
+              "fill": "solid"
+            },
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "log": 2,
+              "type": "symlog"
+            },
+            "showPoints": "auto",
+            "showValues": false,
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "fieldMinMax": false,
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Time"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "dark-orange",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "P"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "dark-red",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "A"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "dark-blue",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "M"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "dark-green",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 11,
+        "w": 15,
+        "x": 9,
+        "y": 0
+      },
+      "id": 2,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "12.3.1",
+      "targets": [
+        {
+          "dataset": "F1GarageManager",
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT \n    s.Data_time as time,\n    sp.setup_p as P,\n    sp.setup_a as A,\n    sp.setup_m as M,\n    sp.time_seconds as Time,\n    c.Name as circuit\nFROM SIMULATION_PARTICIPANT sp\nJOIN SIMULATION s ON sp.simulation_id = s.Simulation_id\nJOIN CIRCUIT c ON s.Circuit_id = c.Circuit_id\nWHERE sp.team_id = ${Team}\n  AND sp.car_id = ${TeamCar}\nORDER BY s.Data_time;",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "title": "Car Setups Evolution",
+      "transparent": true,
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "mssql",
+        "uid": "efb6j40xjyadce"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "#ee0606",
+            "mode": "shades"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 15,
+        "x": 0,
+        "y": 11
+      },
+      "id": 5,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "12.3.1",
+      "targets": [
+        {
+          "dataset": "F1GarageManager",
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT \n    s.Data_time AS time,\n    FORMAT(s.Data_time, 'yyyy-MM-dd') AS race_date,\n    FORMAT(s.Data_time, 'HH:mm')      AS race_time,\n\n    c.Name AS circuit,\n\n    CONCAT(\n        'Car ',\n        DENSE_RANK() OVER (PARTITION BY t.Team_id ORDER BY car.Car_id)\n    ) AS car_number,\n\n    sp.position AS Position,\n    ROUND(sp.time_seconds, 2) AS Time,\n    ROUND(sp.v_recta, 1) AS [Straight Speed],\n    ROUND(sp.v_curva, 1) AS [Curve Speed],\n    ROUND(sp.penalty, 1) AS Penalty,\n    sp.setup_p AS P,\n    sp.setup_a AS A,\n    sp.setup_m AS M,\n    sp.driver_h AS H\n\nFROM SIMULATION_PARTICIPANT sp\nJOIN SIMULATION s ON sp.simulation_id = s.Simulation_id\nJOIN CIRCUIT c ON s.Circuit_id = c.Circuit_id\nJOIN TEAM t ON sp.team_id = t.Team_id\nJOIN CAR car ON sp.car_id = car.Car_id\nJOIN DRIVER d ON sp.driver_id = d.User_id\nJOIN [USER] u ON d.User_id = u.User_id\n\nWHERE sp.team_id = ${Team}\n  AND (${Simulation} = 0 OR sp.simulation_id = ${Simulation})\n  AND (${TeamCar} = 0 OR sp.car_id = ${TeamCar})\n\nORDER BY s.Data_time DESC, sp.position;",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "title": "Simulation Details",
+      "transparent": true,
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "mssql",
+        "uid": "efb6j40xjyadce"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "#a10000",
+            "mode": "shades"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "fillOpacity": 80,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineWidth": 1,
+            "scaleDistribution": {
+              "log": 2,
+              "type": "symlog"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 14,
+        "w": 9,
+        "x": 15,
+        "y": 11
+      },
+      "id": 4,
+      "options": {
+        "barRadius": 0,
+        "barWidth": 0.97,
+        "fullHighlight": false,
+        "groupWidth": 0.7,
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "right",
+          "showLegend": true
+        },
+        "orientation": "horizontal",
+        "showValue": "never",
+        "stacking": "none",
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "single",
+          "sort": "none"
+        },
+        "xTickLabelRotation": 0,
+        "xTickLabelSpacing": 0
+      },
+      "pluginVersion": "12.3.1",
+      "targets": [
+        {
+          "dataset": "F1GarageManager",
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT \n    c.Name as Circuit,\n    c.N_Curves as [Number of Curves],\n    AVG(sp.v_recta) as [Average Straight Speed],\n    AVG(sp.v_curva) as [Average Curve Speed],\n    AVG(sp.v_recta - sp.v_curva) as [Speed Difference],\n    COUNT(*) as Races\nFROM SIMULATION_PARTICIPANT sp\nJOIN SIMULATION s ON sp.simulation_id = s.Simulation_id\nJOIN CIRCUIT c ON s.Circuit_id = c.Circuit_id\nWHERE sp.team_id = ${Team}\n  AND (${TeamCar} = 0 OR sp.car_id = ${TeamCar})\nGROUP BY c.Name, c.N_Curves\nORDER BY [Number of Curves];",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "title": "Average Performance Per Circuit",
+      "transparent": true,
+      "type": "barchart"
+    },
+    {
+      "datasource": {
+        "type": "mssql",
+        "uid": "efb6j40xjyadce"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "footer": {
+              "reducers": []
+            },
+            "hideFrom": {
+              "viz": false
+            },
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "percentage",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "orange",
+                "value": 70
+              },
+              {
+                "color": "red",
+                "value": 85
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Name"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 316
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "p"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 54
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "a"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 67
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "m"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 59
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Average Position"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 140
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Best Position"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 104
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Category"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 252
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 25
+      },
+      "id": 3,
+      "options": {
+        "cellHeight": "sm",
+        "showHeader": true
+      },
+      "pluginVersion": "12.3.1",
+      "targets": [
+        {
+          "dataset": "F1GarageManager",
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH UsedParts AS (\n    SELECT \n        ssd.category AS Category,\n        p.Name AS Name,\n        AVG(ssd.part_p) AS p,\n        AVG(ssd.part_a) AS a,\n        AVG(ssd.part_m) AS m,\n        AVG(sp.position) AS [Average Position],\n        MIN(sp.position) AS [Best Position]\n    FROM SIMULATION_PARTICIPANT sp\n    JOIN SIMULATION_SETUP_DETAIL ssd \n        ON sp.simulation_id = ssd.simulation_id \n       AND sp.car_id = ssd.car_id\n    JOIN PART p ON ssd.part_id = p.Part_id\n    WHERE sp.team_id = ${Team}\n      AND (${TeamCar} = 0 OR sp.car_id = ${TeamCar})\n    GROUP BY ssd.category, p.Name\n)\nSELECT \n    Category,\n    Name,\n    p,\n    a,\n    m,\n    [Average Position],\n    [Best Position]\nFROM UsedParts;",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "title": "Used Partes Summary",
+      "transparent": true,
+      "type": "table"
+    }
+  ],
+  "preload": false,
+  "schemaVersion": 42,
+  "tags": [],
+  "templating": {
+    "list": [
+      {
+        "allowCustomValue": false,
+        "current": {
+          "text": "Mercedes",
+          "value": "1"
+        },
+        "definition": "SELECT \n    Team_id as __value,\n    Name as __text\nFROM TEAM;",
+        "hide": 2,
+        "name": "Team",
+        "options": [],
+        "query": "SELECT \n    Team_id as __value,\n    Name as __text\nFROM TEAM;",
+        "refresh": 1,
+        "regex": "",
+        "type": "query"
+      },
+      {
+        "allowCustomValue": false,
+        "current": {
+          "text": "Mercedes - Car 1",
+          "value": "1"
+        },
+        "definition": "WITH NumberedCars AS (\n    SELECT \n        c.Car_id,\n        t.Name as TeamName,\n        ROW_NUMBER() OVER (PARTITION BY c.Team_id ORDER BY c.Car_id) as CarNumber\n    FROM CAR c\n    JOIN TEAM t ON c.Team_id = t.Team_id\n    WHERE c.Team_id = ${Team}\n)\nSELECT \n    Car_id as __value,\n    CONCAT(TeamName, ' - Car ', CarNumber) as __text\nFROM NumberedCars\nORDER BY TeamName, CarNumber;",
+        "description": "",
+        "name": "TeamCar",
+        "options": [],
+        "query": "WITH NumberedCars AS (\n    SELECT \n        c.Car_id,\n        t.Name as TeamName,\n        ROW_NUMBER() OVER (PARTITION BY c.Team_id ORDER BY c.Car_id) as CarNumber\n    FROM CAR c\n    JOIN TEAM t ON c.Team_id = t.Team_id\n    WHERE c.Team_id = ${Team}\n)\nSELECT \n    Car_id as __value,\n    CONCAT(TeamName, ' - Car ', CarNumber) as __text\nFROM NumberedCars\nORDER BY TeamName, CarNumber;",
+        "refresh": 1,
+        "regex": "",
+        "type": "query"
+      },
+      {
+        "allowCustomValue": false,
+        "current": {
+          "text": "2026-01-27 01:20:16 - Monza",
+          "value": "6"
+        },
+        "definition": "SELECT\n    s.Simulation_id AS __value,\n    CONCAT(\n        CONVERT(varchar(19), s.Data_time, 120),\n        ' - ',\n        c.Name\n    ) AS __text\nFROM SIMULATION s\nJOIN CIRCUIT c \n    ON s.Circuit_id = c.Circuit_id\nJOIN SIMULATION_PARTICIPANT sp \n    ON s.Simulation_id = sp.simulation_id\nWHERE sp.team_id = ${Team}\nGROUP BY\n    s.Simulation_id,\n    s.Data_time,\n    c.Name\nORDER BY s.Data_time DESC;\n",
+        "name": "Simulation",
+        "options": [],
+        "query": "SELECT\n    s.Simulation_id AS __value,\n    CONCAT(\n        CONVERT(varchar(19), s.Data_time, 120),\n        ' - ',\n        c.Name\n    ) AS __text\nFROM SIMULATION s\nJOIN CIRCUIT c \n    ON s.Circuit_id = c.Circuit_id\nJOIN SIMULATION_PARTICIPANT sp \n    ON s.Simulation_id = sp.simulation_id\nWHERE sp.team_id = ${Team}\nGROUP BY\n    s.Simulation_id,\n    s.Data_time,\n    c.Name\nORDER BY s.Data_time DESC;\n",
+        "refresh": 1,
+        "regex": "",
+        "type": "query"
+      }
+    ]
+  },
+  "time": {
+    "from": "2026-01-20T00:08:37.487Z",
+    "to": "2026-01-27T01:20:16.653Z"
+  },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "Engineer",
+  "uid": "ad5z78h",
+  "version": 27
+}
