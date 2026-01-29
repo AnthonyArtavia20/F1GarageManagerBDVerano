@@ -23,7 +23,7 @@ const DriverProfile = () => {
   
   const [driverData, setDriverData] = useState({
     name: "[Driver's Name]",
-    teamName: "[Driver's Team]",
+    teamName: "---",
     initials: "•‿•",
     driverId: 1,
     teamId: 1
@@ -43,7 +43,7 @@ const DriverProfile = () => {
         const user = data.user;
         setDriverData({
           name: user.username || "[Driver's Name]",
-          teamName: user.teamName || "[Driver's Team]",
+          teamName: user.teamName || "---",
           initials: user.username?.charAt(0) || "•‿•",
           driverId: user.id || 1,
           teamId: user.teamId || 1
@@ -73,11 +73,7 @@ const DriverProfile = () => {
     params.set('viewPanel', panel.panelId);
     params.set('kiosk', '');
     
-    params.set('var-driver_id', driverData.driverId.toString());
-    
-    if (driverData.teamId) {
-      params.set('var-team_id', driverData.teamId.toString());
-    }
+    params.set('var-Driver', driverData.driverId.toString());
     
     return `${baseUrl}/d/${panel.dashboardUid}/${panel.dashboardSlug}?${params.toString()}`;
   };
