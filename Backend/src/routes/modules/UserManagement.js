@@ -92,6 +92,7 @@ router.put('/:userId/update', async (req, res) => {
         const { username, password, role, teamId } = req.body;
 
         console.log(`[UPDATE USER] Updating user ${userId}`);
+        console.log('[UPDATE USER] Request body:', req.body);
 
         let salt = null;
         let passwordHash = null;
@@ -104,13 +105,20 @@ router.put('/:userId/update', async (req, res) => {
     }
 
     const pool = await mssqlConnect();
+    
+    // ✅ Determinar si se debe actualizar TeamId
+    const updateTeamId = req.body.hasOwnProperty('teamId');
+    
+    console.log(`[UPDATE USER] UpdateTeamId flag: ${updateTeamId}, TeamId value: ${teamId}`);
+    
     const result = await pool.request()
         .input('UserId', sql.Int, parseInt(userId))
         .input('NewUsername', sql.NVarChar(100), username || null)
         .input('NewSalt', sql.NVarChar(255), salt)
         .input('NewPasswordHash', sql.NVarChar(255), passwordHash)
         .input('NewRole', sql.NVarChar(20), role || null)
-        .input('NewTeamId', sql.Int, teamId || null)  // ✅ Permite null
+        .input('NewTeamId', sql.Int, teamId || null)
+        .input('UpdateTeamId', sql.Bit, updateTeamId ? 1 : 0)  // ✅ Nuevo parámetro
         .execute('sp_UpdateUser');
 
     const userData = result.recordset[0];
