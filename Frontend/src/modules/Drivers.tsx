@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, Search, X } from "lucide-react";
+import { Search, X } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -185,18 +185,7 @@ const Drivers = () => {
             <p className="text-xs text-red-500 mt-2">Debug: isAdmin = {String(isAdmin)}</p>
           </div>
 
-          {/* ADMIN ONLY - LARGE BUTTON */}
-          {isAdmin ? (
-            <Button 
-              onClick={() => setShowForm(!showForm)}
-              className="bg-red-600 hover:bg-red-700 text-white px-8 py-6 text-lg font-bold"
-            >
-              <Plus className="w-6 h-6 mr-3" />
-              Add Driver
-            </Button>
-          ) : (
-            <div className="text-xs text-gray-500">Not Admin</div>
-          )}
+          {/* Add Driver button removed */}
         </div>
 
         {/* Create Driver Form Card (ADMIN) */}

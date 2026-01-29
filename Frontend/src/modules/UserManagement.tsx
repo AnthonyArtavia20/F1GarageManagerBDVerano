@@ -51,6 +51,8 @@ interface FormData {// Estructura del formulario para crear/editar usuarios
   password: string;
   role: UserRole;
   teamId: string;
+  // Pilot skill H (1-100) — only relevant when role === 'Driver'
+  driverH: string;
 }
 /*
 ============================================================================
@@ -73,6 +75,7 @@ const UserManagement = () => {
     password: "",
     role: "Driver",
     teamId: "",
+    driverH: "85",
   });
   
   /*
@@ -147,6 +150,15 @@ const UserManagement = () => {
       return;
     }
 
+    // If creating a Driver, validate pilot skill H (1-100)
+    if (!editingUser && formData.role === 'Driver') {
+      const hVal = Number(formData.driverH);
+      if (!formData.driverH || isNaN(hVal) || hVal < 1 || hVal > 100) {
+        setError('Driver H must be a number between 1 and 100');
+        return;
+      }
+    }
+
     try {
       setLoading(true);
       setError(null);
@@ -192,6 +204,7 @@ const UserManagement = () => {
             password: formData.password,
             role: formData.role,
             teamId: formData.teamId ? parseInt(formData.teamId) : null,
+            driverH: formData.role === 'Driver' ? (formData.driverH ? parseInt(formData.driverH) : 85) : undefined,
           })
         });
         
@@ -217,7 +230,7 @@ const UserManagement = () => {
   // ============================================================================
   // Limpia el formulario y cierra el diálogo
   const resetForm = () => {
-    setFormData({ username: "", password: "", role: "Driver", teamId: "" });
+    setFormData({ username: "", password: "", role: "Driver", teamId: "", driverH: "85" });
     setEditingUser(null);
     setIsDialogOpen(false);
     setError(null);
@@ -231,6 +244,8 @@ const UserManagement = () => {
       password: "",// Vacío porque no queremos mostrar la contraseña actual
       role: user.Role,
       teamId: user.Team_id?.toString() || "",
+      // driverH not provided by GET users — default to 85 for editing context
+      driverH: "85"
     });
     setIsDialogOpen(true);
     setError(null);
@@ -311,7 +326,7 @@ const UserManagement = () => {
                 variant="racing" 
                 onClick={() => { 
                   setEditingUser(null); 
-                  setFormData({ username: "", password: "", role: "Driver", teamId: "" });
+                  setFormData({ username: "", password: "", role: "Driver", teamId: "", driverH: "85" });
                   setError(null);
                   setSuccessMessage(null);
                 }}
@@ -416,6 +431,25 @@ const UserManagement = () => {
                       placeholder="Select team..."
                       required={true}
                     />
+                  </div>
+                )}
+
+                {/* Pilot Skill H (only for Driver) */}
+                {formData.role === "Driver" && (
+                  <div className="space-y-2">
+                    <Label>Pilot Skill (H)</Label>
+                    <div className="flex items-center gap-4">
+                      <Input
+                        type="number"
+                        min={1}
+                        max={100}
+                        value={formData.driverH}
+                        onChange={(e) => setFormData({...formData, driverH: e.target.value})}
+                        className="bg-accent/50 w-32"
+                        disabled={loading}
+                      />
+                      <p className="text-sm text-muted-foreground">Value 1-100 (default 85)</p>
+                    </div>
                   </div>
                 )}
 

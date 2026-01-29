@@ -1,9 +1,10 @@
-import { useState } from "react";
-import { Plus, Search, Users, Car, DollarSign, Edit, Trash2 } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Plus, Search, Users, Car, DollarSign, Edit, Trash2, X } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import axios from "@/lib/axios";
 
 // Team information 
 
@@ -28,8 +29,87 @@ const teamsData = [
   },
 ];
 
+interface Driver {
+  User_id: number;
+  name: string;
+  team: string;
+  skill: number;
+}
+
 const Teams = () => {
   const [search, setSearch] = useState("");
+  const [showForm, setShowForm] = useState(false);
+  const [teamName, setTeamName] = useState("");
+  // Driver selectors removed — assignment will be optional
+  const [drivers, setDrivers] = useState<Driver[]>([]);
+  const [assignDriversLater, setAssignDriversLater] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+
+  useEffect(() => {
+    fetchDrivers();
+  }, []);
+
+  const fetchDrivers = async () => {
+    try {
+      const res = await axios.get("/drivers");
+      console.log("Drivers response:", res.data);
+      
+      // Handle both array and object responses
+      let driversData = Array.isArray(res.data) ? res.data : res.data.data || res.data.recordset || [];
+
+      // Normalize shape so options have consistent keys
+      const normalized = driversData.map((d: any) => ({
+        User_id: d.User_id ?? d.id ?? d.UserId ?? d.user_id ?? null,
+        Username: d.Username ?? d.name ?? d.Name ?? d.username ?? '',
+        H: d.H ?? d.skill ?? d.h ?? 0,
+      }));
+
+      setDrivers(normalized);
+    } catch (err) {
+      console.error("Error fetching drivers:", err);
+      setDrivers([]);
+    }
+  };
+
+  const handleCreateTeam = async () => {
+    setError("");
+    setSuccess("");
+
+    console.log("Form data:", { teamName, assignDriversLater });
+
+    // Validation
+    if (!teamName.trim()) {
+      setError("Team name is required");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const payload: any = {
+        teamName: teamName.trim(),
+      };
+      // If you ever want to support assigning now, add driver ids to payload
+      console.log("Sending payload:", payload);
+      
+      const response = await axios.post("/teams", payload);
+      console.log("Response:", response.data);
+
+      setSuccess("Team created successfully!");
+      setTimeout(() => {
+        setShowForm(false);
+        setTeamName("");
+        setAssignDriversLater(true);
+        setSuccess("");
+      }, 1500);
+    } catch (err: any) {
+      console.error("Error details:", err.response?.data);
+      setError(err.response?.data?.message || "Error creating team");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const filteredTeams = teamsData.filter((team) =>
     team.name.toLowerCase().includes(search.toLowerCase())
@@ -49,11 +129,103 @@ const Teams = () => {
               Administration and visualization of available teams in the system
             </p>
           </div>
-          <Button variant="racing" size="lg">
+          <Button 
+            onClick={() => setShowForm(!showForm)}
+            variant="racing" 
+            size="lg"
+            className="bg-red-600 hover:bg-red-700"
+          >
             <Plus className="w-5 h-5" />
             ADD TEAM
           </Button>
         </div>
+
+        {/* Create Team Form Card (ADMIN) */}
+        {showForm && (
+          <div className="glass-card p-8 mb-8 rounded-xl border border-primary/20 opacity-0 animate-fade-in">
+            {/* Card Header */}
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-bold">Create New Team</h2>
+              <button
+                onClick={() => setShowForm(false)}
+                className="text-gray-400 hover:text-white"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            {/* Form Content */}
+            <div className="space-y-6">
+              {/* Team Name */}
+              <div>
+                <label className="block text-sm font-semibold mb-2">
+                  Team Name *
+                </label>
+                <Input
+                  type="text"
+                  placeholder="Enter team name"
+                  value={teamName}
+                  onChange={(e) => setTeamName(e.target.value)}
+                  disabled={loading}
+                  className="text-white"
+                />
+              </div>
+
+              {/* Assign Drivers Option */}
+              <div className="flex items-center gap-3">
+                <input
+                  id="assignLater"
+                  type="checkbox"
+                  checked={assignDriversLater}
+                  onChange={(e) => setAssignDriversLater(e.target.checked)}
+                  className="w-4 h-4"
+                />
+                <label htmlFor="assignLater" className="text-sm">
+                  Assign drivers later (no drivers will be assigned now)
+                </label>
+              </div>
+              
+              <p className="text-xs text-muted-foreground">Note: driver assignment can be done later from the team details.</p>
+
+              {/* Error Message */}
+              {error && (
+                <div className="bg-red-500/20 border border-red-500 rounded-lg p-3 text-red-300 text-sm">
+                  {error}
+                </div>
+              )}
+
+              {/* Success Message */}
+              {success && (
+                <div className="bg-green-500/20 border border-green-500 rounded-lg p-3 text-green-300 text-sm">
+                  ✅ {success}
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              <div className="flex gap-4 pt-4">
+                <Button
+                  onClick={handleCreateTeam}
+                  disabled={loading}
+                  className="flex-1 bg-primary hover:bg-primary/90 text-white font-bold py-2"
+                >
+                  {loading ? "Creating..." : "Create Team"}
+                </Button>
+                <Button
+                  onClick={() => {
+                    setShowForm(false);
+                    setError("");
+                    setSuccess("");
+                  }}
+                  disabled={loading}
+                  variant="outline"
+                  className="flex-1 text-white"
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Search */}
         <div className="relative max-w-md mb-8 opacity-0 animate-fade-in" style={{ animationDelay: "100ms" }}>
