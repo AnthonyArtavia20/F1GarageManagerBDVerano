@@ -1,24 +1,13 @@
 -- ============================================================================
 -- F1 Garage Manager
--- Parte 5.1: Stored Procedures para User Management (CORREGIDO)
--- Ejecutar DESPUÉS del 05_Stored_Procedures.sql
+-- Parte 5.1: Stored Procedures para User Management (ACTUALIZADO)
+-- Permite TeamId NULL para Engineer y Driver
 -- ============================================================================
 USE F1GarageManager;
 GO
 
--- Verificar que la tabla USER existe
-IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'USER' AND type = 'U')
-BEGIN
-    PRINT '❌ ERROR: La tabla USER no existe. Debes ejecutar primero 01_Database.sql';
-    PRINT 'Saliendo...';
-    RETURN;
-END
-
-PRINT '✅ Tabla USER verificada - Continuando...';
-GO
-
 -- ============================================================================
--- 1. SP: Crear Usuario
+-- 1. SP: Crear Usuario (ACTUALIZADO - TeamId opcional)
 -- ============================================================================
 IF OBJECT_ID('sp_CreateUser', 'P') IS NOT NULL
     DROP PROCEDURE sp_CreateUser;
@@ -29,7 +18,7 @@ CREATE PROCEDURE sp_CreateUser
     @Salt NVARCHAR(255),
     @PasswordHash NVARCHAR(255),
     @Role NVARCHAR(20),        -- 'Admin', 'Engineer', 'Driver'
-    @TeamId INT = NULL,        -- Opcional, requerido para Engineer/Driver
+    @TeamId INT = NULL,        -- AHORA ES OPCIONAL para Engineer/Driver
     @DriverH INT = 85          -- Opcional, solo para Driver
 AS
 BEGIN
@@ -46,9 +35,8 @@ BEGIN
         IF @Role NOT IN ('Admin', 'Engineer', 'Driver')
             THROW 51002, 'Rol inválido. Debe ser: Admin, Engineer o Driver', 1;
         
-        -- Validar TeamId para Engineer/Driver
-        IF @Role IN ('Engineer', 'Driver') AND @TeamId IS NULL
-            THROW 51003, 'TeamId es requerido para Engineer y Driver', 1;
+        -- CAMBIO: Ya NO validamos que TeamId sea obligatorio
+        -- Engineer y Driver ahora pueden tener TeamId = NULL
         
         -- Insertar usuario
         DECLARE @UserId INT;
@@ -62,9 +50,9 @@ BEGIN
         IF @Role = 'Admin'
             INSERT INTO ADMIN (User_id) VALUES (@UserId);
         ELSE IF @Role = 'Engineer'
-            INSERT INTO ENGINEER (User_id, Team_id) VALUES (@UserId, @TeamId);
+            INSERT INTO ENGINEER (User_id, Team_id) VALUES (@UserId, @TeamId); -- ✅ Permite NULL
         ELSE IF @Role = 'Driver'
-            INSERT INTO DRIVER (User_id, Team_id, H) VALUES (@UserId, @TeamId, @DriverH);
+            INSERT INTO DRIVER (User_id, Team_id, H) VALUES (@UserId, @TeamId, @DriverH); -- ✅ Permite NULL
         
         -- Retornar resultado
         SELECT 
@@ -85,11 +73,11 @@ BEGIN
 END
 GO
 
-PRINT '✅ SP sp_CreateUser creado';
+PRINT '✅ SP sp_CreateUser creado (TeamId opcional)';
 GO
 
 -- ============================================================================
--- 2. SP: Actualizar Usuario
+-- 2. SP: Actualizar Usuario (ACTUALIZADO - Permite quitar TeamId)
 -- ============================================================================
 IF OBJECT_ID('sp_UpdateUser', 'P') IS NOT NULL
     DROP PROCEDURE sp_UpdateUser;
@@ -101,7 +89,8 @@ CREATE PROCEDURE sp_UpdateUser
     @NewSalt NVARCHAR(255) = NULL,
     @NewPasswordHash NVARCHAR(255) = NULL,
     @NewRole NVARCHAR(20) = NULL,
-    @NewTeamId INT = NULL
+    @NewTeamId INT = NULL, -- Puede ser NULL para quitar equipo
+    @UpdateTeamId BIT = 0  -- Flag para saber si actualizar TeamId
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -156,21 +145,13 @@ BEGIN
             IF @NewRole = 'Admin'
                 INSERT INTO ADMIN (User_id) VALUES (@UserId);
             ELSE IF @NewRole = 'Engineer'
-            BEGIN
-                IF @NewTeamId IS NULL
-                    THROW 51006, 'TeamId es requerido para Engineer', 1;
                 INSERT INTO ENGINEER (User_id, Team_id) VALUES (@UserId, @NewTeamId);
-            END
             ELSE IF @NewRole = 'Driver'
-            BEGIN
-                IF @NewTeamId IS NULL
-                    THROW 51007, 'TeamId es requerido para Driver', 1;
                 INSERT INTO DRIVER (User_id, Team_id, H) VALUES (@UserId, @NewTeamId, 85);
-            END
         END
-        ELSE IF @NewTeamId IS NOT NULL AND @CurrentRole IN ('Engineer', 'Driver')
+        ELSE IF @UpdateTeamId = 1 AND @CurrentRole IN ('Engineer', 'Driver')
         BEGIN
-            -- Solo actualizar team si no cambió el rol
+            -- ✅ Solo actualizar si el flag está activado
             IF @CurrentRole = 'Engineer'
                 UPDATE ENGINEER SET Team_id = @NewTeamId WHERE User_id = @UserId;
             ELSE IF @CurrentRole = 'Driver'
@@ -205,7 +186,7 @@ BEGIN
 END
 GO
 
-PRINT '✅ SP sp_UpdateUser creado';
+PRINT '✅ SP sp_UpdateUser creado (permite quitar TeamId)';
 GO
 
 -- ============================================================================
@@ -233,12 +214,12 @@ BEGIN
         DECLARE @Role NVARCHAR(20);
         
         SELECT @Username = Username,
-               @Role = CASE 
+                @Role = CASE 
                     WHEN EXISTS (SELECT 1 FROM ADMIN WHERE User_id = @UserId) THEN 'Admin'
                     WHEN EXISTS (SELECT 1 FROM ENGINEER WHERE User_id = @UserId) THEN 'Engineer'
                     WHEN EXISTS (SELECT 1 FROM DRIVER WHERE User_id = @UserId) THEN 'Driver'
                     ELSE 'Unknown'
-               END
+                END
         FROM [USER]
         WHERE User_id = @UserId;
         
