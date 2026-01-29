@@ -7,7 +7,9 @@ const { mssqlConnect } = require('../config/database');
 const getAllCircuits = async (req, res) => {
     try {
         const pool = await mssqlConnect();
+        
         const result = await pool.request()
+            .input('dc', sql.Decimal(10, 3), 0.200)
             .execute('sp_GetAllCircuits');
 
         res.json({
@@ -73,11 +75,27 @@ const createCircuit = async (req, res) => {
             });
         }
 
+        const distanceNum = parseFloat(totalDistance);
+        if (isNaN(distanceNum) || distanceNum <= 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'La distancia total debe ser un número mayor a 0'
+            });
+        }
+
+        const decimalPlaces = (distanceNum.toString().split('.')[1] || '').length;
+        if (decimalPlaces > 3) {
+            return res.status(400).json({
+                success: false,
+                message: 'La distancia total no puede tener más de 3 decimales'
+            });
+        }
+
         const pool = await mssqlConnect();
         
         const result = await pool.request()
             .input('Name', sql.VarChar(100), name)
-            .input('Total_distance', sql.Decimal(10, 2), totalDistance)
+            .input('Total_distance', sql.Decimal(10, 3), distanceNum)
             .input('N_Curves', sql.Int, numberOfCurves)
             .output('Success', sql.Bit)
             .output('Message', sql.NVarChar(500))
@@ -95,7 +113,7 @@ const createCircuit = async (req, res) => {
                 data: {
                     circuitId: newCircuitId,
                     name: name,
-                    totalDistance: totalDistance,
+                    totalDistance: distanceNum,
                     numberOfCurves: numberOfCurves
                 }
             });
@@ -130,12 +148,28 @@ const updateCircuit = async (req, res) => {
             });
         }
 
+        const distanceNum = parseFloat(totalDistance);
+        if (isNaN(distanceNum) || distanceNum <= 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'La distancia total debe ser un número mayor a 0'
+            });
+        }
+
+        const decimalPlaces = (distanceNum.toString().split('.')[1] || '').length;
+        if (decimalPlaces > 3) {
+            return res.status(400).json({
+                success: false,
+                message: 'La distancia total no puede tener más de 3 decimales'
+            });
+        }
+
         const pool = await mssqlConnect();
         
         const result = await pool.request()
             .input('Circuit_id', sql.Int, id)
             .input('Name', sql.VarChar(100), name)
-            .input('Total_distance', sql.Decimal(10, 2), totalDistance)
+            .input('Total_distance', sql.Decimal(10, 3), distanceNum)
             .input('N_Curves', sql.Int, numberOfCurves)
             .output('Success', sql.Bit)
             .output('Message', sql.NVarChar(500))
@@ -209,13 +243,13 @@ const deleteCircuit = async (req, res) => {
 const validateCircuit = async (req, res) => {
     try {
         const { id } = req.params;
-        const dc = req.query.dc || 0.5; // dc por defecto
+        const dc = req.query.dc || 0.200;
         
         const pool = await mssqlConnect();
         
         const result = await pool.request()
             .input('Circuit_id', sql.Int, id)
-            .input('dc', sql.Decimal(10, 2), dc)
+            .input('dc', sql.Decimal(10, 3), dc)
             .execute('sp_ValidateCircuitForSimulation');
 
         res.json({

@@ -110,7 +110,7 @@ interface SelectedParticipant {
   carM: number;
 }
 
-const DC_CURVE_DISTANCE = 0.5; // km
+const DC_CURVE_DISTANCE = 0.2; // km
 
 const Simulation = () => {
   const [activeTab, setActiveTab] = useState("new");

@@ -40,39 +40,6 @@ END
 GO
 
 -- ============================================================================
--- SP: Validar circuito para simulacion
--- ============================================================================
-CREATE OR ALTER PROCEDURE sp_ValidateCircuitForSimulation
-    @Circuit_id INT,
-    @dc DECIMAL(10,2) = 0.5
-AS
-BEGIN
-    SET NOCOUNT ON;
-    
-    SELECT 
-        Circuit_id,
-        Name,
-        Total_distance,
-        N_Curves,
-        -- Calcular distancias con dc proporcionado
-        (@dc * N_Curves) AS Calculated_Curve_Distance,
-        (Total_distance - (@dc * N_Curves)) AS Calculated_Straight_Distance,
-        -- Validación
-        CASE 
-            WHEN (Total_distance - (@dc * N_Curves)) >= 0 THEN 1
-            ELSE 0
-        END AS IsValid,
-        CASE 
-            WHEN (Total_distance - (@dc * N_Curves)) >= 0 
-            THEN 'Circuito válido para simulación'
-            ELSE 'Error: Las curvas ocupan más distancia que el total del circuito'
-        END AS Message
-    FROM CIRCUIT
-    WHERE Circuit_id = @Circuit_id;
-END
-GO
-
--- ============================================================================
 -- SP: Validar carro para simulación
 -- ============================================================================
 CREATE OR ALTER PROCEDURE sp_ValidateCarForSimulation
@@ -191,7 +158,7 @@ CREATE OR ALTER PROCEDURE sp_CalculateRaceTimes
     @Car_A INT,
     @Car_M INT,
     @Driver_H INT,
-    @dc DECIMAL(10,2) = 0.5,
+    @dc DECIMAL(10,3) = 0.200,
     @V_recta DECIMAL(10,2) OUTPUT,
     @V_curva DECIMAL(10,2) OUTPUT,
     @Penalization DECIMAL(10,2) OUTPUT,
@@ -267,10 +234,10 @@ GO
 -- ============================================================================
 CREATE OR ALTER PROCEDURE sp_RunSimulation
     @Circuit_id INT,
-    @User_id INT,  -- ← Cambiado de @Admin_id a @User_id
+    @User_id INT,
     @Car_ids NVARCHAR(MAX),
     @Driver_ids NVARCHAR(MAX),
-    @dc DECIMAL(10,2) = 0.5,
+    @dc DECIMAL(10,3) = 0.200,
     @Success BIT OUTPUT,
     @Message NVARCHAR(500) OUTPUT,
     @Simulation_id INT OUTPUT
@@ -860,16 +827,14 @@ BEGIN
         Name,
         Total_distance,
         N_Curves,
-        -- Calcular distancias con dc = 0.5 (valor por defecto)
-        (N_Curves * 0.5) AS Calculated_Curve_Distance,
-        (Total_distance - (N_Curves * 0.5)) AS Calculated_Straight_Distance,
-        -- Validación
+        (N_Curves * 0.200) AS Calculated_Curve_Distance,
+        (Total_distance - (N_Curves * 0.200)) AS Calculated_Straight_Distance,
         CASE 
-            WHEN (Total_distance - (N_Curves * 0.5)) >= 0 THEN 1
+            WHEN (Total_distance - (N_Curves * 0.200)) >= 0 THEN 1
             ELSE 0
         END AS IsValid,
         CASE 
-            WHEN (Total_distance - (N_Curves * 0.5)) >= 0 
+            WHEN (Total_distance - (N_Curves * 0.200)) >= 0
             THEN 'Circuito válido para simulación'
             ELSE 'Error: Las curvas ocupan más distancia que el total del circuito'
         END AS Message

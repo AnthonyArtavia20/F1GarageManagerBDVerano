@@ -73,7 +73,7 @@ const Analytics = () => {
     
     // On engineer user add team as parameter
     if (sessionUser?.role === 'engineer' && sessionUser.teamId && panel.tag === 'engineer') {
-      params.set('var-team_id', sessionUser.teamId.toString());
+      params.set('var-Team', sessionUser.teamId.toString());
     }
     
     return `${baseUrl}/d/${panel.dashboardUid}/${panel.dashboardSlug}?${params.toString()}`;

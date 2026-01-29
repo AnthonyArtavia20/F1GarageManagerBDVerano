@@ -33,8 +33,8 @@ const navigation: NavItem[] = [
   { name: "Store*", href: "/Store", icon: Store },
   { name: "Inventory*", href: "/Inventory", icon: Package },
   { name: "Car Assembly*", href: "/CarAssembly", icon: Wrench },
-  { name: "Circuits [X]", href: "/Circuits", icon: Flag },
-  { name: "Simulation [X]", href: "/Simulation", icon: Play },
+  { name: "Circuits", href: "/Circuits", icon: Flag },
+  { name: "Simulation", href: "/Simulation", icon: Play },
   { name: "User Management", href: "/UserManagement", icon: UserPen },
 ];
 

@@ -1,19 +1,9 @@
 -- ============================================================================
--- F1 Garage Manager - Stored Procedures para Circuitos
--- ============================================================================
-
-USE F1GarageManager;
-GO
-
-PRINT 'Creando Stored Procedures para CIRCUIT...';
-GO
-
--- ============================================================================
 -- SP: Crear nuevo circuito
 -- ============================================================================
 CREATE OR ALTER PROCEDURE sp_CreateCircuit
     @Name VARCHAR(100),
-    @Total_distance DECIMAL(10,2),
+    @Total_distance DECIMAL(10,3),
     @N_Curves INT,
     @Success BIT OUTPUT,
     @Message NVARCHAR(500) OUTPUT,
@@ -81,14 +71,11 @@ BEGIN
 END
 GO
 
-PRINT 'SP sp_CreateCircuit creado';
-GO
-
 -- ============================================================================
 -- SP: Obtener todos los circuitos
 -- ============================================================================
 CREATE OR ALTER PROCEDURE sp_GetAllCircuits
-    @dc DECIMAL(10,2) = 0.5
+    @dc DECIMAL(10,3) = 0.200
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -111,38 +98,13 @@ BEGIN
 END
 GO
 
-PRINT 'SP sp_GetAllCircuits creado';
-GO
-
--- ============================================================================
--- SP: Obtener un circuito por ID
--- ============================================================================
-CREATE OR ALTER PROCEDURE sp_GetCircuitById
-    @Circuit_id INT
-AS
-BEGIN
-    SET NOCOUNT ON;
-    
-    SELECT 
-        Circuit_id,
-        Name,
-        Total_distance,
-        N_Curves
-    FROM CIRCUIT
-    WHERE Circuit_id = @Circuit_id;
-END
-GO
-
-PRINT 'SP sp_GetCircuitById creado';
-GO
-
 -- ============================================================================
 -- SP: Actualizar circuito
 -- ============================================================================
 CREATE OR ALTER PROCEDURE sp_UpdateCircuit
     @Circuit_id INT,
     @Name VARCHAR(100),
-    @Total_distance DECIMAL(10,2),
+    @Total_distance DECIMAL(10,3),
     @N_Curves INT,
     @Success BIT OUTPUT,
     @Message NVARCHAR(500) OUTPUT
@@ -219,77 +181,20 @@ BEGIN
 END
 GO
 
-PRINT 'SP sp_UpdateCircuit creado';
-GO
-
--- ============================================================================
--- SP: Eliminar circuito
--- ============================================================================
-CREATE OR ALTER PROCEDURE sp_DeleteCircuit
-    @Circuit_id INT,
-    @Success BIT OUTPUT,
-    @Message NVARCHAR(500) OUTPUT
-AS
-BEGIN
-    SET NOCOUNT ON;
-    SET @Success = 0;
-    SET @Message = '';
-    
-    BEGIN TRY
-        BEGIN TRANSACTION;
-        
-        -- Verificar que el circuito existe
-        IF NOT EXISTS (SELECT 1 FROM CIRCUIT WHERE Circuit_id = @Circuit_id)
-        BEGIN
-            SET @Message = 'Circuito no encontrado';
-            ROLLBACK TRANSACTION;
-            RETURN;
-        END
-        
-        -- Verificar que no esté siendo usado en simulaciones
-        IF EXISTS (SELECT 1 FROM SIMULATION WHERE Circuit_id = @Circuit_id)
-        BEGIN
-            SET @Message = 'No se puede eliminar: el circuito tiene simulaciones asociadas';
-            ROLLBACK TRANSACTION;
-            RETURN;
-        END
-        
-        -- Eliminar
-        DELETE FROM CIRCUIT WHERE Circuit_id = @Circuit_id;
-        
-        COMMIT TRANSACTION;
-        
-        SET @Success = 1;
-        SET @Message = 'Circuito eliminado exitosamente';
-        
-    END TRY
-    BEGIN CATCH
-        IF @@TRANCOUNT > 0
-            ROLLBACK TRANSACTION;
-        
-        SET @Success = 0;
-        SET @Message = 'Error al eliminar circuito: ' + ERROR_MESSAGE();
-    END CATCH;
-END
-GO
-
-PRINT 'SP sp_DeleteCircuit creado';
-GO
-
 -- ============================================================================
 -- SP: Validar circuito para simulación
 -- ============================================================================
 CREATE OR ALTER PROCEDURE sp_ValidateCircuitForSimulation
     @Circuit_id INT,
-    @dc DECIMAL(10,2) = 0.5  -- Distancia por curva (parámetro global del sistema)
+    @dc DECIMAL(10,3) = 0.200
 AS
 BEGIN
     SET NOCOUNT ON;
     
-    DECLARE @Total_distance DECIMAL(10,2);
+    DECLARE @Total_distance DECIMAL(10,3);
     DECLARE @N_Curves INT;
-    DECLARE @D_curves DECIMAL(10,2);
-    DECLARE @D_straights DECIMAL(10,2);
+    DECLARE @D_curves DECIMAL(10,3);
+    DECLARE @D_straights DECIMAL(10,3);
     DECLARE @IsValid BIT;
     DECLARE @Message NVARCHAR(500);
     
@@ -330,12 +235,4 @@ BEGIN
         @D_curves AS Total_Curve_Distance,
         @D_straights AS Total_Straight_Distance;
 END
-GO
-
-PRINT 'SP sp_ValidateCircuitForSimulation creado';
-GO
-
-PRINT '============================================================================';
-PRINT 'STORED PROCEDURES DE CIRCUITOS CREADOS EXITOSAMENTE';
-PRINT '============================================================================';
 GO

@@ -270,7 +270,7 @@ const getCircuitStatistics = async (req, res) => {
 // ============================================================================
 const runSimulation = async (req, res) => {
   try {
-    const { circuitId, carIds, driverIds, dc = 0.5 } = req.body;
+    const { circuitId, carIds, driverIds, dc = 0.200 } = req.body;
     
     console.log('🚀 Iniciando simulación con datos:', { 
       circuitId, 
@@ -365,7 +365,7 @@ const runSimulation = async (req, res) => {
       .input('User_id', sql.Int, userId)  // ← CAMBIADO: de Admin_id a User_id
       .input('Car_ids', sql.NVarChar(sql.MAX), carIdsString)
       .input('Driver_ids', sql.NVarChar(sql.MAX), driverIdsString)
-      .input('dc', sql.Decimal(10, 2), dc)
+      .input('dc', sql.Decimal(10, 3), dc)
       .output('Success', sql.Bit)
       .output('Message', sql.NVarChar(500))
       .output('Simulation_id', sql.Int)

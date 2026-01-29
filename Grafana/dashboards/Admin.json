@@ -563,7 +563,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT \n    sp.position as Ranking,\n    t.Name as Team,\n    u.Username as Driver,\n    \n    sp.setup_p as P,\n    sp.setup_a as A,\n    sp.setup_m as M,\n    sp.driver_h as H,\n    \n    ROUND(sp.time_seconds, 2) as 'Time (s)',\n    ROUND(sp.v_recta, 1) as 'Straight S. (km/h)',\n    ROUND(sp.v_curva, 1) as 'Curve S. (km/h)',\n    ROUND(sp.penalty, 1) as Penalty,\n    \n    ROW_NUMBER() OVER (PARTITION BY t.Team_id ORDER BY car.Car_id) as 'Car ID'\n    \nFROM SIMULATION_PARTICIPANT sp\nJOIN SIMULATION s ON sp.simulation_id = s.Simulation_id\nJOIN CIRCUIT c ON s.Circuit_id = c.Circuit_id\nJOIN TEAM t ON sp.team_id = t.Team_id\nJOIN DRIVER d ON sp.driver_id = d.User_id\nJOIN [USER] u ON d.User_id = u.User_id\nJOIN CAR car ON sp.car_id = car.Car_id\n\nWHERE (${Simulation} = 0 OR s.Simulation_id = ${Simulation})\nORDER BY sp.position;",
+          "rawSql": "SELECT \n    sp.position AS Ranking,\n    t.Name AS Team,\n    u.Username AS Driver,\n    \n    sp.setup_p AS P,\n    sp.setup_a AS A,\n    sp.setup_m AS M,\n    sp.driver_h AS H,\n    \n    ROUND(sp.time_seconds, 2) AS [Time (s)],\n    ROUND(sp.v_recta, 1) AS [Straight S. (km/h)],\n    ROUND(sp.v_curva, 1) AS [Curve S. (km/h)],\n    ROUND(sp.penalty, 1) AS Penalty\n\nFROM SIMULATION_PARTICIPANT sp\nJOIN SIMULATION s ON sp.simulation_id = s.Simulation_id\nJOIN CIRCUIT c ON s.Circuit_id = c.Circuit_id\nJOIN TEAM t ON sp.team_id = t.Team_id\nJOIN DRIVER d ON sp.driver_id = d.User_id\nJOIN [USER] u ON d.User_id = u.User_id\nJOIN CAR car ON sp.car_id = car.Car_id\n\nWHERE (${Simulation} = 0 OR s.Simulation_id = ${Simulation})\nORDER BY sp.position;",
           "refId": "A",
           "sql": {
             "columns": [
@@ -597,8 +597,8 @@
       {
         "allowCustomValue": false,
         "current": {
-          "text": "Alfa Romeo",
-          "value": "9"
+          "text": "Red Bull Racing",
+          "value": "1"
         },
         "definition": "SELECT \n    Team_id as __value,\n    Name as __text\nFROM TEAM;",
         "name": "Team",
@@ -612,7 +612,7 @@
         "allowCustomValue": false,
         "current": {
           "text": "Car 1",
-          "value": "9"
+          "value": "1"
         },
         "definition": "WITH NumberedCars AS (\n    SELECT \n        c.Car_id,\n        t.Name as TeamName,\n        ROW_NUMBER() OVER (PARTITION BY c.Team_id ORDER BY c.Car_id) as CarNumber\n    FROM CAR c\n    JOIN TEAM t ON c.Team_id = t.Team_id\n    WHERE c.Team_id = ${Team}\n)\nSELECT \n    Car_id as __value,\n    CONCAT('Car ', CarNumber) as __text\nFROM NumberedCars\nORDER BY TeamName, CarNumber;",
         "name": "Car",
@@ -625,8 +625,8 @@
       {
         "allowCustomValue": false,
         "current": {
-          "text": "20 Jan 00:08:37 - Monza",
-          "value": "1"
+          "text": "29 Jan 15:11:56 - Silverstone",
+          "value": "2"
         },
         "definition": "SELECT \n    s.Simulation_id as __value,\n    CONCAT(\n        FORMAT(s.Data_time, 'dd MMM HH:mm:ss'), \n        ' - ', \n        c.Name) as __text\nFROM SIMULATION s\nJOIN CIRCUIT c ON s.Circuit_id = c.Circuit_id\nORDER BY s.Data_time DESC;",
         "name": "Simulation",
@@ -639,7 +639,7 @@
       {
         "allowCustomValue": false,
         "current": {
-          "text": "Monza",
+          "text": "Monza GP",
           "value": "1"
         },
         "definition": "SELECT \n    Circuit_id as __value,\n    Name as __text\nFROM CIRCUIT\nORDER BY Name;",
@@ -653,12 +653,12 @@
     ]
   },
   "time": {
-    "from": "2026-01-20T00:08:37.487Z",
-    "to": "2026-01-27T01:20:16.653Z"
+    "from": "2026-01-29T12:53:40.149Z",
+    "to": "2026-01-29T18:53:52.356Z"
   },
   "timepicker": {},
   "timezone": "browser",
   "title": "Admin",
   "uid": "ad684xl",
-  "version": 26
+  "version": 28
 }

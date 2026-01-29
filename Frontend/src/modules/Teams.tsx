@@ -20,7 +20,6 @@ const teamsData = [
     id: " [Team's ID] ",
     name: "[Team's Name]",
     budget: 0,
-    cars: 2,
     drivers: ["[Driver_1]", "[Driver_2]"],
     color: "#1E41FF",
     logo: "•_•",
@@ -29,7 +28,6 @@ const teamsData = [
     id: "TEST-001",
     name: "Red Bull Racing",
     budget: 15000000,
-    cars: 2,
     drivers: ["Max Verstappen", "Sergio Pérez"],
     color: "#0600EF",
     logo: "RB",
@@ -52,7 +50,6 @@ interface TeamCard {
   id: string;
   name: string;
   budget: number;
-  cars: number;
   drivers: string[];
   color: string;
   logo: string;
@@ -166,7 +163,6 @@ const Teams = () => {
         name: t.Name ?? t.name ?? "Unnamed Team",
         // Use available budget (Total_Budget - Total_Spent) if provided, otherwise fall back to Total_Budget
         budget: Number(t.Available_Budget ?? t.Total_Budget ?? 0),
-        cars: 0,
         drivers: [],
         color: ["#0600EF", "#1E41FF", "#FF6B6B", "#FFA500"][idx % 4],
         logo: (t.Name || t.name || "").split(" ").map((w: string) => w[0]).slice(0,2).join("") || "T",
@@ -195,7 +191,6 @@ const Teams = () => {
         return {
           ...t,
           drivers: assigned.map((d) => d.Username || d.name || `#${d.User_id}`),
-          cars: t.cars ?? 0,
           budget: t.budget ?? 0,
         } as TeamCard;
       });
@@ -239,7 +234,6 @@ const Teams = () => {
         id: String(newTeamId),
         name: teamName.trim(),
         budget: 0,
-        cars: 0,
         drivers: [],
         color: '#1E41FF',
         logo: teamName.trim().split(' ').map((w) => w[0]).slice(0,2).join('') || 'T',
@@ -477,18 +471,13 @@ const Teams = () => {
                 </div>
 
                 {/* Stats */}
-                <div className="grid grid-cols-3 gap-4 mb-4">
+                <div className="grid grid-cols-2 gap-4 mb-4">
                   <div className="text-center p-3 rounded-lg bg-accent/50">
                     <DollarSign className="w-4 h-4 text-success mx-auto mb-1" />
                     <p className="text-xs text-muted-foreground">Budget</p>
                     <p className="font-medium text-foreground text-sm">
                       {formatBudget(team.budget)}
                     </p>
-                  </div>
-                  <div className="text-center p-3 rounded-lg bg-accent/50">
-                    <Car className="w-4 h-4 text-primary mx-auto mb-1" />
-                    <p className="text-xs text-muted-foreground">Cars</p>
-                    <p className="font-medium text-foreground text-sm">{team.cars}</p>
                   </div>
                   <div className="text-center p-3 rounded-lg bg-accent/50">
                     <Users className="w-4 h-4 text-warning mx-auto mb-1" />

@@ -161,12 +161,9 @@ const Login = () => {
             </Button>
           </form>
         
-          <div className="mt-7 pt-2 border-t border-border">
+          <div className="mt-7 pt-4 border-t border-border">
             <p className="text-center text-sm text-muted-foreground">
-                version 0.0.9
-            </p>
-            <p className="text-center text-xs text-muted-foreground mt-2">
-              Default users: winAdmin / winEngineer / winDriver
+                version 1.11.35
             </p>
           </div>
         </div>

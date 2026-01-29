@@ -87,6 +87,15 @@
       "tag": "engineer",
       "fullWidth": true
     },
+    {
+      "panelId": "6",
+      "title": "Team Contributions",
+      "description": "Detailed table about recived contributions",
+      "dashboardUid": "ad5z78h",
+      "dashboardSlug": "engineer",
+      "tag": "engineer",
+      "fullWidth": true
+    },
 
     { "_comment": "DRIVER DASHBOARD" }, 
 

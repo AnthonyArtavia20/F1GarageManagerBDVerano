@@ -128,7 +128,7 @@ GO
 CREATE TABLE CIRCUIT (
     Circuit_id INT IDENTITY(1,1),
     Name VARCHAR(100) NOT NULL,
-    Total_distance DECIMAL(10,2) NOT NULL,
+    Total_distance DECIMAL(10,3) NOT NULL,
     N_Curves INT NOT NULL,
     
     -- Constraints

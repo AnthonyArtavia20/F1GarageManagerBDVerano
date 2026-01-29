@@ -18,7 +18,7 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
-  "id": 0,
+  "id": 7,
   "links": [],
   "panels": [
     {
@@ -659,6 +659,89 @@
       "title": "Used Partes Summary",
       "transparent": true,
       "type": "table"
+    },
+    {
+      "datasource": {
+        "type": "mssql",
+        "uid": "efb6j40xjyadce"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "footer": {
+              "reducers": []
+            },
+            "hideFrom": {
+              "viz": false
+            },
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 24,
+        "x": 0,
+        "y": 34
+      },
+      "id": 6,
+      "options": {
+        "cellHeight": "sm",
+        "showHeader": true
+      },
+      "pluginVersion": "12.3.1",
+      "targets": [
+        {
+          "dataset": "F1GarageManager",
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT \n    s.Name as Sponsor,\n    s.Industry,\n    s.Country,\n    c.Date,\n    'USD ' + FORMAT(c.Amount, 'N2') as Amount,\n    c.Description\nFROM CONTRIBUTION c\nJOIN SPONSOR s ON c.Sponsor_id = s.Sponsor_id\nJOIN TEAM t ON c.Team_id = t.Team_id\nWHERE t.Team_id = ${Team}\nORDER BY c.Date DESC;",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "title": "Contributions",
+      "transparent": true,
+      "type": "table"
     }
   ],
   "preload": false,
@@ -669,7 +752,7 @@
       {
         "allowCustomValue": false,
         "current": {
-          "text": "Mercedes",
+          "text": "Red Bull Racing",
           "value": "1"
         },
         "definition": "SELECT \n    Team_id as __value,\n    Name as __text\nFROM TEAM;",
@@ -684,7 +767,7 @@
       {
         "allowCustomValue": false,
         "current": {
-          "text": "Mercedes - Car 1",
+          "text": "Red Bull Racing - Car 1",
           "value": "1"
         },
         "definition": "WITH NumberedCars AS (\n    SELECT \n        c.Car_id,\n        t.Name as TeamName,\n        ROW_NUMBER() OVER (PARTITION BY c.Team_id ORDER BY c.Car_id) as CarNumber\n    FROM CAR c\n    JOIN TEAM t ON c.Team_id = t.Team_id\n    WHERE c.Team_id = ${Team}\n)\nSELECT \n    Car_id as __value,\n    CONCAT(TeamName, ' - Car ', CarNumber) as __text\nFROM NumberedCars\nORDER BY TeamName, CarNumber;",
@@ -699,8 +782,8 @@
       {
         "allowCustomValue": false,
         "current": {
-          "text": "2026-01-27 01:20:16 - Monza",
-          "value": "6"
+          "text": "",
+          "value": ""
         },
         "definition": "SELECT\n    s.Simulation_id AS __value,\n    CONCAT(\n        CONVERT(varchar(19), s.Data_time, 120),\n        ' - ',\n        c.Name\n    ) AS __text\nFROM SIMULATION s\nJOIN CIRCUIT c \n    ON s.Circuit_id = c.Circuit_id\nJOIN SIMULATION_PARTICIPANT sp \n    ON s.Simulation_id = sp.simulation_id\nWHERE sp.team_id = ${Team}\nGROUP BY\n    s.Simulation_id,\n    s.Data_time,\n    c.Name\nORDER BY s.Data_time DESC;\n",
         "name": "Simulation",
@@ -713,12 +796,12 @@
     ]
   },
   "time": {
-    "from": "2026-01-20T00:08:37.487Z",
-    "to": "2026-01-27T01:20:16.653Z"
+    "from": "now-6h",
+    "to": "now"
   },
   "timepicker": {},
   "timezone": "browser",
   "title": "Engineer",
   "uid": "ad5z78h",
-  "version": 27
+  "version": 29
 }

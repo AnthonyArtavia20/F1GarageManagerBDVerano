@@ -34,8 +34,7 @@ const Circuits = () => {
   });
   const [error, setError] = useState<string | null>(null);
 
-  // Constante dc (NO configurable por usuario)
-  const DC_CURVE_DISTANCE = 0.5; // km
+  const DC_CURVE_DISTANCE = 0.200;
 
   useEffect(() => {
     fetchCircuits();
@@ -96,9 +95,13 @@ const Circuits = () => {
     e.preventDefault();
     
     try {
+      const totalDistanceValue = parseFloat(formData.totalDistance);
+      
+      const roundedTotalDistance = Math.round(totalDistanceValue * 1000) / 1000;
+      
       const requestData = {
         name: formData.name,
-        totalDistance: parseFloat(formData.totalDistance),
+        totalDistance: roundedTotalDistance,
         numberOfCurves: parseInt(formData.numberOfCurves)
       };
 
@@ -369,8 +372,8 @@ const Circuits = () => {
                 <Input
                   id="totalDistance"
                   type="number"
-                  step="0.01"
-                  min="0.01"
+                  step="0.001"
+                  min="0.001"
                   value={formData.totalDistance}
                   onChange={(e) => setFormData({ ...formData, totalDistance: e.target.value })}
                   placeholder="Ej: 5.891"

@@ -790,11 +790,8 @@ const Sponsors = () => {
                       <thead>
                         <tr className="border-b">
                           <th className="text-left py-3 px-4 font-medium">Sponsor</th>
-                          <th className="text-left py-3 px-4 font-medium">Team</th>
                           <th className="text-left py-3 px-4 font-medium">Amount</th>
                           <th className="text-left py-3 px-4 font-medium">Date</th>
-                          <th className="text-left py-3 px-4 font-medium">Status</th>
-                          <th className="text-left py-3 px-4 font-medium">Actions</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -806,35 +803,11 @@ const Sponsors = () => {
                                 {contribution.Terms_Accepted ? "Terms accepted" : "Terms pending"}
                               </div>
                             </td>
-                            <td className="py-3 px-4">{contribution.Team_Name}</td>
                             <td className="py-3 px-4 font-display font-bold">
                               ${contribution.Amount.toLocaleString()}
                             </td>
                             <td className="py-3 px-4">
                               {new Date(contribution.Date).toLocaleDateString()}
-                            </td>
-                            <td className="py-3 px-4">
-                              {getStatusBadge(contribution.Status)}
-                            </td>
-                            <td className="py-3 px-4">
-                              {contribution.Status === "PENDING" && (
-                                <div className="flex gap-2">
-                                  <Button
-                                    size="sm"
-                                    variant="success"
-                                    onClick={() => handleAcceptContribution(contribution.Contribution_id)}
-                                  >
-                                    Accept
-                                  </Button>
-                                  <Button
-                                    size="sm"
-                                    variant="destructive"
-                                    onClick={() => handleRejectContribution(contribution.Contribution_id)}
-                                  >
-                                    Reject
-                                  </Button>
-                                </div>
-                              )}
                             </td>
                           </tr>
                         ))}
