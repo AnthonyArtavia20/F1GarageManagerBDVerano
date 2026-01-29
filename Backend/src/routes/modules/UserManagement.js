@@ -33,13 +33,8 @@ router.post('/create', async (req, res) => {
         });
         }
 
-        // Validar teamId para Engineer/Driver
-        if (['Engineer', 'Driver'].includes(role) && !teamId) {
-        return res.status(400).json({ 
-            success: false,
-            error: 'teamId es requerido para Engineer y Driver' 
-        });
-        }
+        // ⚠️ CAMBIO: Ya NO validamos que teamId sea obligatorio
+        // Ahora Engineer y Driver pueden existir sin equipo asignado
 
     console.log(`[CREATE USER] Creating user: ${username} with role: ${role}`);
 
@@ -58,7 +53,7 @@ router.post('/create', async (req, res) => {
         .input('Salt', sql.NVarChar(255), salt)
         .input('PasswordHash', sql.NVarChar(255), passwordHash)
         .input('Role', sql.NVarChar(20), role)
-        .input('TeamId', sql.Int, teamId || null)
+        .input('TeamId', sql.Int, teamId || null)  // ✅ Permite null
         .input('DriverH', sql.Int, driverH || 85)
         .execute('sp_CreateUser');
 
@@ -115,7 +110,7 @@ router.put('/:userId/update', async (req, res) => {
         .input('NewSalt', sql.NVarChar(255), salt)
         .input('NewPasswordHash', sql.NVarChar(255), passwordHash)
         .input('NewRole', sql.NVarChar(20), role || null)
-        .input('NewTeamId', sql.Int, teamId || null)
+        .input('NewTeamId', sql.Int, teamId || null)  // ✅ Permite null
         .execute('sp_UpdateUser');
 
     const userData = result.recordset[0];
