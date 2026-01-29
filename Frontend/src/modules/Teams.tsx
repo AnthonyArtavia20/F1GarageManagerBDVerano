@@ -5,6 +5,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import axios from "@/lib/axios";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
 // Team information 
 
@@ -30,7 +37,9 @@ const teamsData = [
 ];
 
 interface Driver {
+  // Note: some responses use `User_id`, others use `id` — accept both
   User_id: number | null;
+  id?: number | null;
   Username?: string;
   name?: string;
   team?: string;
@@ -49,6 +58,25 @@ interface TeamCard {
   logo: string;
 }
 
+interface SponsorContribution {
+  Sponsor_id: number;
+  SponsorName?: string;
+  // Some endpoints return Name instead of SponsorName — accept both
+  Name?: string;
+  Amount: number;
+  Date?: string;
+  Description?: string;
+}
+
+interface InventoryItem {
+  Part_id: number;
+  Name: string;
+  Category: string;
+  Price: number;
+  Stock: number;
+}
+
+
 const Teams = () => {
   const [search, setSearch] = useState("");
   const [showForm, setShowForm] = useState(false);
@@ -60,6 +88,15 @@ const Teams = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+
+  // Team details modal
+  const [selectedTeam, setSelectedTeam] = useState<TeamCard | null>(null);
+  const [isDetailOpen, setIsDetailOpen] = useState(false);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [teamContributions, setTeamContributions] = useState<SponsorContribution[]>([]);
+  const [teamInventory, setTeamInventory] = useState<InventoryItem[]>([]);
+  const [teamBudgetInfo, setTeamBudgetInfo] = useState<any>(null);
+
 
   const formatBudget = (b: number) => {
     try {
@@ -224,6 +261,57 @@ const Teams = () => {
     }
   };
 
+  // Open team detail modal and fetch details
+  const openTeamDetails = async (team: TeamCard) => {
+    setSelectedTeam(team);
+    setIsDetailOpen(true);
+
+    try {
+      setDetailLoading(true);
+
+      const teamId = parseInt(team.id);
+
+      const [budgetRes, contributionsRes, inventoryRes] = await Promise.all([
+        axios.get(`/sponsors/budget/${teamId}`),
+        axios.get(`/sponsors/contributions/${teamId}`),
+        axios.get(`/sp/team-inventory/${teamId}`),
+      ]);
+
+      console.debug('Team budget:', budgetRes.data);
+      console.debug('Team contributions:', contributionsRes.data);
+      console.debug('Team inventory:', inventoryRes.data);
+
+      setTeamBudgetInfo(budgetRes.data?.data || null);
+      setTeamContributions(Array.isArray(contributionsRes.data?.data) ? contributionsRes.data.data : contributionsRes.data || []);
+
+      // Normalize inventory response to always be an array
+      const invRaw = inventoryRes.data;
+      console.debug('Raw inventory response:', invRaw);
+      const invArray = Array.isArray(invRaw)
+        ? invRaw
+        : Array.isArray(invRaw?.data)
+          ? invRaw.data
+          : Array.isArray(invRaw?.records)
+            ? invRaw.records
+            : [];
+      setTeamInventory(invArray);
+
+    } catch (err) {
+      console.error('Error fetching team details:', err);
+    } finally {
+      setDetailLoading(false);
+    }
+  };
+
+  const closeTeamDetails = () => {
+    setIsDetailOpen(false);
+    setSelectedTeam(null);
+    setTeamContributions([]);
+    setTeamInventory([]);
+    setTeamBudgetInfo(null);
+  };
+
+
   const filteredTeams = teams.filter((team) =>
     team.name.toLowerCase().includes(search.toLowerCase())
   );
@@ -356,7 +444,10 @@ const Teams = () => {
           {filteredTeams.map((team, index) => (
             <div
               key={team.id}
-              className="glass-card rounded-xl overflow-hidden opacity-0 animate-fade-in hover:border-primary/50 transition-all duration-300 group"
+              onClick={() => openTeamDetails(team)}
+              role="button"
+              tabIndex={0}
+              className="glass-card rounded-xl overflow-hidden opacity-0 animate-fade-in hover:border-primary/50 transition-all duration-300 group cursor-pointer"
               style={{ animationDelay: `${150 + index * 50}ms` }}
             >
               {/* Color Strip */}
@@ -424,6 +515,94 @@ const Teams = () => {
             </div>
           ))}
         </div>
+
+        {/* Team Detail Dialog */}
+        <Dialog open={isDetailOpen} onOpenChange={(open) => { if (!open) closeTeamDetails(); setIsDetailOpen(open); }}>
+          <DialogContent className="glass-card border-border max-w-3xl">
+            <DialogHeader>
+              <DialogTitle className="font-display text-foreground">
+                {selectedTeam ? `${selectedTeam.name} — Details` : 'Team Details'}
+              </DialogTitle>
+            </DialogHeader>
+
+            <div className="p-4">
+              {detailLoading ? (
+                <p className="text-muted-foreground">Loading...</p>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-4">
+                    <h4 className="text-sm text-muted-foreground">Budget</h4>
+                    <p className="font-bold text-foreground text-lg">
+                      {teamBudgetInfo ? (
+                        `${formatBudget(teamBudgetInfo.availableBudget ?? team.budget)}`
+                      ) : (
+                        formatBudget(selectedTeam?.budget ?? 0)
+                      )}
+                    </p>
+
+                    <div className="mt-4">
+                      <h4 className="text-sm text-muted-foreground">Sponsors</h4>
+                      {teamContributions.length === 0 ? (
+                        <p className="text-muted-foreground">No sponsor contributions found</p>
+                      ) : (
+                        <ul className="space-y-2">
+                          {teamContributions.map((c) => (
+                            <li key={c.Sponsor_id} className="flex justify-between">
+                              <span>{c.SponsorName || c.Name || `Sponsor ${c.Sponsor_id}`}</span>
+                              <span className="font-medium">{formatBudget(c.Amount)}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+
+                    <div className="mt-4">
+                      <h4 className="text-sm text-muted-foreground">Drivers</h4>
+                      <div className="flex flex-col gap-2">
+                        {(drivers.filter((d) => String(d.Team_id) === String(selectedTeam?.id))).map((d) => (
+                          <div key={d.User_id ?? d.id} className="flex items-center justify-between">
+                            <div>{d.Username || d.name}</div>
+                            <div className="text-sm text-muted-foreground">H: {d.H ?? d.skill ?? 0}</div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <h4 className="text-sm text-muted-foreground">Inventory</h4>
+                    {teamInventory.length === 0 ? (
+                      <p className="text-muted-foreground">No inventory found</p>
+                    ) : (
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="text-left text-muted-foreground">
+                            <th>Part</th>
+                            <th>Category</th>
+                            <th>Price</th>
+                            <th className="text-right">Stock</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {teamInventory.map((it) => (
+                            <tr key={it.Part_id} className="border-t border-border">
+                              <td className="py-2">{it.Name}</td>
+                              <td className="py-2 text-muted-foreground">{it.Category}</td>
+                              <td className="py-2">{formatBudget(it.Price)}</td>
+                              <td className="py-2 text-right">{it.Stock}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
+          </DialogContent>
+        </Dialog>
+
       </div>
     </MainLayout>
   );
