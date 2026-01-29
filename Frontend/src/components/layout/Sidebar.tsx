@@ -1,5 +1,5 @@
 // Frontend/src/components/layout/Sidebar.tsx
-import { useMemo } from "react";
+import { useMemo, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Headset,
@@ -52,8 +52,42 @@ export const Sidebar = ({
   const navigate = useNavigate();
   const currentPath = window.location.pathname;
 
+  // Local session user state (fetched from /api/auth/me)
+  const [sessionUser, setSessionUser] = useState<{ username?: string; role?: string } | null>(null);
+
+  useEffect(() => {
+    // Try to read a cached user from localStorage for instant render
+    try {
+      const stored = JSON.parse(localStorage.getItem("user") || "null");
+      if (stored) {
+        setSessionUser({ username: stored.username || stored.Username, role: stored.role || stored.Role });
+      }
+    } catch {
+      // ignore parse errors
+    }
+
+    // Fetch authoritative session user from backend
+    (async () => {
+      try {
+        const { res, data } = await apiFetch("/api/auth/me", { method: "GET" });
+        if (res.ok && data && data.success && data.user) {
+          setSessionUser({
+            username: data.user.username || data.user.Username || data.user.user || "",
+            role: (data.user.role || data.user.Role || "").toString(),
+          });
+        }
+      } catch (err) {
+        // ignore network issues
+      }
+    })();
+  }, []);
+
+  // Compute display name & role (falling back to props if needed)
+  const displayUserName = sessionUser?.username || userName;
+  const displayUserRole = sessionUser?.role || userRole;
+
   // Normalizar rol
-  const role = (userRole || "").toLowerCase().trim();
+  const role = (displayUserRole || "").toLowerCase().trim();
 
   // Si por algún motivo el rol no viene aún (por ejemplo al refrescar),
   // usamos fallback "admin" para NO dejar el sidebar vacío.
@@ -136,9 +170,9 @@ export const Sidebar = ({
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-foreground truncate">
-                {userName}
+                {displayUserName}
               </p>
-              <p className="text-xs text-muted-foreground">{userRole}</p>
+              <p className="text-xs text-muted-foreground">{displayUserRole}</p>
             </div>
           </div>
         </div>
