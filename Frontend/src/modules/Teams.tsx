@@ -36,12 +36,23 @@ interface Driver {
   skill: number;
 }
 
+interface TeamCard {
+  id: string;
+  name: string;
+  budget: number;
+  cars: number;
+  drivers: string[];
+  color: string;
+  logo: string;
+}
+
 const Teams = () => {
   const [search, setSearch] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [teamName, setTeamName] = useState("");
   // Driver selectors removed — assignment will be optional
   const [drivers, setDrivers] = useState<Driver[]>([]);
+  const [teams, setTeams] = useState<TeamCard[]>(teamsData as TeamCard[]);
   const [assignDriversLater, setAssignDriversLater] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -49,6 +60,7 @@ const Teams = () => {
 
   useEffect(() => {
     fetchDrivers();
+    fetchTeamsFromServer();
   }, []);
 
   const fetchDrivers = async () => {
@@ -70,6 +82,30 @@ const Teams = () => {
     } catch (err) {
       console.error("Error fetching drivers:", err);
       setDrivers([]);
+    }
+  };
+
+  // Fetch teams from backend and normalize into card-ready shape
+  const fetchTeamsFromServer = async () => {
+    try {
+      const res = await axios.get("/teams");
+      let teamsResp = Array.isArray(res.data) ? res.data : res.data.data || res.data.recordset || [];
+
+      const normalized = teamsResp.map((t: any, idx: number) => ({
+        id: String(t.Team_id ?? t.id ?? `team-${Date.now()}-${idx}`),
+        name: t.Name ?? t.name ?? "Unnamed Team",
+        budget: 0,
+        cars: 0,
+        drivers: [],
+        color: ["#0600EF", "#1E41FF", "#FF6B6B", "#FFA500"][idx % 4],
+        logo: (t.Name || t.name || "").split(" ").map((w: string) => w[0]).slice(0,2).join("") || "T",
+      }));
+
+      setTeams(normalized.length ? normalized : teamsData as TeamCard[]);
+    } catch (err) {
+      console.error("Error fetching teams:", err);
+      // fallback to static sample teamsData
+      setTeams(teamsData as TeamCard[]);
     }
   };
 
@@ -96,6 +132,19 @@ const Teams = () => {
       const response = await axios.post("/teams", payload);
       console.log("Response:", response.data);
 
+      // Add new team locally so it appears immediately in the UI
+      const newTeamId = response.data?.teamId ?? `team-${Date.now()}`;
+      const newTeamCard: TeamCard = {
+        id: String(newTeamId),
+        name: teamName.trim(),
+        budget: 0,
+        cars: 0,
+        drivers: [],
+        color: '#1E41FF',
+        logo: teamName.trim().split(' ').map((w) => w[0]).slice(0,2).join('') || 'T',
+      };
+      setTeams(prev => [newTeamCard, ...prev]);
+
       setSuccess("Team created successfully!");
       setTimeout(() => {
         setShowForm(false);
@@ -111,7 +160,7 @@ const Teams = () => {
     }
   };
 
-  const filteredTeams = teamsData.filter((team) =>
+  const filteredTeams = teams.filter((team) =>
     team.name.toLowerCase().includes(search.toLowerCase())
   );
 

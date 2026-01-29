@@ -486,63 +486,6 @@ const UserManagement = () => {
                   </div>
                 )}
 
-                {/* Pilot Skill H (only for Driver) */}
-                {formData.role === "Driver" && (
-                  <div className="space-y-2">
-                    <Label>Pilot Skill (H)</Label>
-                    <div className="flex items-center gap-4">
-                      <Input
-                        type="number"
-                        min={1}
-                        max={100}
-                        value={formData.driverH}
-                        onChange={(e) => setFormData({...formData, driverH: e.target.value})}
-                        className="bg-accent/50 w-32"
-                        disabled={loading}
-                      />
-                      <p className="text-sm text-muted-foreground">Value 1-100 (default 85)</p>
-                    </div>
-                  </div>
-                )}
-
-                {/* Pilot Skill H (only for Driver) */}
-                {formData.role === "Driver" && (
-                  <div className="space-y-2">
-                    <Label>Pilot Skill (H)</Label>
-                    <div className="flex items-center gap-4">
-                      <Input
-                        type="number"
-                        min={1}
-                        max={100}
-                        value={formData.driverH}
-                        onChange={(e) => setFormData({...formData, driverH: e.target.value})}
-                        className="bg-accent/50 w-32"
-                        disabled={loading}
-                      />
-                      <p className="text-sm text-muted-foreground">Value 1-100 (default 85)</p>
-                    </div>
-                  </div>
-                )}
-
-                {/* Pilot Skill H (only for Driver) */}
-                {formData.role === "Driver" && (
-                  <div className="space-y-2">
-                    <Label>Pilot Skill (H)</Label>
-                    <div className="flex items-center gap-4">
-                      <Input
-                        type="number"
-                        min={1}
-                        max={100}
-                        value={formData.driverH}
-                        onChange={(e) => setFormData({...formData, driverH: e.target.value})}
-                        className="bg-accent/50 w-32"
-                        disabled={loading}
-                      />
-                      <p className="text-sm text-muted-foreground">Value 1-100 (default 85)</p>
-                    </div>
-                  </div>
-                )}
-
                 {/* Buttons */}
                 <div className="flex gap-3 pt-4">
                   <Button 
