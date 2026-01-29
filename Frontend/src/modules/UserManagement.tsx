@@ -193,6 +193,8 @@ const UserManagement = () => {
           console.log('User updated successfully');
           setSuccessMessage('Usuario actualizado exitosamente');
           await fetchUsers();// Recargar lista
+          // Notify other UI modules that drivers may have changed so they can refresh
+          try { window.dispatchEvent(new CustomEvent('app:dataChange', { detail: { entity: 'drivers', teamId: data?.user?.teamId ?? null } })); } catch (e) { console.warn('Dispatch failed', e); }
           resetForm();// Limpiar formulario
         } else {
           setError(data.error || 'Error al actualizar usuario');
@@ -217,6 +219,8 @@ const UserManagement = () => {
           console.log('✅ User created successfully');
           setSuccessMessage('Usuario creado exitosamente');
           await fetchUsers();// Recargar lista
+          // Notify other UI modules that drivers may have changed so they can refresh
+          try { window.dispatchEvent(new CustomEvent('app:dataChange', { detail: { entity: 'drivers', teamId: data?.user?.teamId ?? null } })); } catch (e) { console.warn('Dispatch failed', e); }
           resetForm();// Limpiar formulario
         } else {
           setError(data.error || 'Error al crear usuario');
@@ -281,8 +285,8 @@ const UserManagement = () => {
       if (res.ok && data.success) {
         console.log('✅ User deleted successfully');
         setSuccessMessage('Usuario eliminado exitosamente');
-        await fetchUsers();// Recargar lista
-      } else {
+        await fetchUsers();// Recargar lista        // Notify other UI modules that drivers may have changed so they can refresh
+        try { window.dispatchEvent(new CustomEvent('app:dataChange', { detail: { entity: 'drivers' } })); } catch (e) { console.warn('Dispatch failed', e); }      } else {
         setError(data.error || 'Error al eliminar usuario');
       }
     } catch (err: any) {

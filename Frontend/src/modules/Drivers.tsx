@@ -62,10 +62,13 @@ const Drivers = () => {
       let driversData = Array.isArray(res.data) ? res.data : res.data.data || res.data.recordset || [];
       
       const mapped = driversData.map((d: any) => ({
-        id: d.User_id,
-        name: d.name,
-        team: d.team ?? "No Team",
-        skill: d.skill,
+        id: d.User_id ?? d.id ?? null,
+        // Backend may return Username or name
+        name: (d.Username ?? d.name ?? d.Name ?? '').toString(),
+        // team may be provided as team name or null
+        team: (d.team ?? d.Team ?? d.Team_name ?? d.TeamName ?? null) || 'No Team',
+        // Skill may be H or skill
+        skill: Number(d.H ?? d.skill ?? d.h ?? 0) || 0,
         teamColor: "#1E41FF",
       }));
       setDrivers(mapped);
@@ -155,11 +158,10 @@ const Drivers = () => {
     }
   };
 
-  const filteredDrivers = drivers.filter(
-    (d) =>
-      d.name.toLowerCase().includes(search.toLowerCase()) ||
-      d.team.toLowerCase().includes(search.toLowerCase())
-  );
+  const filteredDrivers = drivers.filter((d) => {
+    const s = search.toLowerCase();
+    return (d.name || '').toLowerCase().includes(s) || (d.team || '').toLowerCase().includes(s);
+  });
 
   const handleDriverClick = () => {
     navigate("/DriverProfile");

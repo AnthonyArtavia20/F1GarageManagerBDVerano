@@ -180,7 +180,7 @@ exports.getAllTeams = async (req, res) => {
   try {
     const pool = await mssqlConnect();
     const result = await pool.request()
-      .query('SELECT Team_id, Name FROM TEAM ORDER BY Name');
+      .query('SELECT Team_id, Name, Total_Budget, Total_Spent, (Total_Budget - Total_Spent) AS Available_Budget FROM TEAM ORDER BY Name');
     
     res.json({
       success: true,
@@ -204,7 +204,7 @@ exports.searchTeams = async (req, res) => {
     
     const result = await pool.request()
       .input('search', sql.NVarChar(100), `%${search}%`)
-      .query('SELECT Team_id, Name FROM TEAM WHERE Name LIKE @search ORDER BY Name');
+      .query('SELECT Team_id, Name, Total_Budget, Total_Spent, (Total_Budget - Total_Spent) AS Available_Budget FROM TEAM WHERE Name LIKE @search ORDER BY Name');
     
     res.json({
       success: true,

@@ -30,10 +30,13 @@ const teamsData = [
 ];
 
 interface Driver {
-  User_id: number;
-  name: string;
-  team: string;
-  skill: number;
+  User_id: number | null;
+  Username?: string;
+  name?: string;
+  team?: string;
+  H?: number; // pilot skill
+  skill?: number;
+  Team_id?: number | null;
 }
 
 interface TeamCard {
@@ -58,9 +61,36 @@ const Teams = () => {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
+  const formatBudget = (b: number) => {
+    try {
+      const n = Number(b || 0);
+      return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(n);
+    } catch (e) {
+      return '$0';
+    }
+  };
+
   useEffect(() => {
     fetchDrivers();
     fetchTeamsFromServer();
+  }, []);
+
+  // Listen for global app data changes (create/update/delete) and refresh drivers/teams
+  useEffect(() => {
+    const handler = (e: any) => {
+      const detail = e?.detail || {};
+      if (detail.entity === 'drivers') {
+        console.log('app:dataChange received: drivers updated', detail);
+        fetchDrivers();
+        // If a specific team may have changed, refresh teams too
+        if (typeof detail.teamId !== 'undefined') {
+          fetchTeamsFromServer();
+        }
+      }
+    };
+
+    window.addEventListener('app:dataChange', handler as EventListener);
+    return () => window.removeEventListener('app:dataChange', handler as EventListener);
   }, []);
 
   const fetchDrivers = async () => {
@@ -76,8 +106,10 @@ const Teams = () => {
         User_id: d.User_id ?? d.id ?? d.UserId ?? d.user_id ?? null,
         Username: d.Username ?? d.name ?? d.Name ?? d.username ?? '',
         H: d.H ?? d.skill ?? d.h ?? 0,
+        Team_id: d.Team_id ?? d.TeamId ?? d.team_id ?? d.teamId ?? null,
       }));
 
+      console.debug('Normalized drivers:', normalized);
       setDrivers(normalized);
     } catch (err) {
       console.error("Error fetching drivers:", err);
@@ -89,18 +121,21 @@ const Teams = () => {
   const fetchTeamsFromServer = async () => {
     try {
       const res = await axios.get("/teams");
+      console.log('Teams response:', res.data);
       let teamsResp = Array.isArray(res.data) ? res.data : res.data.data || res.data.recordset || [];
 
       const normalized = teamsResp.map((t: any, idx: number) => ({
         id: String(t.Team_id ?? t.id ?? `team-${Date.now()}-${idx}`),
         name: t.Name ?? t.name ?? "Unnamed Team",
-        budget: 0,
+        // Use available budget (Total_Budget - Total_Spent) if provided, otherwise fall back to Total_Budget
+        budget: Number(t.Available_Budget ?? t.Total_Budget ?? 0),
         cars: 0,
         drivers: [],
         color: ["#0600EF", "#1E41FF", "#FF6B6B", "#FFA500"][idx % 4],
         logo: (t.Name || t.name || "").split(" ").map((w: string) => w[0]).slice(0,2).join("") || "T",
       }));
 
+      console.debug('Normalized teams:', normalized);
       setTeams(normalized.length ? normalized : teamsData as TeamCard[]);
     } catch (err) {
       console.error("Error fetching teams:", err);
@@ -108,6 +143,35 @@ const Teams = () => {
       setTeams(teamsData as TeamCard[]);
     }
   };
+
+  // Recompose team cards when drivers or teams change so driver counts and names are accurate
+  useEffect(() => {
+    setTeams((prevTeams) => {
+      if (!prevTeams || prevTeams.length === 0) {
+        console.debug('Recompose: no teams to update yet');
+        return prevTeams;
+      }
+
+      const newTeams = prevTeams.map((t) => {
+        const assigned = (drivers || []).filter((d) => d.Team_id != null && String(d.Team_id) === String(t.id));
+        console.debug(`Team ${t.name} (${t.id}) assignedCount: ${assigned.length}`);
+        return {
+          ...t,
+          drivers: assigned.map((d) => d.Username || d.name || `#${d.User_id}`),
+          cars: t.cars ?? 0,
+          budget: t.budget ?? 0,
+        } as TeamCard;
+      });
+
+      // Only update state if it changed to avoid unnecessary re-renders
+      if (JSON.stringify(newTeams) !== JSON.stringify(prevTeams)) {
+        console.debug('Recompose: teams updated', newTeams);
+        return newTeams;
+      }
+      return prevTeams;
+    });
+  }, [drivers, teams]);
+
 
   const handleCreateTeam = async () => {
     setError("");
@@ -327,7 +391,7 @@ const Teams = () => {
                     <DollarSign className="w-4 h-4 text-success mx-auto mb-1" />
                     <p className="text-xs text-muted-foreground">Budget</p>
                     <p className="font-medium text-foreground text-sm">
-                      ${(team.budget / 1000000).toFixed(0)}M
+                      {formatBudget(team.budget)}
                     </p>
                   </div>
                   <div className="text-center p-3 rounded-lg bg-accent/50">

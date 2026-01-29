@@ -10,10 +10,11 @@ const getDrivers = async (req, res) => {
 
     const result = await pool.request().query(`
       SELECT 
-        u.User_id AS id,
-        u.Username AS name,
+        u.User_id AS User_id,
+        u.Username AS Username,
         ISNULL(t.Name, 'Sin equipo') AS team,
-        d.H AS skill
+        d.H AS H,
+        d.Team_id AS Team_id
       FROM DRIVER d
       JOIN [USER] u ON d.User_id = u.User_id
       LEFT JOIN TEAM t ON d.Team_id = t.Team_id
