@@ -99,11 +99,10 @@ const getCircuitForSimulation = async (req, res) => {
         const { dc = 0.5 } = req.query;
         const pool = await mssqlConnect();
         
-        // Validar circuito
+        // Obtener datos del circuito (sin validación)
         const result = await pool.request()
             .input('Circuit_id', sql.Int, id)
-            .input('dc', sql.Decimal(10, 2), dc)
-            .execute('sp_ValidateCircuitForSimulation');
+            .execute('sp_GetCircuitForSimulation');
         
         if (result.recordset.length === 0) {
             return res.status(404).json({
@@ -118,7 +117,7 @@ const getCircuitForSimulation = async (req, res) => {
             success: true,
             data: {
                 ...circuitData,
-                isValid: circuitData.IsValid === 1 || circuitData.IsValid === true
+                isValid: true  // Siempre true ahora
             }
         });
     } catch (error) {
@@ -340,12 +339,6 @@ const runSimulation = async (req, res) => {
     }
     
     const circuit = circuitResult.recordset[0];
-    if (!circuit.IsValid) {
-      return res.status(400).json({
-        success: false,
-        message: `Circuito inválido: ${circuit.Message}`
-      });
-    }
     
     // Convertir arrays a string separado por comas
     const carIdsString = carIds.join(',');

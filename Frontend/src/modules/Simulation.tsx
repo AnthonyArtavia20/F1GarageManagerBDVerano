@@ -358,39 +358,33 @@ const Simulation = () => {
   };
 
   const validateSimulation = (): boolean => {
-    // Validar circuito seleccionado
-    if (!selectedCircuit) {
-      alert("Selecciona un circuito primero");
+  // Validar circuito seleccionado
+  if (!selectedCircuit) {
+    alert("Selecciona un circuito primero");
+    return false;
+  }
+
+  // Validar número de participantes
+  if (selectedParticipants.length < 2) {
+    alert("Se requieren al menos 2 participantes");
+    return false;
+  }
+
+  if (selectedParticipants.length > 10) {
+    alert("Máximo 10 participantes por simulación");
+    return false;
+  }
+
+  // Validar que todos tengan conductor seleccionado
+  for (const participant of selectedParticipants) {
+    if (!participant.driverId) {
+      alert(`El carro #${participant.carId} no tiene conductor seleccionado`);
       return false;
     }
+  }
 
-    const circuit = circuits.find(c => c.Circuit_id.toString() === selectedCircuit);
-    if (!circuit?.IsValid) {
-      alert("El circuito seleccionado no es válido para simulación");
-      return false;
-    }
-
-    // Validar número de participantes
-    if (selectedParticipants.length < 2) {
-      alert("Se requieren al menos 2 participantes");
-      return false;
-    }
-
-    if (selectedParticipants.length > 10) {
-      alert("Máximo 10 participantes por simulación");
-      return false;
-    }
-
-    // Validar que todos tengan conductor seleccionado
-    for (const participant of selectedParticipants) {
-      if (!participant.driverId) {
-        alert(`El carro #${participant.carId} no tiene conductor seleccionado`);
-        return false;
-      }
-    }
-
-    return true;
-  };
+  return true;
+};
 
   const runSimulation = async () => {
     try {
@@ -542,10 +536,8 @@ const Simulation = () => {
                           <SelectItem
                             key={circuit.Circuit_id}
                             value={circuit.Circuit_id.toString()}
-                            className={!circuit.IsValid ? "text-destructive" : ""}
                           >
                             {circuit.Name} ({circuit.Total_distance} km, {circuit.N_Curves} curvas)
-                            {!circuit.IsValid && " ⚠️"}
                           </SelectItem>
                         ))
                       )}
@@ -553,35 +545,35 @@ const Simulation = () => {
                   </Select>
 
                   {selectedCircuitData && (
-                    <div className="p-4 rounded-lg bg-muted/30">
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <div className="p-3 rounded bg-accent/50">
-                          <p className="text-xs text-muted-foreground">Distancia Total</p>
-                          <p className="font-bold">{selectedCircuitData.Total_distance} km</p>
-                        </div>
-                        <div className="p-3 rounded bg-accent/50">
-                          <p className="text-xs text-muted-foreground">Curvas</p>
-                          <p className="font-bold">{selectedCircuitData.N_Curves}</p>
-                        </div>
-                        <div className="p-3 rounded bg-accent/50">
-                          <p className="text-xs text-muted-foreground">Dist. Curvas</p>
-                          <p className="font-bold">{selectedCircuitData.Calculated_Curve_Distance.toFixed(2)} km</p>
-                        </div>
-                        <div className="p-3 rounded bg-accent/50">
-                          <p className="text-xs text-muted-foreground">Dist. Rectas</p>
-                          <p className={`font-bold ${selectedCircuitData.Calculated_Straight_Distance < 0 ? "text-destructive" : ""}`}>
-                            {selectedCircuitData.Calculated_Straight_Distance.toFixed(2)} km
-                          </p>
-                        </div>
-                      </div>
-                      {!selectedCircuitData.IsValid && (
-                        <div className="mt-3 p-2 rounded bg-destructive/10 text-destructive text-sm">
-                          <AlertCircle className="w-4 h-4 inline mr-2" />
-                          {selectedCircuitData.Message}
-                        </div>
-                      )}
-                    </div>
-                  )}
+  <div className="p-4 rounded-lg bg-muted/30">
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="p-3 rounded bg-accent/50">
+        <p className="text-xs text-muted-foreground">Distancia Total</p>
+        <p className="font-bold">{selectedCircuitData.Total_distance} km</p>
+      </div>
+      <div className="p-3 rounded bg-accent/50">
+        <p className="text-xs text-muted-foreground">Curvas</p>
+        <p className="font-bold">{selectedCircuitData.N_Curves}</p>
+      </div>
+      <div className="p-3 rounded bg-accent/50">
+        <p className="text-xs text-muted-foreground">Dist. Curvas</p>
+        <p className="font-bold">{selectedCircuitData.Calculated_Curve_Distance.toFixed(2)} km</p>
+      </div>
+      <div className="p-3 rounded bg-accent/50">
+        <p className="text-xs text-muted-foreground">Dist. Rectas</p>
+        <p className="font-bold">
+          {selectedCircuitData.Calculated_Straight_Distance.toFixed(2)} km
+        </p>
+      </div>
+    </div>
+    {!selectedCircuitData.IsValid && (
+      <div className="mt-3 p-2 rounded bg-destructive/10 text-destructive text-sm">
+        <AlertCircle className="w-4 h-4 inline mr-2" />
+        {selectedCircuitData.Message}
+      </div>
+    )}
+  </div>
+)}
                 </div>
               </CardContent>
             </Card>
@@ -807,15 +799,14 @@ const Simulation = () => {
             <Card>
               <CardContent className="pt-6">
                 <Button
-                  size="lg"
-                  className="w-full"
-                  onClick={runSimulation}
-                  disabled={
-                    !selectedCircuit ||
-                    selectedParticipants.length < 2 ||
-                    isLoading.simulation ||
-                    !selectedCircuitData?.IsValid
-                  }
+  size="lg"
+  className="w-full"
+  onClick={runSimulation}
+  disabled={
+    !selectedCircuit ||
+    selectedParticipants.length < 2 ||
+    isLoading.simulation
+  }
                 >
                   {isLoading.simulation ? (
                     <>

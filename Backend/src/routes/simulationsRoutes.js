@@ -15,7 +15,7 @@ router.get('/', simulationsController.getSimulationHistory);
 router.get('/available-cars', simulationsController.getAvailableCars);
 
 // GET - Obtener circuito por ID para simulación
-router.get('/circuit/:id', simulationsController.getCircuitForSimulation);
+router.get('/circuits/:id', simulationsController.getCircuitForSimulation);
 
 // GET - Obtener resultados de simulación específica
 router.get('/:id', simulationsController.getSimulationResults);

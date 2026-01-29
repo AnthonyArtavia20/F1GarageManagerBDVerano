@@ -197,11 +197,7 @@ BEGIN
         SET @D_curvas = @N_Curves * @dc;
         SET @D_rectas = @Total_distance - @D_curvas;
         
-        IF @D_rectas < 0
-        BEGIN
-            SET @Message = 'Circuito inválido: las curvas ocupan más distancia que el total';
-            RETURN;
-        END
+        -- Eliminada la validación de D_rectas < 0
         
         -- Calcular velocidades según fórmulas del PDF
         SET @V_recta = 200 + (3 * @Car_P) + (0.2 * @Driver_H) - (1 * @Car_A);
@@ -829,15 +825,8 @@ BEGIN
         N_Curves,
         (N_Curves * 0.200) AS Calculated_Curve_Distance,
         (Total_distance - (N_Curves * 0.200)) AS Calculated_Straight_Distance,
-        CASE 
-            WHEN (Total_distance - (N_Curves * 0.200)) >= 0 THEN 1
-            ELSE 0
-        END AS IsValid,
-        CASE 
-            WHEN (Total_distance - (N_Curves * 0.200)) >= 0
-            THEN 'Circuito válido para simulación'
-            ELSE 'Error: Las curvas ocupan más distancia que el total del circuito'
-        END AS Message
+        1 AS IsValid,  -- Siempre válido ahora
+        'Circuito válido para simulación' AS Message  -- Mensaje fijo
     FROM CIRCUIT
     WHERE Circuit_id = @Circuit_id;
 END
