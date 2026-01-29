@@ -157,13 +157,20 @@ const UserManagement = () => {
         const body: any = {// Construir body solo con campos que cambiaron
           username: formData.username !== editingUser.Username ? formData.username : undefined,
           role: formData.role !== editingUser.Role ? formData.role : undefined,
-          teamId: formData.teamId ? parseInt(formData.teamId) : null, // ✅ Permite null
         };
+        
+        // ✅ CAMBIO CRÍTICO: Siempre incluir teamId si cambió (incluso si es null para quitar equipo)
+        const currentTeamId = editingUser.Team_id?.toString() || "";
+        if (formData.teamId !== currentTeamId) {
+          body.teamId = formData.teamId ? parseInt(formData.teamId) : null;
+        }
         
         //Solo incluir password si el usuario ingresó uno nuevo
         if (formData.password.trim()) {
           body.password = formData.password;
         }
+        
+        console.log('[UPDATE] Request body:', body);
         
         const { res, data } = await apiFetch(`/api/sp/users/${editingUser.User_id}/update`, {
           method: 'PUT',
