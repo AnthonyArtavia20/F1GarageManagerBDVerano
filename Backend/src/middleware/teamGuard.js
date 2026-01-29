@@ -1,4 +1,4 @@
-export function enforceSameTeam(req, res, next) {
+function enforceSameTeam(req, res, next) {
   const sessionUser = req.session?.user;
   if (!sessionUser) return res.status(401).json({ success: false, message: "Unauthorized" });
 
@@ -24,3 +24,5 @@ export function enforceSameTeam(req, res, next) {
 
   next();
 }
+
+module.exports = { enforceSameTeam };

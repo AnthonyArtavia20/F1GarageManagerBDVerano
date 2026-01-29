@@ -15,6 +15,7 @@ const authRoutes = require('./routes/authRoutes');
 const inventoryRoutes = require('./routes/inventoryRoutes');
 const circuitsRoutes = require('./routes/circuitsRoutes');
 const simulationsRoutes = require('./routes/simulationsRoutes');
+const driversRoutes = require('./routes/driversRoutes');
 
 const carAssemblyRoutes = require('./routes/modules/CarAssembly');
 
@@ -112,6 +113,7 @@ app.use('/api/sp', spRoutes);  // <-- Mantiene /api/sp/teams
 app.use('/api/parts', partsRoutes);
 app.use('/api/sponsors', sponsorsRoutes);
 app.use('/api/teams', teamsRoutes);
+app.use('/api/drivers', driversRoutes);
 app.use('/api/inventory', inventoryRoutes);
 app.use('/api/circuits', circuitsRoutes);
 app.use('/api/simulations', simulationsRoutes);

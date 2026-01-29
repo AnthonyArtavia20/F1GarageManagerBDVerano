@@ -47,6 +47,15 @@ router.post('/create', async (req, res) => {
 
     const pool = await mssqlConnect();
 
+    // If creating a Driver and assigning to a team, ensure team has space (max 2 drivers)
+    if (role === 'Driver' && teamId) {
+        const countRes = await pool.request().input('TeamId', sql.Int, teamId).query('SELECT COUNT(1) AS cnt FROM DRIVER WHERE Team_id = @TeamId');
+        const currentCount = countRes.recordset?.[0]?.cnt ?? 0;
+        if (currentCount >= 2) {
+            return res.status(400).json({ success: false, error: 'Team already has maximum drivers (2)' });
+        }
+    }
+
     // Ejecutar SP
     const result = await pool.request()
         .input('Username', sql.NVarChar(100), username)
@@ -110,6 +119,18 @@ router.put('/:userId/update', async (req, res) => {
     const updateTeamId = req.body.hasOwnProperty('teamId');
     
     console.log(`[UPDATE USER] UpdateTeamId flag: ${updateTeamId}, TeamId value: ${teamId}`);
+
+    // If user is being assigned to a team, ensure the team has capacity for another driver (max 2)
+    if (updateTeamId && teamId) {
+        const countRes = await pool.request()
+            .input('TeamId', sql.Int, teamId)
+            .input('UserId', sql.Int, parseInt(userId))
+            .query('SELECT COUNT(1) AS cnt FROM DRIVER WHERE Team_id = @TeamId AND User_id != @UserId');
+        const cnt = countRes.recordset?.[0]?.cnt ?? 0;
+        if (cnt >= 2) {
+            return res.status(400).json({ success: false, error: 'Team already has maximum drivers (2)' });
+        }
+    }
     
     const result = await pool.request()
         .input('UserId', sql.Int, parseInt(userId))

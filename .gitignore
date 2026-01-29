@@ -1,0 +1,24 @@
+# Node backend
+Backend/node_modules/
+Backend/dist/
+Backend/.env
+Backend/.vite/
+
+# Node frontend
+Frontend/node_modules/
+Frontend/dist/
+Frontend/.env
+Frontend/.vite/
+
+# Logs
+**/*.log
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+# Shell artifacts
+*.sh~
+bcrypt_install.log
+auto_setup_*.sql
+future_stored_procedure.sql
