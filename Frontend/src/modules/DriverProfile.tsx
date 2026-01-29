@@ -19,8 +19,9 @@ type PanelType = {
 
 const DriverProfile = () => {
   const navigate = useNavigate();
-  const panels: PanelType[] = panelData.panels;
-  
+  const panels: PanelType[] = (panelData.panels as any[]).filter(
+    (p): p is PanelType => !!p.panelId
+  );  
   const [driverData, setDriverData] = useState({
     name: "[Driver's Name]",
     teamName: "---",

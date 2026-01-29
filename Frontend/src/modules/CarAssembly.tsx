@@ -83,6 +83,7 @@ const CarAssembly = () => {
   const [installedPartsData, setInstalledPartsData] = useState<Record<string, InstalledPart>>({});
   const [carStats, setCarStats] = useState<CarStats | null>(null);
   const [hasChanges, setHasChanges] = useState(false);
+  const [tempSelectedParts, setTempSelectedParts] = useState<Record<string, string>>({});
 
   const selectedCarId = teamCars[selectedCarIndex]?.Car_id?.toString();
   const isAdmin = sessionUser?.role === 'admin';

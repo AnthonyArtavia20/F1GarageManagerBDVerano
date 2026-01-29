@@ -35,13 +35,12 @@ const teamsData = [
 ];
 
 interface Driver {
-  // Note: some responses use `User_id`, others use `id` — accept both
   User_id: number | null;
   id?: number | null;
   Username?: string;
   name?: string;
   team?: string;
-  H?: number; // pilot skill
+  H?: number;
   skill?: number;
   Team_id?: number | null;
 }
@@ -58,7 +57,6 @@ interface TeamCard {
 interface SponsorContribution {
   Sponsor_id: number;
   SponsorName?: string;
-  // Some endpoints return Name instead of SponsorName — accept both
   Name?: string;
   Amount: number;
   Date?: string;
@@ -78,7 +76,6 @@ const Teams = () => {
   const [search, setSearch] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [teamName, setTeamName] = useState("");
-  // Driver selectors removed — assignment will be optional
   const [drivers, setDrivers] = useState<Driver[]>([]);
   const [teams, setTeams] = useState<TeamCard[]>(teamsData as TeamCard[]);
   const [assignDriversLater, setAssignDriversLater] = useState(true);
@@ -109,14 +106,12 @@ const Teams = () => {
     fetchTeamsFromServer();
   }, []);
 
-  // Listen for global app data changes (create/update/delete) and refresh drivers/teams
   useEffect(() => {
     const handler = (e: any) => {
       const detail = e?.detail || {};
       if (detail.entity === 'drivers') {
         console.log('app:dataChange received: drivers updated', detail);
         fetchDrivers();
-        // If a specific team may have changed, refresh teams too
         if (typeof detail.teamId !== 'undefined') {
           fetchTeamsFromServer();
         }
@@ -132,10 +127,8 @@ const Teams = () => {
       const res = await axios.get("/drivers");
       console.log("Drivers response:", res.data);
       
-      // Handle both array and object responses
       let driversData = Array.isArray(res.data) ? res.data : res.data.data || res.data.recordset || [];
 
-      // Normalize shape so options have consistent keys
       const normalized = driversData.map((d: any) => ({
         User_id: d.User_id ?? d.id ?? d.UserId ?? d.user_id ?? null,
         Username: d.Username ?? d.name ?? d.Name ?? d.username ?? '',
@@ -151,7 +144,6 @@ const Teams = () => {
     }
   };
 
-  // Fetch teams from backend and normalize into card-ready shape
   const fetchTeamsFromServer = async () => {
     try {
       const res = await axios.get("/teams");
@@ -161,7 +153,6 @@ const Teams = () => {
       const normalized = teamsResp.map((t: any, idx: number) => ({
         id: String(t.Team_id ?? t.id ?? `team-${Date.now()}-${idx}`),
         name: t.Name ?? t.name ?? "Unnamed Team",
-        // Use available budget (Total_Budget - Total_Spent) if provided, otherwise fall back to Total_Budget
         budget: Number(t.Available_Budget ?? t.Total_Budget ?? 0),
         drivers: [],
         color: ["#0600EF", "#1E41FF", "#FF6B6B", "#FFA500"][idx % 4],
@@ -172,12 +163,10 @@ const Teams = () => {
       setTeams(normalized.length ? normalized : teamsData as TeamCard[]);
     } catch (err) {
       console.error("Error fetching teams:", err);
-      // fallback to static sample teamsData
       setTeams(teamsData as TeamCard[]);
     }
   };
 
-  // Recompose team cards when drivers or teams change so driver counts and names are accurate
   useEffect(() => {
     setTeams((prevTeams) => {
       if (!prevTeams || prevTeams.length === 0) {
@@ -195,7 +184,6 @@ const Teams = () => {
         } as TeamCard;
       });
 
-      // Only update state if it changed to avoid unnecessary re-renders
       if (JSON.stringify(newTeams) !== JSON.stringify(prevTeams)) {
         console.debug('Recompose: teams updated', newTeams);
         return newTeams;
@@ -211,7 +199,6 @@ const Teams = () => {
 
     console.log("Form data:", { teamName, assignDriversLater });
 
-    // Validation
     if (!teamName.trim()) {
       setError("Team name is required");
       return;
@@ -222,13 +209,11 @@ const Teams = () => {
       const payload: any = {
         teamName: teamName.trim(),
       };
-      // If you ever want to support assigning now, add driver ids to payload
       console.log("Sending payload:", payload);
       
       const response = await axios.post("/teams", payload);
       console.log("Response:", response.data);
 
-      // Add new team locally so it appears immediately in the UI
       const newTeamId = response.data?.teamId ?? `team-${Date.now()}`;
       const newTeamCard: TeamCard = {
         id: String(newTeamId),
@@ -255,7 +240,6 @@ const Teams = () => {
     }
   };
 
-  // Open team detail modal and fetch details
   const openTeamDetails = async (team: TeamCard) => {
     setSelectedTeam(team);
     setIsDetailOpen(true);
@@ -278,7 +262,6 @@ const Teams = () => {
       setTeamBudgetInfo(budgetRes.data?.data || null);
       setTeamContributions(Array.isArray(contributionsRes.data?.data) ? contributionsRes.data.data : contributionsRes.data || []);
 
-      // Normalize inventory response to always be an array
       const invRaw = inventoryRes.data;
       console.debug('Raw inventory response:', invRaw);
       const invArray = Array.isArray(invRaw)
@@ -338,7 +321,6 @@ const Teams = () => {
         {/* Create Team Form Card (ADMIN) */}
         {showForm && (
           <div className="glass-card p-8 mb-8 rounded-xl border border-primary/20 opacity-0 animate-fade-in">
-            {/* Card Header */}
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-2xl font-bold">Create New Team</h2>
               <button
@@ -349,9 +331,7 @@ const Teams = () => {
               </button>
             </div>
 
-            {/* Form Content */}
             <div className="space-y-6">
-              {/* Team Name */}
               <div>
                 <label className="block text-sm font-semibold mb-2">
                   Team Name *
@@ -366,7 +346,6 @@ const Teams = () => {
                 />
               </div>
 
-              {/* Assign Drivers Option */}
               <div className="flex items-center gap-3">
                 <input
                   id="assignLater"
@@ -382,21 +361,18 @@ const Teams = () => {
               
               <p className="text-xs text-muted-foreground">Note: driver assignment can be done later from the team details.</p>
 
-              {/* Error Message */}
               {error && (
                 <div className="bg-red-500/20 border border-red-500 rounded-lg p-3 text-red-300 text-sm">
                   {error}
                 </div>
               )}
 
-              {/* Success Message */}
               {success && (
                 <div className="bg-green-500/20 border border-green-500 rounded-lg p-3 text-green-300 text-sm">
                   ✅ {success}
                 </div>
               )}
 
-              {/* Action Buttons */}
               <div className="flex gap-4 pt-4">
                 <Button
                   onClick={handleCreateTeam}
@@ -444,15 +420,12 @@ const Teams = () => {
               className="glass-card rounded-xl overflow-hidden opacity-0 animate-fade-in hover:border-primary/50 transition-all duration-300 group cursor-pointer"
               style={{ animationDelay: `${150 + index * 50}ms` }}
             >
-              {/* Color Strip */}
               <div
                 className="h-2"
                 style={{ backgroundColor: team.color }}
               />
               
               <div className="p-6">
-
-                {/* Header */}
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-center gap-4">
                     <div
@@ -470,8 +443,7 @@ const Teams = () => {
                   </div>
                 </div>
 
-                {/* Stats */}
-                <div className="grid grid-cols-2 gap-4 mb-4">
+                <div className="grid grid-cols-3 gap-4 mb-4">
                   <div className="text-center p-3 rounded-lg bg-accent/50">
                     <DollarSign className="w-4 h-4 text-success mx-auto mb-1" />
                     <p className="text-xs text-muted-foreground">Budget</p>
@@ -486,7 +458,6 @@ const Teams = () => {
                   </div>
                 </div>
 
-                {/* Drivers */}
                 <div className="mt-15 pt-2 border-t border-border">
                   <p className="text-xs text-muted-foreground mb-2">Drivers</p>
                   <div className="flex flex-wrap gap-2">
@@ -523,7 +494,8 @@ const Teams = () => {
                     <h4 className="text-sm text-muted-foreground">Budget</h4>
                     <p className="font-bold text-foreground text-lg">
                       {teamBudgetInfo ? (
-                        `${formatBudget(teamBudgetInfo.availableBudget ?? team.budget)}`
+                        // Corregido: usar selectedTeam en lugar de `team` y protección por si es null
+                        `${formatBudget(teamBudgetInfo.availableBudget ?? selectedTeam?.budget ?? 0)}`
                       ) : (
                         formatBudget(selectedTeam?.budget ?? 0)
                       )}

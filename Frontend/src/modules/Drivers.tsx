@@ -183,8 +183,6 @@ const Drivers = () => {
             <p className="text-muted-foreground">
               Visualization of available drivers in the system
             </p>
-            {/* DEBUG */}
-            <p className="text-xs text-red-500 mt-2">Debug: isAdmin = {String(isAdmin)}</p>
           </div>
 
           {/* Add Driver button removed */}
