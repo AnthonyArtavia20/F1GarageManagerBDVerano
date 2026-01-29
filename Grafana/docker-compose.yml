@@ -3,7 +3,7 @@ services:
     image: grafana/grafana:latest
     container_name: grafana-f1
     ports:
-      - "3002:3000"
+      - "3000:3000"
     environment:
       - GF_SECURITY_ALLOW_EMBEDDING=true
       - GF_SECURITY_ADMIN_PASSWORD=admin

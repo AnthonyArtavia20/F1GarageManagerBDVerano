@@ -145,10 +145,8 @@ const UserManagement = () => {
       return;
     }
     
-    if ((formData.role === 'Engineer' || formData.role === 'Driver') && !formData.teamId) {
-      setError('Team es requerido para Engineer y Driver');
-      return;
-    }
+    // ⚠️ CAMBIO: Ya NO validamos que teamId sea obligatorio
+    // Ahora Engineer y Driver pueden crearse sin equipo
 
     // If creating a Driver, validate pilot skill H (1-100)
     if (!editingUser && formData.role === 'Driver') {
@@ -171,7 +169,7 @@ const UserManagement = () => {
         const body: any = {// Construir body solo con campos que cambiaron
           username: formData.username !== editingUser.Username ? formData.username : undefined,
           role: formData.role !== editingUser.Role ? formData.role : undefined,
-          teamId: formData.teamId ? parseInt(formData.teamId) : undefined,
+          teamId: formData.teamId ? parseInt(formData.teamId) : null, // ✅ Permite null
         };
         
         //Solo incluir password si el usuario ingresó uno nuevo
@@ -203,7 +201,7 @@ const UserManagement = () => {
             username: formData.username,
             password: formData.password,
             role: formData.role,
-            teamId: formData.teamId ? parseInt(formData.teamId) : null,
+            teamId: formData.teamId ? parseInt(formData.teamId) : null, // ✅ Permite null
             driverH: formData.role === 'Driver' ? (formData.driverH ? parseInt(formData.driverH) : 85) : undefined,
           })
         });
@@ -293,7 +291,7 @@ const UserManagement = () => {
       case "Admin":
         return "destructive"; //Rojo
       case "Engineer":
-        return "default"; //Szul
+        return "default"; //Azul
       case "Driver":
         return "secondary"; //Gris
       default:
@@ -307,8 +305,7 @@ const UserManagement = () => {
   return (
     <MainLayout>
       <div className="p-8">
-        // HEADER - Título y botón de crear usuario
-        {/* Header */}
+        {/* HEADER - Título y botón de crear usuario */}
         <div className="flex items-center justify-between mb-8 opacity-0 animate-fade-in">
           <div>
             <h1 className="text-3xl font-display font-bold text-foreground mb-2">
@@ -346,7 +343,7 @@ const UserManagement = () => {
               {/* FORMULARIO */}
               {/* ============================================================================ */}
               <form onSubmit={handleSubmit} className="space-y-4 mt-4">
-                // Mensajes de error dentro del diálogo
+                {/* Mensajes de error dentro del diálogo */}
                 {error && (
                   <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
                     <div className="flex items-center gap-2">
@@ -424,13 +421,106 @@ const UserManagement = () => {
                 {/* Team (only for Engineer/Driver) */}
                 {(formData.role === "Engineer" || formData.role === "Driver") && (
                   <div className="space-y-2">
-                    <Label>Assigned Team</Label>
-                    <TeamSelector
-                      value={formData.teamId}
-                      onChange={(teamId, teamName) => setFormData({ ...formData, teamId })}
-                      placeholder="Select team..."
-                      required={true}
-                    />
+                    <Label>
+                      Assigned Team
+                      <span className="text-xs text-muted-foreground ml-2">(Optional)</span>
+                    </Label>
+                    <div className="flex gap-2">
+                      <div className="flex-1">
+                        {formData.teamId ? (
+                          // Mostrar TeamSelector con valor cuando hay equipo seleccionado
+                          <TeamSelector
+                            value={formData.teamId}
+                            onChange={(teamId) => setFormData({ ...formData, teamId: teamId || "" })}
+                            placeholder="Seleccionar equipo..."
+                            required={false}
+                          />
+                        ) : (
+                          // Mostrar TeamSelector vacío cuando no hay equipo
+                          <TeamSelector
+                            value=""
+                            onChange={(teamId) => setFormData({ ...formData, teamId: teamId || "" })}
+                            placeholder="No asignar equipo"
+                            required={false}
+                          />
+                        )}
+                      </div>
+                      {formData.teamId && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          onClick={() => setFormData({ ...formData, teamId: "" })}
+                          disabled={loading}
+                          title="Quitar equipo asignado"
+                          className="shrink-0"
+                        >
+                          ✕
+                        </Button>
+                      )}
+                    </div>
+                    {!formData.teamId && (
+                      <p className="text-xs text-muted-foreground">
+                        Sin equipo asignado
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {/* Pilot Skill H (only for Driver) */}
+                {formData.role === "Driver" && (
+                  <div className="space-y-2">
+                    <Label>Pilot Skill (H)</Label>
+                    <div className="flex items-center gap-4">
+                      <Input
+                        type="number"
+                        min={1}
+                        max={100}
+                        value={formData.driverH}
+                        onChange={(e) => setFormData({...formData, driverH: e.target.value})}
+                        className="bg-accent/50 w-32"
+                        disabled={loading}
+                      />
+                      <p className="text-sm text-muted-foreground">Value 1-100 (default 85)</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Pilot Skill H (only for Driver) */}
+                {formData.role === "Driver" && (
+                  <div className="space-y-2">
+                    <Label>Pilot Skill (H)</Label>
+                    <div className="flex items-center gap-4">
+                      <Input
+                        type="number"
+                        min={1}
+                        max={100}
+                        value={formData.driverH}
+                        onChange={(e) => setFormData({...formData, driverH: e.target.value})}
+                        className="bg-accent/50 w-32"
+                        disabled={loading}
+                      />
+                      <p className="text-sm text-muted-foreground">Value 1-100 (default 85)</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Pilot Skill H (only for Driver) */}
+                {formData.role === "Driver" && (
+                  <div className="space-y-2">
+                    <Label>Pilot Skill (H)</Label>
+                    <div className="flex items-center gap-4">
+                      <Input
+                        type="number"
+                        min={1}
+                        max={100}
+                        value={formData.driverH}
+                        onChange={(e) => setFormData({...formData, driverH: e.target.value})}
+                        className="bg-accent/50 w-32"
+                        disabled={loading}
+                      />
+                      <p className="text-sm text-muted-foreground">Value 1-100 (default 85)</p>
+                    </div>
                   </div>
                 )}
 
@@ -560,7 +650,7 @@ const UserManagement = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {/* Se cambia users.map por filteredUsers.map para una óptima búsqueda. Mapeo de usuarios fultrados*/}
+                  {/* Se cambia users.map por filteredUsers.map para una óptima búsqueda. Mapeo de usuarios filtrados*/}
                   {filteredUsers.map((user) => (
                     <TableRow key={user.User_id} className="border-border hover:bg-accent/20 transition-colors">
                       {/* Columna: Usuario */}
@@ -586,7 +676,7 @@ const UserManagement = () => {
                       </TableCell> {/*Equipo asignado*/}
                       <TableCell className="font-medium text-foreground">
                         {user.Team_name || (
-                          <span className="text-muted-foreground italic">—</span>
+                          <span className="text-muted-foreground italic">No asignado</span>
                         )}
                       </TableCell> 
                       <TableCell className="text-right">{/*Acciones (editar/eliminar)*/}

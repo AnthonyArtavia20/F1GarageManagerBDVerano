@@ -35,6 +35,19 @@ export const TeamSelector = ({
     fetchTeams();
   }, []);
 
+  // ✅ NUEVO: Sincronizar selectedTeamName cuando cambia el value prop o se cargan los equipos
+  useEffect(() => {
+    if (value && teams.length > 0) {
+      const selectedTeam = teams.find(t => t.Team_id.toString() === value);
+      if (selectedTeam) {
+        setSelectedTeamName(selectedTeam.Name);
+      }
+    } else if (!value) {
+      // Limpiar el nombre cuando value es vacío
+      setSelectedTeamName('');
+    }
+  }, [value, teams]);
+
   // Buscar equipos cuando cambia el texto
   useEffect(() => {
     if (search.trim() === '') {
