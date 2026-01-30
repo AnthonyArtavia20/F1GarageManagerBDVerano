@@ -430,7 +430,7 @@ Winner = MIN(Time_seconds)
 **Team 3 - CE3101 Databases Course**
 
 - **Anthony José Artavia Leitón** (2024067097)
-  - Backend architecture, Car Assembly module, Database design
+  - Backend architecture, Car Assembly module, Database design, userManagement functionality
 - **Alexs Eduardo Feng Wu** (2023081452)
   - Financial module, Sponsor management, Simulation backend
 - **Luis Felipe Chaves Mena** (2024418551)
@@ -454,7 +454,7 @@ Complete project documentation including:
 - API endpoint specifications
 - Business rules catalog (60+ rules)
 
-Available in: `Docs/Official_Docs.pdf`
+Available in: `Docs/Official_Doc.pdf`
 
 ## 🔗 Repository
 
