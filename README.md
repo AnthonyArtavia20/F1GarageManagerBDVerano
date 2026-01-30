@@ -429,13 +429,13 @@ Winner = MIN(Time_seconds)
 
 **Team 3 - CE3101 Databases Course**
 
-- **Anthony José Artavia Leitón** (2024067097)
+- **Anthony José Artavia Leitón**
   - Backend architecture, Car Assembly module, Database design, userManagement functionality
-- **Alexs Eduardo Feng Wu** (2023081452)
+- **Alexs Eduardo Feng Wu**
   - Financial module, Sponsor management, Simulation backend
-- **Luis Felipe Chaves Mena** (2024418551)
+- **Luis Felipe Chaves Mena**
   - Frontend architecture, UI/UX design, Grafana integration
-- **Bryan Alexander Monge Navarro** (2023024270)
+- **Bryan Alexander Monge Navarro**
   - Authentication system, Session management, User roles
 
 **Course**: CE-3101 Bases de Datos  
