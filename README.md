@@ -156,7 +156,9 @@ cd F1GarageManagerBDVerano
 
 1. **Start SQL Server** and open SQL Server Management Studio
 2. **Connect to your SQL Server instance** (e.g., `DESKTOP-XXXX\SQLEXPRESS`)
-3. **Run the SQL scripts in order**:
+3. **you can run the bash "AutoRunSQLFiles.bash" and it will delete the BD if exist and then excecute in order these files:**:
+**Note!**
+You need to change the credentials of SQL Server in "AutoRunSQLFiles.bash" with yours
    ```
    Queries_SQLServer/01_Schema_y_Entidades_Fuertes.sql
    Queries_SQLServer/02_Entidades_Debiles.sql
