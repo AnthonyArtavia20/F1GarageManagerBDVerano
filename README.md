@@ -43,6 +43,7 @@ F1 Garage Manager is an academic project developed for the CE-3101 Databases cou
 - **Transactions** - Data consistency
 
 ### Analytics
+- **Docker & Docker Compose** - Use to run Grafana image
 - **Grafana** (Cloud) - Data visualization and dashboards
 
 ## 📁 Project Structure
@@ -301,18 +302,40 @@ The following Grafana panels are implemented:
 
 ### Configuration
 
-[Detailed Grafana setup instructions will be provided by team member Luis Felipe, including:
-- Grafana Cloud account setup
-- SQL Server data source configuration
-- Dashboard JSON import process
-- Panel query examples
-- Embedding dashboards in the Admin view]
+**1. Start Grafana Container**
+```bash
+cd Grafana
+docker-compose up -d
+```
+**2. Access Grafana**
+- Open: `http://localhost:3000`
+- Default credentials: admin / admin
+- Change password on first login (recommended)
+
+**3. Configure Data Source**
+
+Add your database/data source.
+```bash
+# By default the parameters to configure goes as follows:
+Host: localhost:1433
+Database: F1GarageManager
+Username: [MSSQL-Server Username]
+Password: [MSSQL-Server Password]
+*TLS/SSL Auth: [Disable for test/dev]
+```
+
+**4. Import Dashboards**
+- Go to Dashboards → New → Import
+- Upload JSON files from `Grafana/dashboards/`:
+    - `Admin.json` - Administrator overview
+    - `Engineer.json` - Team-specific metrics
+    - `Driver.json` - Real-time monitoring
 
 ### Access
 
 Grafana dashboards are accessible:
 - **Embedded**: Within the Analytics module in the application
-- **Direct Link**: Via Grafana Cloud URL (Admin only)
+- **Direct Link**: Via Grafana Cloud URL to specific Grafana panel 
 
 ## 🏗️ Architecture
 
@@ -436,7 +459,7 @@ Winner = MIN(Time_seconds)
 - **Alexs Eduardo Feng Wu**
   - Financial module, Sponsor management, Simulation backend
 - **Luis Felipe Chaves Mena**
-  - Frontend architecture, UI/UX design, Grafana integration
+  - Frontend architecture, UI/UX design, end-to-end connection, Grafana integration
 - **Bryan Alexander Monge Navarro**
   - Authentication system, Session management, User roles
 
